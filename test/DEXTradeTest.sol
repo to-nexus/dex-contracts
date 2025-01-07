@@ -4,7 +4,8 @@ pragma solidity ^0.8.13;
 import {Test, console} from "forge-std/Test.sol";
 import {ERC20, IERC20} from "@openzeppelin-contracts-5.1.0/token/ERC20/ERC20.sol";
 import {Math} from "@openzeppelin-contracts-5.1.0/utils/math/Math.sol";
-import {Pair, PairImpl} from "../src/Pair.sol";
+import {Router, RouterImpl} from "../src/Router.sol";
+import {IPair, Pair, PairImpl} from "../src/Pair.sol";
 
 contract T20 is ERC20 {
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {
@@ -12,8 +13,9 @@ contract T20 is ERC20 {
     }
 }
 
-contract PairTest is Test {
+contract DEXTradeTest is Test {
     address public constant OWNER = address(bytes20("OWNER"));
+    RouterImpl public ROUTER;
     PairImpl public PAIR;
     IERC20 public QUOTE;
     IERC20 public BASE;
@@ -22,15 +24,34 @@ contract PairTest is Test {
         vm.label(OWNER, "owner");
 
         vm.startPrank(OWNER);
-        PAIR = PairImpl(address(new Pair(address(new PairImpl()))));
+
         QUOTE = IERC20(address(new T20("QUOTE", "Q")));
         BASE = IERC20(address(new T20("BASE", "B")));
+        ROUTER = RouterImpl(payable(address(new Router(address(new RouterImpl())))));
 
+        PAIR = PairImpl(
+            address(
+                new Pair(
+                    address(new PairImpl()),
+                    OWNER,
+                    address(ROUTER),
+                    address(QUOTE),
+                    address(BASE),
+                    1e18,
+                    0.001e18,
+                    0.00001e18,
+                    0,
+                    0
+                )
+            )
+        );
+        ROUTER.addPair(PAIR);
+
+        vm.label(address(ROUTER), "ROUTER");
         vm.label(address(PAIR), "PAIR");
         vm.label(address(QUOTE), "QUOTE");
         vm.label(address(BASE), "BASE");
 
-        PAIR.initialize(address(QUOTE), address(BASE), 1e18, 0.001e18, 0.00001e18, 0, 0);
         vm.stopPrank();
     }
 
@@ -42,18 +63,16 @@ contract PairTest is Test {
         BASE.transfer(user, 100 ether);
 
         vm.startPrank(user);
-        PairImpl.Order memory order =
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user, price: 1 ether, amount: 100 ether});
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId = PAIR.limit(order);
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
-        PairImpl.Order memory callOrder = PAIR.orderById(orderId);
+        IPair.Order memory callOrder = PAIR.orderById(orderId);
 
-        assertEq(uint8(order._type), uint8(callOrder._type));
-        assertEq(order.owner, callOrder.owner);
-        assertEq(order.price, callOrder.price);
-        assertEq(order.amount, callOrder.amount);
+        assertNotEq(uint8(0), uint8(callOrder._type));
+        assertNotEq(address(0), callOrder.owner);
+        assertNotEq(0, callOrder.price);
+        assertNotEq(0, callOrder.amount);
 
         assertEq(0, BASE.balanceOf(user));
         assertEq(100 ether, BASE.balanceOf(address(PAIR)));
@@ -67,18 +86,16 @@ contract PairTest is Test {
         QUOTE.transfer(user, 100 ether);
 
         vm.startPrank(user);
-        PairImpl.Order memory order =
-            PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user, price: 1 ether, amount: 100 ether});
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId = PAIR.limit(order);
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId = ROUTER.buyLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
-        PairImpl.Order memory callOrder = PAIR.orderById(orderId);
+        IPair.Order memory callOrder = PAIR.orderById(orderId);
 
-        assertEq(uint8(order._type), uint8(callOrder._type));
-        assertEq(order.owner, callOrder.owner);
-        assertEq(order.price, callOrder.price);
-        assertEq(order.amount, callOrder.amount);
+        assertNotEq(uint8(0), uint8(callOrder._type));
+        assertNotEq(address(0), callOrder.owner);
+        assertNotEq(0, callOrder.price);
+        assertNotEq(0, callOrder.amount);
 
         assertEq(0, QUOTE.balanceOf(user));
         assertEq(100 ether, QUOTE.balanceOf(address(PAIR)));
@@ -96,24 +113,22 @@ contract PairTest is Test {
         QUOTE.transfer(user2, 100 ether);
 
         vm.startPrank(user1);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId1 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user1, price: 1 ether, amount: 100 ether})
-        );
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId1 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 100 ether);
+
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
         assertEq(QUOTE.balanceOf(user1), 0, "before QUOTE user1");
 
         vm.startPrank(user2);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId2 =
-            PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user2, price: 1 ether, amount: 100 ether}));
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId2 = ROUTER.buyLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         // order 데이터가 삭제 되었는지 확인
-        PairImpl.Order memory order1 = PAIR.orderById(orderId1);
-        PairImpl.Order memory order2 = PAIR.orderById(orderId2);
+        IPair.Order memory order1 = PAIR.orderById(orderId1);
+        IPair.Order memory order2 = PAIR.orderById(orderId2);
         assertEq(0, uint8(order1._type), "order1, not deleted");
         assertEq(0, uint8(order2._type), "order2, not deleted");
         // PAIR 에는 잔액이 없는지 확인
@@ -139,24 +154,21 @@ contract PairTest is Test {
         BASE.transfer(user2, 100 ether);
 
         vm.startPrank(user1);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId1 =
-            PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user1, price: 1 ether, amount: 100 ether}));
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId1 = ROUTER.buyLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
         assertEq(QUOTE.balanceOf(user1), 0, "before QUOTE user1");
 
         vm.startPrank(user2);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId2 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user2, price: 1 ether, amount: 100 ether})
-        );
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId2 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         // order 데이터가 삭제 되었는지 확인
-        PairImpl.Order memory order1 = PAIR.orderById(orderId1);
-        PairImpl.Order memory order2 = PAIR.orderById(orderId2);
+        IPair.Order memory order1 = PAIR.orderById(orderId1);
+        IPair.Order memory order2 = PAIR.orderById(orderId2);
         assertEq(0, uint8(order1._type), "order1, not deleted");
         assertEq(0, uint8(order2._type), "order2, not deleted");
         // PAIR 에는 잔액이 없는지 확인
@@ -183,24 +195,21 @@ contract PairTest is Test {
         QUOTE.transfer(user2, 50 ether);
 
         vm.startPrank(user1);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId1 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user1, price: 1 ether, amount: 100 ether})
-        );
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId1 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
         assertEq(QUOTE.balanceOf(user1), 0, "before QUOTE user1");
 
         vm.startPrank(user2);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId2 =
-            PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user2, price: 1 ether, amount: 50 ether}));
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId2 = ROUTER.buyLimitOrder(address(PAIR), 1 ether, 50 ether);
         vm.stopPrank();
 
         // order 데이터가 삭제 되었는지 확인
-        PairImpl.Order memory order1 = PAIR.orderById(orderId1);
-        PairImpl.Order memory order2 = PAIR.orderById(orderId2);
+        IPair.Order memory order1 = PAIR.orderById(orderId1);
+        IPair.Order memory order2 = PAIR.orderById(orderId2);
         assertNotEq(0, uint8(order1._type), "order1, deleted");
         assertEq(0, uint8(order2._type), "order2, not deleted");
         // PAIR 에는 BASE 토큰이 50 개 남아있는지 확인
@@ -228,23 +237,21 @@ contract PairTest is Test {
         BASE.transfer(user2, 50 ether);
 
         vm.startPrank(user1);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId1 =
-            PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user1, price: 1 ether, amount: 100 ether}));
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId1 = ROUTER.buyLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
         assertEq(QUOTE.balanceOf(user1), 0, "before QUOTE user1");
 
         vm.startPrank(user2);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId2 =
-            PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user2, price: 1 ether, amount: 50 ether}));
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId2 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 50 ether);
         vm.stopPrank();
 
         // order 데이터가 삭제 되었는지 확인
-        PairImpl.Order memory order1 = PAIR.orderById(orderId1);
-        PairImpl.Order memory order2 = PAIR.orderById(orderId2);
+        IPair.Order memory order1 = PAIR.orderById(orderId1);
+        IPair.Order memory order2 = PAIR.orderById(orderId2);
         assertNotEq(0, uint8(order1._type), "order1, deleted");
         assertEq(0, uint8(order2._type), "order2, not deleted");
         // PAIR 50 QUOTE 가 남아 있어야 한다.
@@ -271,24 +278,21 @@ contract PairTest is Test {
         QUOTE.transfer(user2, 200 ether);
 
         vm.startPrank(user1);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId1 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user1, price: 1 ether, amount: 100 ether})
-        );
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId1 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
         assertEq(QUOTE.balanceOf(user1), 0, "before QUOTE user1");
 
         vm.startPrank(user2);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId2 =
-            PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user2, price: 1 ether, amount: 200 ether}));
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId2 = ROUTER.buyLimitOrder(address(PAIR), 1 ether, 200 ether);
         vm.stopPrank();
 
         // order 데이터가 삭제 되었는지 확인
-        PairImpl.Order memory order1 = PAIR.orderById(orderId1);
-        PairImpl.Order memory order2 = PAIR.orderById(orderId2);
+        IPair.Order memory order1 = PAIR.orderById(orderId1);
+        IPair.Order memory order2 = PAIR.orderById(orderId2);
         assertEq(0, uint8(order1._type), "order1, not deleted");
         assertNotEq(0, uint8(order2._type), "order2, deleted");
         // PAIR 에는 QUOTE 토큰이 100 개 남아있는지 확인
@@ -316,24 +320,21 @@ contract PairTest is Test {
         BASE.transfer(user2, 200 ether);
 
         vm.startPrank(user1);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId1 =
-            PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user1, price: 1 ether, amount: 100 ether}));
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId1 = ROUTER.buyLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
         assertEq(QUOTE.balanceOf(user1), 0, "before QUOTE user1");
 
         vm.startPrank(user2);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId2 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user2, price: 1 ether, amount: 200 ether})
-        );
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId2 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 200 ether);
         vm.stopPrank();
 
         // order 데이터가 삭제 되었는지 확인
-        PairImpl.Order memory order1 = PAIR.orderById(orderId1);
-        PairImpl.Order memory order2 = PAIR.orderById(orderId2);
+        IPair.Order memory order1 = PAIR.orderById(orderId1);
+        IPair.Order memory order2 = PAIR.orderById(orderId2);
         assertEq(0, uint8(order1._type), "order1, not deleted");
         assertNotEq(0, uint8(order2._type), "order2, deleted");
         // PAIR 100 BASE 가 남아 있어야 한다.
@@ -363,17 +364,13 @@ contract PairTest is Test {
         vm.stopPrank();
 
         vm.startPrank(user1);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId1 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user1, price: 1 ether, amount: 100 ether})
-        );
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId1 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         vm.startPrank(user2);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId2 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user2, price: 1 ether, amount: 100 ether})
-        );
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId2 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
@@ -382,15 +379,14 @@ contract PairTest is Test {
         assertEq(QUOTE.balanceOf(user2), 0, "before QUOTE user2");
 
         vm.startPrank(user3);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId3 =
-            PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user3, price: 1 ether, amount: 200 ether}));
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId3 = ROUTER.buyLimitOrder(address(PAIR), 1 ether, 200 ether);
         vm.stopPrank();
 
         // order 데이터가 삭제 되었는지 확인
-        PairImpl.Order memory order1 = PAIR.orderById(orderId1);
-        PairImpl.Order memory order2 = PAIR.orderById(orderId2);
-        PairImpl.Order memory order3 = PAIR.orderById(orderId3);
+        IPair.Order memory order1 = PAIR.orderById(orderId1);
+        IPair.Order memory order2 = PAIR.orderById(orderId2);
+        IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertEq(0, uint8(order1._type), "order1, not deleted");
         assertEq(0, uint8(order2._type), "order2, not deleted");
         assertEq(0, uint8(order3._type), "order3, not deleted");
@@ -424,15 +420,13 @@ contract PairTest is Test {
         vm.stopPrank();
 
         vm.startPrank(user1);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId1 =
-            PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user1, price: 1 ether, amount: 100 ether}));
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId1 = ROUTER.buyLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         vm.startPrank(user2);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId2 =
-            PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user2, price: 1 ether, amount: 100 ether}));
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId2 = ROUTER.buyLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
@@ -441,16 +435,14 @@ contract PairTest is Test {
         assertEq(QUOTE.balanceOf(user2), 0, "before QUOTE user2");
 
         vm.startPrank(user3);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId3 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user3, price: 1 ether, amount: 200 ether})
-        );
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId3 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 200 ether);
         vm.stopPrank();
 
         // order 데이터가 삭제 되었는지 확인
-        PairImpl.Order memory order1 = PAIR.orderById(orderId1);
-        PairImpl.Order memory order2 = PAIR.orderById(orderId2);
-        PairImpl.Order memory order3 = PAIR.orderById(orderId3);
+        IPair.Order memory order1 = PAIR.orderById(orderId1);
+        IPair.Order memory order2 = PAIR.orderById(orderId2);
+        IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertEq(0, uint8(order1._type), "order1, not deleted");
         assertEq(0, uint8(order2._type), "order2, not deleted");
         assertEq(0, uint8(order3._type), "order3, not deleted");
@@ -484,17 +476,13 @@ contract PairTest is Test {
         vm.stopPrank();
 
         vm.startPrank(user1);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId1 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user1, price: 1 ether, amount: 100 ether})
-        );
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId1 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         vm.startPrank(user2);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId2 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user2, price: 1 ether, amount: 100 ether})
-        );
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId2 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
@@ -503,15 +491,14 @@ contract PairTest is Test {
         assertEq(QUOTE.balanceOf(user2), 0, "before QUOTE user2");
 
         vm.startPrank(user3);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId3 =
-            PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user3, price: 1 ether, amount: 150 ether}));
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId3 = ROUTER.buyLimitOrder(address(PAIR), 1 ether, 150 ether);
         vm.stopPrank();
 
         // order 데이터가 삭제 되었는지 확인
-        PairImpl.Order memory order1 = PAIR.orderById(orderId1);
-        PairImpl.Order memory order2 = PAIR.orderById(orderId2);
-        PairImpl.Order memory order3 = PAIR.orderById(orderId3);
+        IPair.Order memory order1 = PAIR.orderById(orderId1);
+        IPair.Order memory order2 = PAIR.orderById(orderId2);
+        IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertEq(0, uint8(order1._type), "order1, not deleted");
         assertNotEq(0, uint8(order2._type), "order2, deleted");
         assertEq(0, uint8(order3._type), "order3, not deleted");
@@ -545,15 +532,13 @@ contract PairTest is Test {
         vm.stopPrank();
 
         vm.startPrank(user1);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId1 =
-            PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user1, price: 1 ether, amount: 100 ether}));
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId1 = ROUTER.buyLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         vm.startPrank(user2);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId2 =
-            PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user2, price: 1 ether, amount: 100 ether}));
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId2 = ROUTER.buyLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
@@ -562,16 +547,14 @@ contract PairTest is Test {
         assertEq(QUOTE.balanceOf(user2), 0, "before QUOTE user2");
 
         vm.startPrank(user3);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId3 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user3, price: 1 ether, amount: 150 ether})
-        );
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId3 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 150 ether);
         vm.stopPrank();
 
         // order 데이터가 삭제 되었는지 확인
-        PairImpl.Order memory order1 = PAIR.orderById(orderId1);
-        PairImpl.Order memory order2 = PAIR.orderById(orderId2);
-        PairImpl.Order memory order3 = PAIR.orderById(orderId3);
+        IPair.Order memory order1 = PAIR.orderById(orderId1);
+        IPair.Order memory order2 = PAIR.orderById(orderId2);
+        IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertEq(0, uint8(order1._type), "order1, not deleted");
         assertNotEq(0, uint8(order2._type), "order2, deleted");
         assertEq(0, uint8(order3._type), "order3, not deleted");
@@ -605,17 +588,13 @@ contract PairTest is Test {
         vm.stopPrank();
 
         vm.startPrank(user1);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId1 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user1, price: 1 ether, amount: 100 ether})
-        );
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId1 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         vm.startPrank(user2);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId2 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user2, price: 1 ether, amount: 100 ether})
-        );
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId2 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
@@ -624,15 +603,14 @@ contract PairTest is Test {
         assertEq(QUOTE.balanceOf(user2), 0, "before QUOTE user2");
 
         vm.startPrank(user3);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId3 =
-            PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user3, price: 1 ether, amount: 300 ether}));
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId3 = ROUTER.buyLimitOrder(address(PAIR), 1 ether, 300 ether);
         vm.stopPrank();
 
         // order 데이터가 삭제 되었는지 확인
-        PairImpl.Order memory order1 = PAIR.orderById(orderId1);
-        PairImpl.Order memory order2 = PAIR.orderById(orderId2);
-        PairImpl.Order memory order3 = PAIR.orderById(orderId3);
+        IPair.Order memory order1 = PAIR.orderById(orderId1);
+        IPair.Order memory order2 = PAIR.orderById(orderId2);
+        IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertEq(0, uint8(order1._type), "order1, not deleted");
         assertEq(0, uint8(order2._type), "order2, not deleted");
         assertNotEq(0, uint8(order3._type), "order3, deleted");
@@ -666,15 +644,13 @@ contract PairTest is Test {
         vm.stopPrank();
 
         vm.startPrank(user1);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId1 =
-            PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user1, price: 1 ether, amount: 100 ether}));
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId1 = ROUTER.buyLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         vm.startPrank(user2);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId2 =
-            PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user2, price: 1 ether, amount: 100 ether}));
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId2 = ROUTER.buyLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
@@ -683,16 +659,14 @@ contract PairTest is Test {
         assertEq(QUOTE.balanceOf(user2), 0, "before QUOTE user2");
 
         vm.startPrank(user3);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId3 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user3, price: 1 ether, amount: 300 ether})
-        );
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId3 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 300 ether);
         vm.stopPrank();
 
         // order 데이터가 삭제 되었는지 확인
-        PairImpl.Order memory order1 = PAIR.orderById(orderId1);
-        PairImpl.Order memory order2 = PAIR.orderById(orderId2);
-        PairImpl.Order memory order3 = PAIR.orderById(orderId3);
+        IPair.Order memory order1 = PAIR.orderById(orderId1);
+        IPair.Order memory order2 = PAIR.orderById(orderId2);
+        IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertEq(0, uint8(order1._type), "order1, not deleted");
         assertEq(0, uint8(order2._type), "order2, not deleted");
         assertNotEq(0, uint8(order3._type), "order3, deleted");
@@ -726,31 +700,28 @@ contract PairTest is Test {
         vm.stopPrank();
 
         vm.startPrank(user1);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId1 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user1, price: 1 ether, amount: 200 ether})
-        );
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId1 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 200 ether);
+
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
         assertEq(QUOTE.balanceOf(user1), 0, "before QUOTE user1");
 
         vm.startPrank(user2);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId2 =
-            PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user2, price: 1 ether, amount: 100 ether}));
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId2 = ROUTER.buyLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         vm.startPrank(user3);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId3 =
-            PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user3, price: 1 ether, amount: 100 ether}));
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId3 = ROUTER.buyLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         // order 데이터가 삭제 되었는지 확인
-        PairImpl.Order memory order1 = PAIR.orderById(orderId1);
-        PairImpl.Order memory order2 = PAIR.orderById(orderId2);
-        PairImpl.Order memory order3 = PAIR.orderById(orderId3);
+        IPair.Order memory order1 = PAIR.orderById(orderId1);
+        IPair.Order memory order2 = PAIR.orderById(orderId2);
+        IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertEq(0, uint8(order1._type), "order1, not deleted");
         assertEq(0, uint8(order2._type), "order2, not deleted");
         assertEq(0, uint8(order3._type), "order3, not deleted");
@@ -784,32 +755,27 @@ contract PairTest is Test {
         vm.stopPrank();
 
         vm.startPrank(user1);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId1 =
-            PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user1, price: 1 ether, amount: 200 ether}));
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId1 = ROUTER.buyLimitOrder(address(PAIR), 1 ether, 200 ether);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
         assertEq(QUOTE.balanceOf(user1), 0, "before QUOTE user1");
 
         vm.startPrank(user2);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId2 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user2, price: 1 ether, amount: 100 ether})
-        );
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId2 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         vm.startPrank(user3);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId3 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user3, price: 1 ether, amount: 100 ether})
-        );
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId3 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         // order 데이터가 삭제 되었는지 확인
-        PairImpl.Order memory order1 = PAIR.orderById(orderId1);
-        PairImpl.Order memory order2 = PAIR.orderById(orderId2);
-        PairImpl.Order memory order3 = PAIR.orderById(orderId3);
+        IPair.Order memory order1 = PAIR.orderById(orderId1);
+        IPair.Order memory order2 = PAIR.orderById(orderId2);
+        IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertEq(0, uint8(order1._type), "order1, not deleted");
         assertEq(0, uint8(order2._type), "order2, not deleted");
         assertEq(0, uint8(order3._type), "order3, not deleted");
@@ -843,31 +809,27 @@ contract PairTest is Test {
         vm.stopPrank();
 
         vm.startPrank(user1);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId1 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user1, price: 1 ether, amount: 200 ether})
-        );
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId1 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 200 ether);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
         assertEq(QUOTE.balanceOf(user1), 0, "before QUOTE user1");
 
         vm.startPrank(user2);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId2 =
-            PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user2, price: 1 ether, amount: 100 ether}));
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId2 = ROUTER.buyLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         vm.startPrank(user3);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId3 =
-            PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user3, price: 1 ether, amount: 50 ether}));
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId3 = ROUTER.buyLimitOrder(address(PAIR), 1 ether, 50 ether);
         vm.stopPrank();
 
         // order 데이터가 삭제 되었는지 확인
-        PairImpl.Order memory order1 = PAIR.orderById(orderId1);
-        PairImpl.Order memory order2 = PAIR.orderById(orderId2);
-        PairImpl.Order memory order3 = PAIR.orderById(orderId3);
+        IPair.Order memory order1 = PAIR.orderById(orderId1);
+        IPair.Order memory order2 = PAIR.orderById(orderId2);
+        IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertNotEq(0, uint8(order1._type), "order1, deleted");
         assertEq(0, uint8(order2._type), "order2, deleted");
         assertEq(0, uint8(order3._type), "order3, not deleted");
@@ -901,30 +863,26 @@ contract PairTest is Test {
         vm.stopPrank();
 
         vm.startPrank(user1);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId1 =
-            PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user1, price: 1 ether, amount: 200 ether}));
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId1 = ROUTER.buyLimitOrder(address(PAIR), 1 ether, 200 ether);
         vm.stopPrank();
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
         assertEq(QUOTE.balanceOf(user1), 0, "before QUOTE user1");
 
         vm.startPrank(user2);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId2 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user2, price: 1 ether, amount: 100 ether})
-        );
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId2 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         vm.startPrank(user3);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId3 =
-            PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user3, price: 1 ether, amount: 50 ether}));
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId3 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 50 ether);
         vm.stopPrank();
 
         // order 데이터가 삭제 되었는지 확인
-        PairImpl.Order memory order1 = PAIR.orderById(orderId1);
-        PairImpl.Order memory order2 = PAIR.orderById(orderId2);
-        PairImpl.Order memory order3 = PAIR.orderById(orderId3);
+        IPair.Order memory order1 = PAIR.orderById(orderId1);
+        IPair.Order memory order2 = PAIR.orderById(orderId2);
+        IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertNotEq(0, uint8(order1._type), "order1, deleted");
         assertEq(0, uint8(order2._type), "order2, deleted");
         assertEq(0, uint8(order3._type), "order3, not deleted");
@@ -944,24 +902,23 @@ contract PairTest is Test {
 
     function test_ticks() external {
         vm.startPrank(OWNER);
-        BASE.approve(address(PAIR), type(uint256).max);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-
-        PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: OWNER, price: 1.5 ether, amount: 200 ether}));
-        PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: OWNER, price: 1.4 ether, amount: 200 ether}));
-        PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: OWNER, price: 1 ether, amount: 200 ether}));
-        PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: OWNER, price: 1.3 ether, amount: 200 ether}));
-        PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: OWNER, price: 1.1 ether, amount: 200 ether}));
-        PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: OWNER, price: 1.2 ether, amount: 200 ether}));
+        BASE.approve(address(ROUTER), type(uint256).max);
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        ROUTER.sellLimitOrder(address(PAIR), 1.5 ether, 200 ether);
+        ROUTER.sellLimitOrder(address(PAIR), 1.4 ether, 200 ether);
+        ROUTER.sellLimitOrder(address(PAIR), 1 ether, 200 ether);
+        ROUTER.sellLimitOrder(address(PAIR), 1.3 ether, 200 ether);
+        ROUTER.sellLimitOrder(address(PAIR), 1.1 ether, 200 ether);
+        ROUTER.sellLimitOrder(address(PAIR), 1.2 ether, 200 ether);
 
         vm.roll(block.number + 1);
 
-        PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: OWNER, price: 0.8 ether, amount: 200 ether}));
-        PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: OWNER, price: 0.9 ether, amount: 200 ether}));
-        PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: OWNER, price: 0.4 ether, amount: 200 ether}));
-        PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: OWNER, price: 0.5 ether, amount: 200 ether}));
-        PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: OWNER, price: 0.7 ether, amount: 200 ether}));
-        PAIR.limit(PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: OWNER, price: 0.6 ether, amount: 200 ether}));
+        ROUTER.buyLimitOrder(address(PAIR), 0.8 ether, 200 ether);
+        ROUTER.buyLimitOrder(address(PAIR), 0.9 ether, 200 ether);
+        ROUTER.buyLimitOrder(address(PAIR), 0.4 ether, 200 ether);
+        ROUTER.buyLimitOrder(address(PAIR), 0.5 ether, 200 ether);
+        ROUTER.buyLimitOrder(address(PAIR), 0.7 ether, 200 ether);
+        ROUTER.buyLimitOrder(address(PAIR), 0.6 ether, 200 ether);
 
         vm.roll(block.number + 1);
         vm.stopPrank();
@@ -983,25 +940,21 @@ contract PairTest is Test {
         }
     }
 
-    uint256 public constant fuzz_length = 1000;
+    uint256 public constant fuzz_limit_length = 1000;
 
     function testFuzz_limit_order(
-        uint8[fuzz_length] memory prices,
-        uint8[fuzz_length] memory amounts,
-        bool[fuzz_length] memory isSell
+        uint8[fuzz_limit_length] memory prices,
+        uint8[fuzz_limit_length] memory amounts,
+        bool[fuzz_limit_length] memory isSell
     ) external {
-        address[fuzz_length] memory users;
-        for (uint256 i = 0; i < fuzz_length; i++) {
+        address[fuzz_limit_length] memory users;
+        for (uint256 i = 0; i < fuzz_limit_length; i++) {
             users[i] = address(uint160(i + 1));
         }
 
-        vm.startPrank(OWNER);
-        BASE.approve(address(PAIR), type(uint256).max);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-
         (uint256 quoteTickSize, uint256 baseTickSize) = (PAIR.quoteTickSize(), PAIR.baseTickSize());
         uint256 denominator = 1e18;
-        uint256 length = fuzz_length / 2;
+        uint256 length = fuzz_limit_length / 2;
         uint256 latestOrderId;
 
         for (uint256 i = 0; i < length; i++) {
@@ -1011,9 +964,18 @@ contract PairTest is Test {
             uint256 price = prices[i] * quoteTickSize;
             uint256 amount = amounts[i] * baseTickSize;
             if (price == 0 || amount == 0) continue;
-            PairImpl.OrderType _type = isSell[i] ? PairImpl.OrderType.SELL : PairImpl.OrderType.BUY;
+            vm.prank(OWNER);
+            if (isSell[i]) BASE.transfer(user, amount);
+            else QUOTE.transfer(user, Math.mulDiv(price, amount, 1e18));
 
-            latestOrderId = PAIR.limit(PairImpl.Order({_type: _type, owner: user, price: price, amount: amount}));
+            vm.startPrank(user);
+            BASE.approve(address(ROUTER), type(uint256).max);
+            QUOTE.approve(address(ROUTER), type(uint256).max);
+            latestOrderId = isSell[i]
+                ? ROUTER.sellLimitOrder(address(PAIR), price, amount)
+                : ROUTER.buyLimitOrder(address(PAIR), price, amount);
+
+            vm.stopPrank();
         }
 
         uint256 pairBaseBalance = BASE.balanceOf(address(PAIR));
@@ -1022,9 +984,9 @@ contract PairTest is Test {
         uint256 checkBaseBalance = 0;
         uint256 checkQuoteBalance = 0;
         for (uint256 i = 1; i <= latestOrderId; i++) {
-            PairImpl.Order memory order = PAIR.orderById(i);
-            if (order._type == PairImpl.OrderType.SELL) checkBaseBalance += order.amount;
-            if (order._type == PairImpl.OrderType.BUY) {
+            IPair.Order memory order = PAIR.orderById(i);
+            if (order._type == IPair.OrderType.SELL) checkBaseBalance += order.amount;
+            if (order._type == IPair.OrderType.BUY) {
                 checkQuoteBalance += Math.mulDiv(order.amount, order.price, denominator);
             }
         }
@@ -1034,7 +996,7 @@ contract PairTest is Test {
 
         uint256 usedBaseAmount = type(uint256).max - BASE.balanceOf(OWNER);
         uint256 usedQuoteAmount = type(uint256).max - QUOTE.balanceOf(OWNER);
-        for (uint256 i = 0; i < fuzz_length; i++) {
+        for (uint256 i = 0; i < fuzz_limit_length; i++) {
             checkBaseBalance += BASE.balanceOf(users[i]);
             checkQuoteBalance += QUOTE.balanceOf(users[i]);
         }
@@ -1055,25 +1017,21 @@ contract PairTest is Test {
         QUOTE.transfer(user2, 100 ether);
 
         vm.startPrank(user1);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId1 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user1, price: 1 ether, amount: 100 ether})
-        );
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId1 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
         assertEq(QUOTE.balanceOf(user1), 0, "before QUOTE user1");
 
         vm.startPrank(user2);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        PAIR.market(
-            PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user2, price: 1 ether, amount: 100 ether}), 100 ether
-        );
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        ROUTER.buyMarketOrder(address(PAIR), 100 ether);
         vm.stopPrank();
 
         // order 데이터가 삭제 되었는지 확인
-        PairImpl.Order memory order1 = PAIR.orderById(orderId1);
-        PairImpl.Order memory order2 = PAIR.orderById(2);
+        IPair.Order memory order1 = PAIR.orderById(orderId1);
+        IPair.Order memory order2 = PAIR.orderById(2);
         assertEq(0, uint8(order1._type), "order1, not deleted");
         assertEq(0, uint8(order2._type), "market data is must not inited");
         // PAIR 에는 잔액이 없는지 확인
@@ -1099,29 +1057,23 @@ contract PairTest is Test {
         QUOTE.transfer(user2, 300 ether);
 
         vm.startPrank(user1);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId1 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user1, price: 1 ether, amount: 100 ether})
-        );
-        uint256 orderId2 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user1, price: 2 ether, amount: 100 ether})
-        );
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId1 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 100 ether);
+        uint256 orderId2 = ROUTER.sellLimitOrder(address(PAIR), 2 ether, 100 ether);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
         assertEq(QUOTE.balanceOf(user1), 0, "before QUOTE user1");
 
         vm.startPrank(user2);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        PAIR.market(
-            PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user2, price: 1 ether, amount: 100 ether}), 300 ether
-        );
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        ROUTER.buyMarketOrder(address(PAIR), 300 ether);
         vm.stopPrank();
 
         // order 데이터가 삭제 되었는지 확인
-        PairImpl.Order memory order1 = PAIR.orderById(orderId1);
-        PairImpl.Order memory order2 = PAIR.orderById(orderId2);
-        PairImpl.Order memory order3 = PAIR.orderById(3);
+        IPair.Order memory order1 = PAIR.orderById(orderId1);
+        IPair.Order memory order2 = PAIR.orderById(orderId2);
+        IPair.Order memory order3 = PAIR.orderById(3);
         assertEq(0, uint8(order1._type), "order1, not deleted");
         assertEq(0, uint8(order2._type), "order2, not deleted");
         assertEq(0, uint8(order3._type), "market data is must not inited");
@@ -1148,25 +1100,21 @@ contract PairTest is Test {
         QUOTE.transfer(user2, 50 ether);
 
         vm.startPrank(user1);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId1 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user1, price: 1 ether, amount: 100 ether})
-        );
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId1 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
         assertEq(QUOTE.balanceOf(user1), 0, "before QUOTE user1");
 
         vm.startPrank(user2);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        PAIR.market(
-            PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user2, price: 1 ether, amount: 100 ether}), 50 ether
-        );
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        ROUTER.buyMarketOrder(address(PAIR), 50 ether);
         vm.stopPrank();
 
         // order 데이터가 삭제 되었는지 확인
-        PairImpl.Order memory order1 = PAIR.orderById(orderId1);
-        PairImpl.Order memory order2 = PAIR.orderById(2);
+        IPair.Order memory order1 = PAIR.orderById(orderId1);
+        IPair.Order memory order2 = PAIR.orderById(2);
         assertNotEq(0, uint8(order1._type), "order1, deleted");
         assertEq(0, uint8(order2._type), "market data is must not inited");
         // PAIR 에는 잔액이 없는지 확인
@@ -1192,29 +1140,24 @@ contract PairTest is Test {
         QUOTE.transfer(user2, 200 ether);
 
         vm.startPrank(user1);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId1 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user1, price: 1 ether, amount: 100 ether})
-        );
-        uint256 orderId2 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user1, price: 2 ether, amount: 100 ether})
-        );
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId1 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 100 ether);
+        uint256 orderId2 = ROUTER.sellLimitOrder(address(PAIR), 2 ether, 100 ether);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
         assertEq(QUOTE.balanceOf(user1), 0, "before QUOTE user1");
 
         vm.startPrank(user2);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        PAIR.market(
-            PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user2, price: 1 ether, amount: 100 ether}), 200 ether
-        );
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        ROUTER.buyMarketOrder(address(PAIR), 200 ether);
+
         vm.stopPrank();
 
         // order 데이터가 삭제 되었는지 확인
-        PairImpl.Order memory order1 = PAIR.orderById(orderId1);
-        PairImpl.Order memory order2 = PAIR.orderById(orderId2);
-        PairImpl.Order memory order3 = PAIR.orderById(3);
+        IPair.Order memory order1 = PAIR.orderById(orderId1);
+        IPair.Order memory order2 = PAIR.orderById(orderId2);
+        IPair.Order memory order3 = PAIR.orderById(3);
         assertEq(0, uint8(order1._type), "order1, not deleted");
         assertNotEq(0, uint8(order2._type), "order2, deleted");
         assertEq(0, uint8(order3._type), "market data is must not inited");
@@ -1241,25 +1184,21 @@ contract PairTest is Test {
         QUOTE.transfer(user2, 200 ether);
 
         vm.startPrank(user1);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId1 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user1, price: 1 ether, amount: 100 ether})
-        );
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId1 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 100 ether);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
         assertEq(QUOTE.balanceOf(user1), 0, "before QUOTE user1");
 
         vm.startPrank(user2);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        PAIR.market(
-            PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user2, price: 1 ether, amount: 100 ether}), 200 ether
-        );
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        ROUTER.buyMarketOrder(address(PAIR), 200 ether);
         vm.stopPrank();
 
         // order 데이터가 삭제 되었는지 확인
-        PairImpl.Order memory order1 = PAIR.orderById(orderId1);
-        PairImpl.Order memory order2 = PAIR.orderById(2);
+        IPair.Order memory order1 = PAIR.orderById(orderId1);
+        IPair.Order memory order2 = PAIR.orderById(2);
         assertEq(0, uint8(order1._type), "order1, deleted");
         assertEq(0, uint8(order2._type), "market data is must not inited");
         // PAIR 에는 잔액이 없는지 확인
@@ -1285,29 +1224,23 @@ contract PairTest is Test {
         QUOTE.transfer(user2, 400 ether);
 
         vm.startPrank(user1);
-        BASE.approve(address(PAIR), type(uint256).max);
-        uint256 orderId1 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user1, price: 1 ether, amount: 100 ether})
-        );
-        uint256 orderId2 = PAIR.limit(
-            PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user1, price: 2 ether, amount: 100 ether})
-        );
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId1 = ROUTER.sellLimitOrder(address(PAIR), 1 ether, 100 ether);
+        uint256 orderId2 = ROUTER.sellLimitOrder(address(PAIR), 2 ether, 100 ether);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
         assertEq(QUOTE.balanceOf(user1), 0, "before QUOTE user1");
 
         vm.startPrank(user2);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-        PAIR.market(
-            PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user2, price: 1 ether, amount: 100 ether}), 400 ether
-        );
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        ROUTER.buyMarketOrder(address(PAIR), 400 ether);
         vm.stopPrank();
 
         // order 데이터가 삭제 되었는지 확인
-        PairImpl.Order memory order1 = PAIR.orderById(orderId1);
-        PairImpl.Order memory order2 = PAIR.orderById(orderId2);
-        PairImpl.Order memory order3 = PAIR.orderById(3);
+        IPair.Order memory order1 = PAIR.orderById(orderId1);
+        IPair.Order memory order2 = PAIR.orderById(orderId2);
+        IPair.Order memory order3 = PAIR.orderById(3);
         assertEq(0, uint8(order1._type), "order1, not deleted");
         assertEq(0, uint8(order2._type), "order2, not deleted");
         assertEq(0, uint8(order3._type), "market data is must not inited");
@@ -1334,10 +1267,6 @@ contract PairTest is Test {
             users[i] = address(uint160(i + 1));
         }
 
-        vm.startPrank(OWNER);
-        BASE.approve(address(PAIR), type(uint256).max);
-        QUOTE.approve(address(PAIR), type(uint256).max);
-
         (uint256 quoteTickSize, uint256 baseTickSize) = (PAIR.quoteTickSize(), PAIR.baseTickSize());
         uint256 denominator = 1e18;
         uint256 length = fuzz_market_length / 2;
@@ -1350,24 +1279,40 @@ contract PairTest is Test {
             uint256 price = prices[i] * quoteTickSize;
             uint256 amount = amounts[i] * baseTickSize;
             if (price == 0 || amount == 0) continue;
+
             uint256 _type = uint256(orderTypes[i]) % 4;
             if (_type == 0) {
-                latestOrderId = PAIR.limit(
-                    PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user, price: price, amount: amount})
-                );
+                vm.prank(OWNER);
+                BASE.transfer(user, amount);
+                vm.prank(user);
+                BASE.approve(address(ROUTER), type(uint256).max);
+                vm.prank(user);
+                latestOrderId = ROUTER.sellLimitOrder(address(PAIR), price, amount);
             } else if (_type == 1) {
-                latestOrderId = PAIR.limit(
-                    PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user, price: price, amount: amount})
-                );
+                vm.prank(OWNER);
+                QUOTE.transfer(user, Math.mulDiv(price, amount, 1e18));
+                vm.prank(user);
+                QUOTE.approve(address(ROUTER), type(uint256).max);
+                vm.prank(user);
+                latestOrderId = ROUTER.buyLimitOrder(address(PAIR), price, amount);
             } else if (_type == 2) {
                 ++latestOrderId;
-                PAIR.market(PairImpl.Order({_type: PairImpl.OrderType.SELL, owner: user, price: 0, amount: 0}), amount);
+
+                vm.prank(OWNER);
+                BASE.transfer(user, amount);
+                vm.prank(user);
+                BASE.approve(address(ROUTER), type(uint256).max);
+                vm.prank(user);
+                ROUTER.sellMarketOrder(address(PAIR), amount);
             } else {
                 ++latestOrderId;
-                PAIR.market(
-                    PairImpl.Order({_type: PairImpl.OrderType.BUY, owner: user, price: 0, amount: 0}),
-                    Math.mulDiv(price, amount, denominator)
-                );
+                uint256 _value = Math.mulDiv(price, amount, 1e18);
+                vm.prank(OWNER);
+                QUOTE.transfer(user, _value);
+                vm.prank(user);
+                QUOTE.approve(address(ROUTER), type(uint256).max);
+                vm.prank(user);
+                ROUTER.buyMarketOrder(address(PAIR), _value);
             }
         }
 
@@ -1377,9 +1322,9 @@ contract PairTest is Test {
         uint256 checkBaseBalance = 0;
         uint256 checkQuoteBalance = 0;
         for (uint256 i = 1; i <= latestOrderId; i++) {
-            PairImpl.Order memory order = PAIR.orderById(i);
-            if (order._type == PairImpl.OrderType.SELL) checkBaseBalance += order.amount;
-            if (order._type == PairImpl.OrderType.BUY) {
+            IPair.Order memory order = PAIR.orderById(i);
+            if (order._type == IPair.OrderType.SELL) checkBaseBalance += order.amount;
+            if (order._type == IPair.OrderType.BUY) {
                 checkQuoteBalance += Math.mulDiv(order.amount, order.price, denominator);
             }
         }

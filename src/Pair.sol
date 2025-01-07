@@ -14,16 +14,37 @@ import {ASCList} from "./lib/ASCList.sol";
 import {Test, console} from "forge-std/Test.sol";
 
 contract Pair is ERC1967Proxy {
-    constructor(address implementation) ERC1967Proxy(implementation, bytes("")) {}
+    constructor(
+        address implementation,
+        address owner,
+        address router,
+        address quote,
+        address base,
+        uint256 denominator,
+        uint256 quoteTickSize,
+        uint256 baseTickSize,
+        uint256 quoteFeePermile,
+        uint256 baseFeePermile
+    )
+        ERC1967Proxy(
+            implementation,
+            abi.encodeWithSelector(
+                PairImpl.initialize.selector,
+                owner,
+                router,
+                quote,
+                base,
+                denominator,
+                quoteTickSize,
+                baseTickSize,
+                quoteFeePermile,
+                baseFeePermile
+            )
+        )
+    {}
 }
 
-contract PairImpl is UUPSUpgradeable, OwnableUpgradeable, Test {
-    using SafeERC20 for IERC20;
-    using Math for uint256;
-    using DoubleLinkedList for DoubleLinkedList.U256;
-    using DESCList for DESCList.U256;
-    using ASCList for ASCList.U256;
-
+interface IPair {
     enum OrderType {
         NONE,
         SELL,
@@ -35,6 +56,28 @@ contract PairImpl is UUPSUpgradeable, OwnableUpgradeable, Test {
         MARKET,
         CANCEL
     }
+
+    struct Order {
+        OrderType _type;
+        address owner;
+        uint256 price;
+        uint256 amount;
+    }
+
+    function QUOTE() external view returns (IERC20);
+    function BASE() external view returns (IERC20);
+    function DENOMINATOR() external view returns (uint256);
+
+    function limit(Order memory order) external returns (uint256 orderId);
+    function market(Order memory order, uint256 spendAmount) external;
+}
+
+contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, Test {
+    using SafeERC20 for IERC20;
+    using Math for uint256;
+    using DoubleLinkedList for DoubleLinkedList.U256;
+    using DESCList for DESCList.U256;
+    using ASCList for ASCList.U256;
 
     event OrderCreated(
         address indexed owner,
@@ -51,16 +94,10 @@ contract PairImpl is UUPSUpgradeable, OwnableUpgradeable, Test {
 
     event OrderClosed(uint256 indexed orderId, CloseType indexed _type, uint256 timestamp);
 
-    struct Order {
-        OrderType _type;
-        address owner;
-        uint256 price;
-        uint256 amount;
-    }
-
-    IERC20 public QUOTE; // immutable
-    IERC20 public BASE; // immutable
-    uint256 private DENOMINATOR; // immutable
+    address public ROUTER;
+    IERC20 public override QUOTE; // immutable
+    IERC20 public override BASE; // immutable
+    uint256 public override DENOMINATOR; // immutable
 
     uint256 public quoteTickSize; // quote 거래 단위
     uint256 public baseTickSize; // base 거래 단위
@@ -76,7 +113,14 @@ contract PairImpl is UUPSUpgradeable, OwnableUpgradeable, Test {
     mapping(uint256 price => DoubleLinkedList.U256) private _buyOrders; //  price => 구매 order id list
     mapping(uint256 orderId => Order) private _allOrders; // 모든 주문 정보
 
+    modifier onlyRouter() {
+        if (_msgSender() != ROUTER) revert();
+        _;
+    }
+
     function initialize(
+        address owner,
+        address router,
         address quote,
         address base,
         uint256 denominator,
@@ -85,6 +129,7 @@ contract PairImpl is UUPSUpgradeable, OwnableUpgradeable, Test {
         uint256 _quoteFeePermile,
         uint256 _baseFeePermile
     ) external initializer {
+        ROUTER = router;
         QUOTE = IERC20(quote);
         BASE = IERC20(base);
         DENOMINATOR = denominator;
@@ -95,7 +140,7 @@ contract PairImpl is UUPSUpgradeable, OwnableUpgradeable, Test {
         quoteFeePermile = _quoteFeePermile;
         baseFeePermile = _baseFeePermile;
 
-        __Ownable_init(_msgSender());
+        __Ownable_init(owner);
     }
 
     function orderById(uint256 id) external view returns (Order memory) {
@@ -107,7 +152,7 @@ contract PairImpl is UUPSUpgradeable, OwnableUpgradeable, Test {
         buyPrices = _buyPrices.values();
     }
 
-    function limit(Order memory order) external returns (uint256 orderId) {
+    function limit(Order memory order) external override onlyRouter returns (uint256 orderId) {
         if (order._type == OrderType.NONE) revert();
 
         // 입력된 수량의 조건을 확인한다.
@@ -150,7 +195,7 @@ contract PairImpl is UUPSUpgradeable, OwnableUpgradeable, Test {
         }
     }
 
-    function market(Order memory order, uint256 spendAmount) external {
+    function market(Order memory order, uint256 spendAmount) external override onlyRouter {
         if (order._type == OrderType.NONE) revert();
 
         uint256 orderId = ++_orderIdCounter;
@@ -349,5 +394,5 @@ contract PairImpl is UUPSUpgradeable, OwnableUpgradeable, Test {
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
 
-    uint256[38] __gap;
+    uint256[36] __gap;
 }
