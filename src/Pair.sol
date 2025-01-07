@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 import {ERC1967Proxy} from "@openzeppelin-contracts-5.1.0/proxy/ERC1967/ERC1967Proxy.sol";
 import {UUPSUpgradeable} from "@openzeppelin-contracts-5.1.0/proxy/utils/UUPSUpgradeable.sol";
-import {IERC20} from "@openzeppelin-contracts-5.1.0/token/ERC20/IERC20.sol";
+import {IERC20, IERC20Metadata} from "@openzeppelin-contracts-5.1.0/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin-contracts-5.1.0/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin-contracts-5.1.0/utils/math/Math.sol";
 import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.1.0/access/OwnableUpgradeable.sol";
@@ -21,7 +21,6 @@ contract Pair is ERC1967Proxy {
         address router,
         address quote,
         address base,
-        uint256 denominator,
         uint256 quoteTickSize,
         uint256 baseTickSize,
         uint256 quoteFeePermile,
@@ -35,7 +34,6 @@ contract Pair is ERC1967Proxy {
                 router,
                 quote,
                 base,
-                denominator,
                 quoteTickSize,
                 baseTickSize,
                 quoteFeePermile,
@@ -77,7 +75,8 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     address public ROUTER;
     IERC20 public override QUOTE; // immutable
     IERC20 public override BASE; // immutable
-    uint256 public override DENOMINATOR; // immutable
+    uint256 public override QUOTE_DENOMINATOR; // immutable (not used)
+    uint256 public override BASE_DENOMINATOR; // immutable
 
     uint256 public quoteTickSize; // quote 거래 단위
     uint256 public baseTickSize; // base 거래 단위
@@ -103,7 +102,6 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
         address router,
         address quote,
         address base,
-        uint256 denominator,
         uint256 _quoteTickSize,
         uint256 _baseTickSize,
         uint256 _quoteFeePermile,
@@ -112,7 +110,8 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
         ROUTER = router;
         QUOTE = IERC20(quote);
         BASE = IERC20(base);
-        DENOMINATOR = denominator;
+        QUOTE_DENOMINATOR = 10 ** IERC20Metadata(quote).decimals();
+        BASE_DENOMINATOR = 10 ** IERC20Metadata(base).decimals();
 
         quoteTickSize = _quoteTickSize;
         baseTickSize = _baseTickSize;
@@ -159,7 +158,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
 
             // 주문과 동시에 채결되었다면, 설정된 가격보다 싼 가격으로 샀을수 있기때문에 해당 잔액을 돌려준다.
             if (matchedBaseAmount != 0) {
-                uint256 measuredQuoteAmount = Math.mulDiv(order.price, matchedBaseAmount, DENOMINATOR);
+                uint256 measuredQuoteAmount = Math.mulDiv(order.price, matchedBaseAmount, BASE_DENOMINATOR);
                 uint256 diffQuoteAmount = measuredQuoteAmount - useQuoteAmount;
                 if (diffQuoteAmount != 0) QUOTE.safeTransfer(order.owner, diffQuoteAmount);
             }
@@ -210,7 +209,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
             BASE.safeTransfer(order.owner, order.amount);
         } else {
             _orders = _buyOrders[order.price];
-            QUOTE.safeTransfer(order.owner, Math.mulDiv(order.price, order.amount, DENOMINATOR));
+            QUOTE.safeTransfer(order.owner, Math.mulDiv(order.price, order.amount, BASE_DENOMINATOR));
         }
 
         // 해당 데이터를 제거한다.
@@ -250,7 +249,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
         // 입력된 수량의 조건을 확인한다.
         uint256 quoteAmount;
         if (spendQuoteAmount != 0) quoteAmount = spendQuoteAmount;
-        else quoteAmount = Math.mulDiv(order.price, order.amount, DENOMINATOR);
+        else quoteAmount = Math.mulDiv(order.price, order.amount, BASE_DENOMINATOR);
 
         // 1. 주문에 필요한 토큰을 가져온다.
         QUOTE.safeTransferFrom(_msgSender(), address(this), quoteAmount);
@@ -296,7 +295,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
 
                 // 거래 성사 todo target 수수료 처리
                 BASE.safeTransfer(targetOwner, tradeAmount);
-                earnQuoteAmount += Math.mulDiv(price, tradeAmount, DENOMINATOR);
+                earnQuoteAmount += Math.mulDiv(price, tradeAmount, BASE_DENOMINATOR);
 
                 if (cOrder.amount == 0) return (cOrder, earnQuoteAmount);
             }
@@ -320,10 +319,10 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
 
             // Market 거래일 경우 해당 가격으로 최대 구매할 수 있는 수량을 계산한다.
             if (quoteAmount != 0) {
-                uint256 tradableAmount = Math.mulDiv(quoteAmount - useQuoteAmount, DENOMINATOR, price);
+                uint256 tradableAmount = Math.mulDiv(quoteAmount - useQuoteAmount, BASE_DENOMINATOR, price);
                 tradableAmount -= tradableAmount % baseTickSize;
                 cOrder.amount = tradableAmount;
-                if (cOrder.amount == 0) return (cOrder, matchedBaseAmount, useQuoteAmount);
+                if (tradableAmount == 0) return (cOrder, matchedBaseAmount, useQuoteAmount);
             }
 
             // 해당 가격의 모든 SellOrder 를 순회한다.
@@ -340,7 +339,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
                 (address targetOwner, uint256 tradeAmount) =
                     _matchOrderAmount(orderId, cOrder, targetId, target, price, _orders);
                 // 거래 가치 계산
-                uint256 tradeQuoteAmount = Math.mulDiv(price, tradeAmount, DENOMINATOR);
+                uint256 tradeQuoteAmount = Math.mulDiv(price, tradeAmount, BASE_DENOMINATOR);
                 // 거래 성사 todo target 수수료 처리
                 QUOTE.safeTransfer(targetOwner, tradeQuoteAmount);
 

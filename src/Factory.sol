@@ -69,20 +69,9 @@ contract FactoryImpl is UUPSUpgradeable, OwnableUpgradeable {
         uint256 baseDecimals = IERC20Metadata(base).decimals();
         if (baseDecimals == 0) revert FactoryInvalidBaseAddress(base);
 
-        // denominator = 10^(Max (quote, base) decimals)
-        uint256 denominator = 10 ** (QUOTE_DECIMALS > baseDecimals ? QUOTE_DECIMALS : baseDecimals);
         pair = address(
             new Pair(
-                pairImpl,
-                owner(),
-                router,
-                QUOTE,
-                base,
-                denominator,
-                quoteTickSize,
-                baseTickSize,
-                quoteFeePermile,
-                baseFeePermile
+                pairImpl, owner(), router, QUOTE, base, quoteTickSize, baseTickSize, quoteFeePermile, baseFeePermile
             )
         );
         if (pair == address(0)) revert FactoryDeployPair();

@@ -29,9 +29,10 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
     event PairRemoved(address indexed pair);
 
     struct Pair {
-        IERC20 BASE;
         IERC20 QUOTE;
-        uint256 DENOMINATOR;
+        IERC20 BASE;
+        uint256 QUOTE_DENOMINATOR;
+        uint256 BASE_DENOMINATOR;
     }
 
     mapping(address pair => Pair) public allPairs;
@@ -46,24 +47,27 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
     }
 
     function addPair(address pair) external onlyOwner {
-        if (allPairs[pair].DENOMINATOR != 0) revert RouterAlreadyAddedPair(pair);
+        Pair memory pairInfo = allPairs[pair];
+        if (pairInfo.QUOTE_DENOMINATOR != 0 && pairInfo.BASE_DENOMINATOR != 0) revert RouterAlreadyAddedPair(pair);
 
         IPair ipair = IPair(pair);
-        uint256 DENOMINATOR = ipair.DENOMINATOR();
-        if (DENOMINATOR == 0) revert RouterInvalidPairAddress(pair);
+        uint256 QUOTE_DENOMINATOR = ipair.QUOTE_DENOMINATOR();
+        uint256 BASE_DENOMINATOR = ipair.BASE_DENOMINATOR();
+        if (QUOTE_DENOMINATOR == 0 && BASE_DENOMINATOR == 0) revert RouterInvalidPairAddress(pair);
         IERC20 BASE = ipair.BASE();
         IERC20 QUOTE = ipair.QUOTE();
 
         if (address(BASE) != address(0)) BASE.forceApprove(pair, type(uint256).max);
         if (address(QUOTE) != address(0)) QUOTE.forceApprove(pair, type(uint256).max);
 
-        allPairs[pair] = Pair({BASE: BASE, QUOTE: QUOTE, DENOMINATOR: DENOMINATOR});
+        allPairs[pair] =
+            Pair({QUOTE: QUOTE, BASE: BASE, QUOTE_DENOMINATOR: QUOTE_DENOMINATOR, BASE_DENOMINATOR: BASE_DENOMINATOR});
         emit PairAdded(pair, address(BASE), address(QUOTE));
     }
 
     function removePair(address pair) external onlyOwner {
         Pair memory pairInfo = allPairs[pair];
-        if (pairInfo.DENOMINATOR == 0) revert RouterInvalidPairAddress(pair);
+        if (pairInfo.QUOTE_DENOMINATOR != 0 && pairInfo.BASE_DENOMINATOR != 0) revert RouterInvalidPairAddress(pair);
 
         IPair ipair = IPair(pair);
         IERC20 BASE = ipair.BASE();
@@ -102,9 +106,9 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
         Pair memory pairInfo = allPairs[pair];
         IERC20 QUOTE = pairInfo.QUOTE;
 
-        uint256 value = Math.mulDiv(price, amount, pairInfo.DENOMINATOR);
+        uint256 volumn = Math.mulDiv(price, amount, pairInfo.BASE_DENOMINATOR);
 
-        QUOTE.safeTransferFrom(owner, address(this), value);
+        QUOTE.safeTransferFrom(owner, address(this), volumn);
         IPair.Order memory order = IPair.Order({_type: IPair.OrderType.BUY, owner: owner, price: price, amount: amount});
 
         return IPair(pair).limit(order);

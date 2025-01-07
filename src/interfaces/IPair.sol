@@ -25,7 +25,8 @@ interface IPair {
 
     function QUOTE() external view returns (IERC20);
     function BASE() external view returns (IERC20);
-    function DENOMINATOR() external view returns (uint256);
+    function QUOTE_DENOMINATOR() external view returns (uint256);
+    function BASE_DENOMINATOR() external view returns (uint256);
 
     function limit(Order memory order) external returns (uint256 orderId);
     function market(Order memory order, uint256 spendAmount) external;
