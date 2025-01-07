@@ -22,6 +22,12 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
     using SafeERC20 for IERC20;
     using Math for uint256;
 
+    error RouterAlreadyAddedPair(address);
+    error RouterInvalidPairAddress(address);
+
+    event PairAdded(address indexed pair, address indexed base, address indexed quote);
+    event PairRemoved(address indexed pair);
+
     struct Pair {
         IERC20 BASE;
         IERC20 QUOTE;
@@ -40,11 +46,11 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
     }
 
     function addPair(address pair) external onlyOwner {
-        if (allPairs[pair].DENOMINATOR != 0) revert();
+        if (allPairs[pair].DENOMINATOR != 0) revert RouterAlreadyAddedPair(pair);
 
         IPair ipair = IPair(pair);
         uint256 DENOMINATOR = ipair.DENOMINATOR();
-        if (DENOMINATOR == 0) revert();
+        if (DENOMINATOR == 0) revert RouterInvalidPair(pair);
         IERC20 BASE = ipair.BASE();
         IERC20 QUOTE = ipair.QUOTE();
 
@@ -52,11 +58,12 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
         if (address(QUOTE) != address(0)) QUOTE.forceApprove(pair, type(uint256).max);
 
         allPairs[pair] = Pair({BASE: BASE, QUOTE: QUOTE, DENOMINATOR: DENOMINATOR});
+        emit PairAdded(pair, address(BASE), address(QUOTE));
     }
 
     function removePair(address pair) external onlyOwner {
         Pair memory pairInfo = allPairs[pair];
-        if (pairInfo.DENOMINATOR == 0) revert();
+        if (pairInfo.DENOMINATOR == 0) revert RouterInvalidPairAddress(pair);
 
         IPair ipair = IPair(pair);
         IERC20 BASE = ipair.BASE();
@@ -66,6 +73,7 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
         if (address(QUOTE) != address(0)) QUOTE.forceApprove(pair, 0);
 
         delete allPairs[pair];
+        emit PairRemoved(pair);
     }
 
     function sellLimitOrder(address pair, uint256 price, uint256 amount)

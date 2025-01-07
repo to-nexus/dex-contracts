@@ -18,6 +18,10 @@ contract Factory is ERC1967Proxy {
 contract FactoryImpl is UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
+    error FactoryInvalidBaseAddress(address);
+    error FactoryAlreadCreatedBaseAddress(address);
+    error FactoryDeployError();
+
     address public QUOTE;
     uint256 private QUOTE_DECIMALS;
 
@@ -60,10 +64,10 @@ contract FactoryImpl is UUPSUpgradeable, OwnableUpgradeable {
         uint256 quoteFeePermile,
         uint256 baseFeePermile
     ) external onlyOwner returns (address pair) {
-        if (base == address(0)) revert();
-        if (!_allBases.add(base)) revert();
+        if (base == address(0)) revert FactoryInvalidBaseAddress(base);
+        if (!_allBases.add(base)) revert FactoryAlreadCreatedBaseAddress(base);
         uint256 baseDecimals = IERC20Metadata(base).decimals();
-        if (baseDecimals == 0) revert();
+        if (baseDecimals == 0) revert FactoryInvalidBaseAddress(base);
 
         // denominator = 10^(Max (quote, base) decimals)
         uint256 denominator = 10 ** (QUOTE_DECIMALS > baseDecimals ? QUOTE_DECIMALS : baseDecimals);
@@ -81,7 +85,7 @@ contract FactoryImpl is UUPSUpgradeable, OwnableUpgradeable {
                 baseFeePermile
             )
         );
-        if (pair == address(0)) revert();
+        if (pair == address(0)) revert FactoryDeployPairError();
         _allPairs[base] = pair;
     }
 
