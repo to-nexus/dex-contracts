@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {Test, console} from "forge-std/Test.sol";
+import {Factory, FactoryImpl} from "../src/Factory.sol";
+import {IPair, Pair, PairImpl} from "../src/Pair.sol";
+import {Router, RouterImpl} from "../src/Router.sol";
 import {ERC20, IERC20} from "@openzeppelin-contracts-5.1.0/token/ERC20/ERC20.sol";
 import {Math} from "@openzeppelin-contracts-5.1.0/utils/math/Math.sol";
-import {Router, RouterImpl} from "../src/Router.sol";
-import {IPair, Pair, PairImpl} from "../src/Pair.sol";
+import {Test, console} from "forge-std/Test.sol";
 
 contract T20 is ERC20 {
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {
@@ -27,26 +28,18 @@ contract DEXTradeTest is Test {
 
         QUOTE = IERC20(address(new T20("QUOTE", "Q")));
         BASE = IERC20(address(new T20("BASE", "B")));
-        ROUTER = RouterImpl(payable(address(new Router(address(new RouterImpl())))));
 
-        PAIR = PairImpl(
-            address(
-                new Pair(
-                    address(new PairImpl()),
-                    OWNER,
-                    address(ROUTER),
-                    address(QUOTE),
-                    address(BASE),
-                    1e18,
-                    0.001e18,
-                    0.00001e18,
-                    0,
-                    0
-                )
-            )
-        );
-        ROUTER.addPair(PAIR);
+        address routerImpl = address(new RouterImpl());
+        address payable router = payable(address(new Router(routerImpl)));
+        ROUTER = RouterImpl(router);
 
+        address pairImpl = address(new PairImpl());
+        address factoryImpl = address(new FactoryImpl());
+        address factory = address(new Factory(factoryImpl, address(ROUTER), address(QUOTE), pairImpl));
+        FactoryImpl F = FactoryImpl(factory);
+
+        PAIR = PairImpl(F.createPair(address(BASE), 0.001e18, 0.00001e18, 0, 0));
+        ROUTER.addPair(address(PAIR));
         vm.label(address(ROUTER), "ROUTER");
         vm.label(address(PAIR), "PAIR");
         vm.label(address(QUOTE), "QUOTE");
@@ -951,7 +944,6 @@ contract DEXTradeTest is Test {
         for (uint256 i = 0; i < fuzz_limit_length; i++) {
             users[i] = address(uint160(i + 1));
         }
-
         (uint256 quoteTickSize, uint256 baseTickSize) = (PAIR.quoteTickSize(), PAIR.baseTickSize());
         uint256 denominator = 1e18;
         uint256 length = fuzz_limit_length / 2;

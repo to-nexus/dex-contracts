@@ -3,12 +3,13 @@ pragma solidity 0.8.28;
 
 import {ERC1967Proxy} from "@openzeppelin-contracts-5.1.0/proxy/ERC1967/ERC1967Proxy.sol";
 import {UUPSUpgradeable} from "@openzeppelin-contracts-5.1.0/proxy/utils/UUPSUpgradeable.sol";
-import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.1.0/access/OwnableUpgradeable.sol";
-import {ReentrancyGuardUpgradeable} from
-    "@openzeppelin-contracts-upgradeable-5.1.0/utils/ReentrancyGuardUpgradeable.sol";
 import {IERC20} from "@openzeppelin-contracts-5.1.0/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin-contracts-5.1.0/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin-contracts-5.1.0/utils/math/Math.sol";
+import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.1.0/access/OwnableUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from
+    "@openzeppelin-contracts-upgradeable-5.1.0/utils/ReentrancyGuardUpgradeable.sol";
+
 import {IPair} from "./Pair.sol";
 
 contract Router is ERC1967Proxy {
@@ -38,18 +39,33 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
         __ReentrancyGuard_init();
     }
 
-    function addPair(IPair pair) external onlyOwner {
-        if (allPairs[address(pair)].DENOMINATOR != 0) revert();
-        uint256 DENOMINATOR = pair.DENOMINATOR();
+    function addPair(address pair) external onlyOwner {
+        if (allPairs[pair].DENOMINATOR != 0) revert();
+
+        IPair ipair = IPair(pair);
+        uint256 DENOMINATOR = ipair.DENOMINATOR();
         if (DENOMINATOR == 0) revert();
+        IERC20 BASE = ipair.BASE();
+        IERC20 QUOTE = ipair.QUOTE();
 
-        IERC20 BASE = pair.BASE();
-        IERC20 QUOTE = pair.QUOTE();
+        if (address(BASE) != address(0)) BASE.forceApprove(pair, type(uint256).max);
+        if (address(QUOTE) != address(0)) QUOTE.forceApprove(pair, type(uint256).max);
 
-        if (address(BASE) != address(0)) BASE.forceApprove(address(pair), type(uint256).max);
-        if (address(QUOTE) != address(0)) QUOTE.forceApprove(address(pair), type(uint256).max);
+        allPairs[pair] = Pair({BASE: BASE, QUOTE: QUOTE, DENOMINATOR: DENOMINATOR});
+    }
 
-        allPairs[address(pair)] = Pair({BASE: BASE, QUOTE: QUOTE, DENOMINATOR: DENOMINATOR});
+    function removePair(address pair) external onlyOwner {
+        Pair memory pairInfo = allPairs[pair];
+        if (pairInfo.DENOMINATOR == 0) revert();
+
+        IPair ipair = IPair(pair);
+        IERC20 BASE = ipair.BASE();
+        IERC20 QUOTE = ipair.QUOTE();
+
+        if (address(BASE) != address(0)) BASE.forceApprove(pair, 0);
+        if (address(QUOTE) != address(0)) QUOTE.forceApprove(pair, 0);
+
+        delete allPairs[pair];
     }
 
     function sellLimitOrder(address pair, uint256 price, uint256 amount)

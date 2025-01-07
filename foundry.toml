@@ -8,3 +8,8 @@ libs = ["lib", "dependencies"]
 "@openzeppelin-contracts-upgradeable" = "5.1.0"
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+
+[fmt]
+single_line_statement_blocks = "single"
+multiline_func_header = "attributes_first"
+sort_imports = true

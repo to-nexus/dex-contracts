@@ -76,18 +76,14 @@ library DoubleLinkedList {
             if (_head != 0) _list.nodes[_head].prev = _data;
             newNode = Node({prev: 0, next: _head});
         } else {
-            if (!(_linked(prevNode) || _prev == _list.head)) {
-                revert DoubleLinkedListInvalidPrevNode();
-            }
+            if (!(_linked(prevNode) || _prev == _list.head)) revert DoubleLinkedListInvalidPrevNode();
             uint256 prevNext = prevNode.next;
             newNode = Node({prev: _prev, next: prevNext});
             if (prevNext != 0) _list.nodes[prevNext].prev = _data;
             prevNode.next = _data;
         }
 
-        if (newNode.next == 0) {
-            _list.tail = _data;
-        }
+        if (newNode.next == 0) _list.tail = _data;
 
         _list.nodes[_data] = newNode;
         ++_list.length;
@@ -109,12 +105,8 @@ library DoubleLinkedList {
         prevNode.next = node.next;
         nextNode.prev = node.prev;
 
-        if (_list.head == _data) {
-            _list.head = node.next;
-        }
-        if (_list.tail == _data) {
-            _list.tail = node.prev;
-        }
+        if (_list.head == _data) _list.head = node.next;
+        if (_list.tail == _data) _list.tail = node.prev;
 
         delete _list.nodes[_data];
         --_list.length;

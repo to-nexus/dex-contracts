@@ -42,9 +42,7 @@ library DESCList {
         if (_data == 0) revert DESCListZeroData();
 
         DoubleLinkedList.U256 storage list = _list._inner;
-        if (list.contains(_data)) {
-            return false;
-        }
+        if (list.contains(_data)) return false;
 
         if (_data > list.head) {
             return list.insert(_data, 0);
@@ -54,16 +52,12 @@ library DESCList {
             uint256 current = list.contains(_search) ? _search : list.head;
             if (current > _data) {
                 while (current != 0) {
-                    if (_data > current) {
-                        return list.insert(_data, list.nodes[current].prev);
-                    }
+                    if (_data > current) return list.insert(_data, list.nodes[current].prev);
                     current = list.nodes[current].next;
                 }
             } else {
                 while (current != 0) {
-                    if (_data < current) {
-                        return list.insert(_data, current);
-                    }
+                    if (_data < current) return list.insert(_data, current);
                     current = list.nodes[current].prev;
                 }
             }

@@ -46,9 +46,7 @@ library ASCList {
         if (_data == 0) revert ASCListZeroData();
 
         DoubleLinkedList.U256 storage list = _list._inner;
-        if (list.contains(_data)) {
-            return false;
-        }
+        if (list.contains(_data)) return false;
 
         if (_data < list.head || list.empty()) {
             return list.insert(_data, 0);
@@ -58,16 +56,12 @@ library ASCList {
             uint256 current = list.contains(_search) ? _search : list.head;
             if (current < _data) {
                 while (current != 0) {
-                    if (_data < current) {
-                        return list.insert(_data, list.nodes[current].prev);
-                    }
+                    if (_data < current) return list.insert(_data, list.nodes[current].prev);
                     current = list.nodes[current].next;
                 }
             } else {
                 while (current != 0) {
-                    if (_data > current) {
-                        return list.insert(_data, current);
-                    }
+                    if (_data > current) return list.insert(_data, current);
                     current = list.nodes[current].prev;
                 }
             }

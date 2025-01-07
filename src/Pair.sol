@@ -3,13 +3,15 @@ pragma solidity 0.8.28;
 
 import {ERC1967Proxy} from "@openzeppelin-contracts-5.1.0/proxy/ERC1967/ERC1967Proxy.sol";
 import {UUPSUpgradeable} from "@openzeppelin-contracts-5.1.0/proxy/utils/UUPSUpgradeable.sol";
-import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.1.0/access/OwnableUpgradeable.sol";
 import {IERC20} from "@openzeppelin-contracts-5.1.0/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin-contracts-5.1.0/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin-contracts-5.1.0/utils/math/Math.sol";
-import {DoubleLinkedList} from "./lib/DoubleLinkedList.sol";
-import {DESCList} from "./lib/DESCList.sol";
+import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.1.0/access/OwnableUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.1.0/utils/PausableUpgradeable.sol";
+
 import {ASCList} from "./lib/ASCList.sol";
+import {DESCList} from "./lib/DESCList.sol";
+import {DoubleLinkedList} from "./lib/DoubleLinkedList.sol";
 
 import {Test, console} from "forge-std/Test.sol";
 
@@ -72,7 +74,7 @@ interface IPair {
     function market(Order memory order, uint256 spendAmount) external;
 }
 
-contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, Test {
+contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable, Test {
     using SafeERC20 for IERC20;
     using Math for uint256;
     using DoubleLinkedList for DoubleLinkedList.U256;
@@ -141,6 +143,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, Test {
         baseFeePermile = _baseFeePermile;
 
         __Ownable_init(owner);
+        __Pausable_init();
     }
 
     function orderById(uint256 id) external view returns (Order memory) {
@@ -152,7 +155,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, Test {
         buyPrices = _buyPrices.values();
     }
 
-    function limit(Order memory order) external override onlyRouter returns (uint256 orderId) {
+    function limit(Order memory order) external override whenNotPaused onlyRouter returns (uint256 orderId) {
         if (order._type == OrderType.NONE) revert();
 
         // 입력된 수량의 조건을 확인한다.
@@ -180,9 +183,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, Test {
             if (matchedBaseAmount != 0) {
                 uint256 measuredQuoteAmount = Math.mulDiv(order.price, matchedBaseAmount, DENOMINATOR);
                 uint256 diffQuoteAmount = measuredQuoteAmount - useQuoteAmount;
-                if (diffQuoteAmount != 0) {
-                    QUOTE.safeTransfer(order.owner, diffQuoteAmount);
-                }
+                if (diffQuoteAmount != 0) QUOTE.safeTransfer(order.owner, diffQuoteAmount);
             }
 
             if (order.amount == 0) {
@@ -195,7 +196,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, Test {
         }
     }
 
-    function market(Order memory order, uint256 spendAmount) external override onlyRouter {
+    function market(Order memory order, uint256 spendAmount) external override whenNotPaused onlyRouter {
         if (order._type == OrderType.NONE) revert();
 
         uint256 orderId = ++_orderIdCounter;
@@ -218,6 +219,9 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, Test {
         emit OrderClosed(orderId, CloseType.MARKET, block.timestamp);
     }
 
+    // todo
+    function close(uint256 orderId) external {}
+
     function _createSellOrder(uint256 orderId, Order memory order) private returns (Order memory) {
         if (order._type != OrderType.SELL) revert();
 
@@ -231,9 +235,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, Test {
         (order, earnQuoteAmount) = _tradeSellOrder(orderId, order);
 
         // 3. 즉시 거래된 수익은 판매자에게 전송한다. todo 수수료 처리
-        if (earnQuoteAmount != 0) {
-            QUOTE.safeTransfer(order.owner, earnQuoteAmount);
-        }
+        if (earnQuoteAmount != 0) QUOTE.safeTransfer(order.owner, earnQuoteAmount);
 
         return order;
     }
@@ -247,11 +249,8 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, Test {
 
         // 입력된 수량의 조건을 확인한다.
         uint256 quoteAmount;
-        if (spendQuoteAmount != 0) {
-            quoteAmount = spendQuoteAmount;
-        } else {
-            quoteAmount = Math.mulDiv(order.price, order.amount, DENOMINATOR);
-        }
+        if (spendQuoteAmount != 0) quoteAmount = spendQuoteAmount;
+        else quoteAmount = Math.mulDiv(order.price, order.amount, DENOMINATOR);
 
         // 1. 주문에 필요한 토큰을 가져온다.
         QUOTE.safeTransferFrom(_msgSender(), address(this), quoteAmount);
@@ -390,6 +389,11 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, Test {
 
     function _copyOrder(Order memory order) private pure returns (Order memory) {
         return Order({_type: order._type, owner: order.owner, price: order.price, amount: order.amount});
+    }
+
+    function setPause(bool pause) external onlyOwner {
+        if (pause) _pause();
+        else _unpause();
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
