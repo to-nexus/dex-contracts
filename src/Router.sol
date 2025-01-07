@@ -10,7 +10,7 @@ import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.1.0/acce
 import {ReentrancyGuardUpgradeable} from
     "@openzeppelin-contracts-upgradeable-5.1.0/utils/ReentrancyGuardUpgradeable.sol";
 
-import {IPair} from "./Pair.sol";
+import {IPair} from "./interfaces/IPair.sol";
 
 contract Router is ERC1967Proxy {
     constructor(address implementation)
@@ -50,7 +50,7 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
 
         IPair ipair = IPair(pair);
         uint256 DENOMINATOR = ipair.DENOMINATOR();
-        if (DENOMINATOR == 0) revert RouterInvalidPair(pair);
+        if (DENOMINATOR == 0) revert RouterInvalidPairAddress(pair);
         IERC20 BASE = ipair.BASE();
         IERC20 QUOTE = ipair.QUOTE();
 

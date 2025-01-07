@@ -9,11 +9,10 @@ import {Math} from "@openzeppelin-contracts-5.1.0/utils/math/Math.sol";
 import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.1.0/access/OwnableUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.1.0/utils/PausableUpgradeable.sol";
 
+import {IPair} from "./interfaces/IPair.sol";
 import {ASCList} from "./lib/ASCList.sol";
 import {DESCList} from "./lib/DESCList.sol";
 import {DoubleLinkedList} from "./lib/DoubleLinkedList.sol";
-
-import {Test, console} from "forge-std/Test.sol";
 
 contract Pair is ERC1967Proxy {
     constructor(
@@ -46,35 +45,7 @@ contract Pair is ERC1967Proxy {
     {}
 }
 
-interface IPair {
-    enum OrderType {
-        NONE,
-        SELL,
-        BUY
-    }
-
-    enum CloseType {
-        ALL_MATCH,
-        MARKET,
-        CANCEL
-    }
-
-    struct Order {
-        OrderType _type;
-        address owner;
-        uint256 price;
-        uint256 amount;
-    }
-
-    function QUOTE() external view returns (IERC20);
-    function BASE() external view returns (IERC20);
-    function DENOMINATOR() external view returns (uint256);
-
-    function limit(Order memory order) external returns (uint256 orderId);
-    function market(Order memory order, uint256 spendAmount) external;
-}
-
-contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable, Test {
+contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable {
     using SafeERC20 for IERC20;
     using Math for uint256;
     using DoubleLinkedList for DoubleLinkedList.U256;

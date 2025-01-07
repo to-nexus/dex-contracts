@@ -20,7 +20,7 @@ contract FactoryImpl is UUPSUpgradeable, OwnableUpgradeable {
 
     error FactoryInvalidBaseAddress(address);
     error FactoryAlreadCreatedBaseAddress(address);
-    error FactoryDeployError();
+    error FactoryDeployPair();
 
     address public QUOTE;
     uint256 private QUOTE_DECIMALS;
@@ -85,7 +85,7 @@ contract FactoryImpl is UUPSUpgradeable, OwnableUpgradeable {
                 baseFeePermile
             )
         );
-        if (pair == address(0)) revert FactoryDeployPairError();
+        if (pair == address(0)) revert FactoryDeployPair();
         _allPairs[base] = pair;
     }
 

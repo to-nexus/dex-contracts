@@ -2,8 +2,9 @@
 pragma solidity ^0.8.13;
 
 import {Factory, FactoryImpl} from "../src/Factory.sol";
-import {IPair, Pair, PairImpl} from "../src/Pair.sol";
+import {Pair, PairImpl} from "../src/Pair.sol";
 import {Router, RouterImpl} from "../src/Router.sol";
+import {IPair} from "../src/interfaces/IPair.sol";
 import {ERC20, IERC20} from "@openzeppelin-contracts-5.1.0/token/ERC20/ERC20.sol";
 import {Math} from "@openzeppelin-contracts-5.1.0/utils/math/Math.sol";
 import {Test, console} from "forge-std/Test.sol";
