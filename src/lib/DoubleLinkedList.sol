@@ -31,7 +31,7 @@ library DoubleLinkedList {
     }
 
     function contains(U256 storage _list, uint256 _data) internal view returns (bool) {
-        if (_data == 0) revert DoubleLinkedListZeroData(); // todo
+        if (_data == 0) return false;
         return _data == _list.head || _linked(_list.nodes[_data]);
     }
 

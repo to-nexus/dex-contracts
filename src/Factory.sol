@@ -10,34 +10,45 @@ import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.1.0/acce
 import {Pair, PairImpl} from "./Pair.sol";
 
 contract Factory is ERC1967Proxy {
-    constructor(address implementation, address _router, address quote, address _pairImpl)
-        ERC1967Proxy(implementation, abi.encodeWithSelector(FactoryImpl.initialize.selector, _router, quote, _pairImpl))
+    constructor(address implementation, address router, address feeCollector, address quote, address pairImpl)
+        ERC1967Proxy(
+            implementation,
+            abi.encodeWithSelector(FactoryImpl.initialize.selector, router, feeCollector, quote, pairImpl)
+        )
     {}
 }
 
 contract FactoryImpl is UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
+    error FactoryInvalidInitializeData(bytes32);
     error FactoryInvalidBaseAddress(address);
     error FactoryAlreadCreatedBaseAddress(address);
     error FactoryDeployPair();
 
     address public QUOTE;
-    uint256 private QUOTE_DECIMALS;
 
     address public router;
+    address public feeCollector;
     address public pairImpl;
 
     EnumerableSet.AddressSet private _allBases;
     mapping(address erc20 => address) private _allPairs;
 
-    function initialize(address _router, address _quote, address _pairImpl) external initializer {
-        if (_router == address(0) || _quote == address(0) || _pairImpl == address(0)) revert();
+    function initialize(address _router, address _feeCollector, address _quote, address _pairImpl)
+        external
+        initializer
+    {
+        if (_router == address(0)) revert FactoryInvalidInitializeData("router");
+        if (_feeCollector == address(0)) revert FactoryInvalidInitializeData("feeCollector");
+        if (_quote == address(0)) revert FactoryInvalidInitializeData("quote");
+        if (_pairImpl == address(0)) revert FactoryInvalidInitializeData("pairImpl");
 
         pairImpl = _pairImpl;
         router = _router;
+        feeCollector = _feeCollector;
         QUOTE = _quote;
-        QUOTE_DECIMALS = IERC20Metadata(_quote).decimals();
+
         __Ownable_init(_msgSender());
     }
 
@@ -71,7 +82,16 @@ contract FactoryImpl is UUPSUpgradeable, OwnableUpgradeable {
 
         pair = address(
             new Pair(
-                pairImpl, owner(), router, QUOTE, base, quoteTickSize, baseTickSize, quoteFeePermile, baseFeePermile
+                pairImpl,
+                owner(),
+                router,
+                QUOTE,
+                base,
+                quoteTickSize,
+                baseTickSize,
+                feeCollector,
+                quoteFeePermile,
+                baseFeePermile
             )
         );
         if (pair == address(0)) revert FactoryDeployPair();

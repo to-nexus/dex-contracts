@@ -19,6 +19,7 @@ interface IPair {
     struct Order {
         OrderType _type;
         address owner;
+        uint32 feePermile;
         uint256 price;
         uint256 amount;
     }
@@ -28,6 +29,7 @@ interface IPair {
     function QUOTE_DENOMINATOR() external view returns (uint256);
     function BASE_DENOMINATOR() external view returns (uint256);
 
-    function limit(Order memory order) external returns (uint256 orderId);
-    function market(Order memory order, uint256 spendAmount) external;
+    function limit(Order memory order, uint256 searchPrice, uint256 maxMatchCount) external returns (uint256 orderId);
+    function market(Order memory order, uint256 spendAmount, uint256 maxMatchCount) external;
+    function cancel(address caller, uint256[] memory orderIds) external;
 }
