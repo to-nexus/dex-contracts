@@ -23,7 +23,7 @@ contract FactoryImpl is UUPSUpgradeable, OwnableUpgradeable {
 
     error FactoryInvalidInitializeData(bytes32);
     error FactoryInvalidBaseAddress(address);
-    error FactoryAlreadCreatedBaseAddress(address);
+    error FactoryAlreadyCreatedBaseAddress(address);
     error FactoryDeployPair();
 
     event PairCreated(address indexed pair, address indexed base, uint256 timestamp);
@@ -74,11 +74,11 @@ contract FactoryImpl is UUPSUpgradeable, OwnableUpgradeable {
         address base,
         uint256 quoteTickSize,
         uint256 baseTickSize,
-        uint256 makerFeePermile,
-        uint256 takerFeePermile
+        uint256 makerFeePermil,
+        uint256 takerFeePermil
     ) external onlyOwner returns (address pair) {
         if (base == address(0)) revert FactoryInvalidBaseAddress(base);
-        if (!_allBases.add(base)) revert FactoryAlreadCreatedBaseAddress(base);
+        if (!_allBases.add(base)) revert FactoryAlreadyCreatedBaseAddress(base);
         uint256 baseDecimals = IERC20Metadata(base).decimals();
         if (baseDecimals == 0) revert FactoryInvalidBaseAddress(base);
 
@@ -92,8 +92,8 @@ contract FactoryImpl is UUPSUpgradeable, OwnableUpgradeable {
                 quoteTickSize,
                 baseTickSize,
                 feeCollector,
-                makerFeePermile,
-                takerFeePermile
+                makerFeePermil,
+                takerFeePermil
             )
         );
         if (pair == address(0)) revert FactoryDeployPair();
@@ -104,5 +104,5 @@ contract FactoryImpl is UUPSUpgradeable, OwnableUpgradeable {
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
 
-    uint256[44] __gap;
+    uint256[44] private __gap;
 }

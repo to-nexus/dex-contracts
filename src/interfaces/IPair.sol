@@ -19,7 +19,7 @@ interface IPair {
     struct Order {
         OrderType _type;
         address owner;
-        uint32 feePermile;
+        uint32 feePermil;
         uint256 price;
         uint256 amount;
     }

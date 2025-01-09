@@ -72,7 +72,7 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
         _pairInfo(pair).BASE.safeTransferFrom(owner, address(this), amount);
 
         IPair.Order memory order =
-            IPair.Order({_type: IPair.OrderType.SELL, owner: owner, feePermile: 0, price: price, amount: amount});
+            IPair.Order({_type: IPair.OrderType.SELL, owner: owner, feePermil: 0, price: price, amount: amount});
         return IPair(pair).limit(order, searchPrice, _toMaxMatchCount(_maxMatchCount));
     }
 
@@ -86,11 +86,11 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
         address owner = _msgSender();
 
         PairInfo memory info = _pairInfo(pair);
-        uint256 volumn = Math.mulDiv(price, amount, info.DENOMINATOR);
-        info.QUOTE.safeTransferFrom(owner, address(this), volumn);
+        uint256 volume = Math.mulDiv(price, amount, info.DENOMINATOR);
+        info.QUOTE.safeTransferFrom(owner, address(this), volume);
 
         IPair.Order memory order =
-            IPair.Order({_type: IPair.OrderType.BUY, owner: owner, feePermile: 0, price: price, amount: amount});
+            IPair.Order({_type: IPair.OrderType.BUY, owner: owner, feePermil: 0, price: price, amount: amount});
         return IPair(pair).limit(order, searchPrice, _toMaxMatchCount(_maxMatchCount));
     }
 
@@ -105,7 +105,7 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
         _pairInfo(pair).BASE.safeTransferFrom(owner, address(this), amount);
 
         IPair.Order memory order =
-            IPair.Order({_type: IPair.OrderType.SELL, owner: owner, feePermile: 0, price: 0, amount: 0});
+            IPair.Order({_type: IPair.OrderType.SELL, owner: owner, feePermil: 0, price: 0, amount: 0});
         IPair(pair).market(order, amount, _toMaxMatchCount(_maxMatchCount));
     }
 
@@ -120,7 +120,7 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
         _pairInfo(pair).QUOTE.safeTransferFrom(owner, address(this), amount);
 
         IPair.Order memory order =
-            IPair.Order({_type: IPair.OrderType.BUY, owner: owner, feePermile: 0, price: 0, amount: 0});
+            IPair.Order({_type: IPair.OrderType.BUY, owner: owner, feePermil: 0, price: 0, amount: 0});
         IPair(pair).market(order, amount, _toMaxMatchCount(_maxMatchCount));
     }
 
@@ -139,10 +139,10 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
     function addPair(address pair) external onlyOwner {
         if (!_allPairs.add(pair)) revert RouterAlreadyAddedPair(pair);
 
-        IPair ipair = IPair(pair);
-        uint256 DENOMINATOR = ipair.DENOMINATOR();
-        IERC20 BASE = ipair.BASE();
-        IERC20 QUOTE = ipair.QUOTE();
+        IPair iPair = IPair(pair);
+        uint256 DENOMINATOR = iPair.DENOMINATOR();
+        IERC20 BASE = iPair.BASE();
+        IERC20 QUOTE = iPair.QUOTE();
         if (DENOMINATOR == 0 || address(QUOTE) == address(0) || address(BASE) == address(0)) {
             revert RouterInvalidPairAddress(pair);
         }

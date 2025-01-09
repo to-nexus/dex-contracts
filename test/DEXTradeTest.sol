@@ -1039,7 +1039,7 @@ contract DEXTradeTest is Test {
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(2);
         assertEq(0, uint8(order1._type), "order1, not deleted");
-        assertEq(0, uint8(order2._type), "market data is must not inited");
+        assertEq(0, uint8(order2._type), "market data is must not init");
         // PAIR 에는 잔액이 없는지 확인
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
@@ -1082,7 +1082,7 @@ contract DEXTradeTest is Test {
         IPair.Order memory order3 = PAIR.orderById(3);
         assertEq(0, uint8(order1._type), "order1, not deleted");
         assertEq(0, uint8(order2._type), "order2, not deleted");
-        assertEq(0, uint8(order3._type), "market data is must not inited");
+        assertEq(0, uint8(order3._type), "market data is must not init");
         // PAIR 에는 잔액이 없는지 확인
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
@@ -1122,7 +1122,7 @@ contract DEXTradeTest is Test {
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(2);
         assertNotEq(0, uint8(order1._type), "order1, deleted");
-        assertEq(0, uint8(order2._type), "market data is must not inited");
+        assertEq(0, uint8(order2._type), "market data is must not init");
         // PAIR 에는 잔액이 없는지 확인
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), _toBase(50), "BASE PAIR");
@@ -1166,7 +1166,7 @@ contract DEXTradeTest is Test {
         IPair.Order memory order3 = PAIR.orderById(3);
         assertEq(0, uint8(order1._type), "order1, not deleted");
         assertNotEq(0, uint8(order2._type), "order2, deleted");
-        assertEq(0, uint8(order3._type), "market data is must not inited");
+        assertEq(0, uint8(order3._type), "market data is must not init");
         // PAIR 에는 잔액이 없는지 확인
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), _toBase(50), "BASE PAIR");
@@ -1206,7 +1206,7 @@ contract DEXTradeTest is Test {
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(2);
         assertEq(0, uint8(order1._type), "order1, deleted");
-        assertEq(0, uint8(order2._type), "market data is must not inited");
+        assertEq(0, uint8(order2._type), "market data is must not init");
         // PAIR 에는 잔액이 없는지 확인
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
@@ -1249,7 +1249,7 @@ contract DEXTradeTest is Test {
         IPair.Order memory order3 = PAIR.orderById(3);
         assertEq(0, uint8(order1._type), "order1, not deleted");
         assertEq(0, uint8(order2._type), "order2, not deleted");
-        assertEq(0, uint8(order3._type), "market data is must not inited");
+        assertEq(0, uint8(order3._type), "market data is must not init");
         // PAIR 에는 잔액이 없는지 확인
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");

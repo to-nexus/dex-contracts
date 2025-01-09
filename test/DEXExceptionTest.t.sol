@@ -17,8 +17,8 @@ contract DEXExceptionTest is Test {
     address public constant FEE_COLLECTOR = address(bytes20("FEE_COLLECTOR"));
 
     uint256 public constant MAX_MATCH_COUNT = 5;
-    uint256 public constant MAKER_FEE_PERMILE = 50; // 5%
-    uint256 public constant TAKER_FEE_PERMILE = 20; // 2%
+    uint256 public constant MAKER_FEE_PERMIL = 50; // 5%
+    uint256 public constant TAKER_FEE_PERMIL = 20; // 2%
 
     IERC20 public BASE;
     IERC20 public QUOTE;
@@ -47,7 +47,7 @@ contract DEXExceptionTest is Test {
         FACTORY = FactoryImpl(factory);
 
         address pair = FACTORY.createPair(
-            address(BASE), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e4, MAKER_FEE_PERMILE, TAKER_FEE_PERMILE
+            address(BASE), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e4, MAKER_FEE_PERMIL, TAKER_FEE_PERMIL
         );
         ROUTER.addPair(pair);
         PAIR = PairImpl(pair);
@@ -79,14 +79,14 @@ contract DEXExceptionTest is Test {
         ROUTER.addPair(pair);
     }
 
-    // [ROUTER] 등록되지 않은 Pair는 거래 할 수 없다.
+    // [ROUTER] 등록되지 않은 Pair 는 거래 할 수 없다.
     function test_exception_router_case2() external {
         vm.startPrank(OWNER);
 
         IERC20 BASE2 = IERC20(address(new T20("BASE2", "B2", 18)));
 
         address pair =
-            FACTORY.createPair(address(BASE2), QUOTE_DECIMALS / 1e2, 1e18 / 1e4, MAKER_FEE_PERMILE, TAKER_FEE_PERMILE);
+            FACTORY.createPair(address(BASE2), QUOTE_DECIMALS / 1e2, 1e18 / 1e4, MAKER_FEE_PERMIL, TAKER_FEE_PERMIL);
 
         BASE2.approve(address(ROUTER), type(uint256).max);
         QUOTE.approve(address(ROUTER), type(uint256).max);
@@ -107,7 +107,7 @@ contract DEXExceptionTest is Test {
         vm.stopPrank();
     }
 
-    // [ROUTER] 제거된 Pair는 거래 할 수 없다.
+    // [ROUTER] 제거된 Pair 는 거래 할 수 없다.
     function test_exception_router_case3() external {
         vm.startPrank(OWNER);
         address pair = address(PAIR);
@@ -136,10 +136,8 @@ contract DEXExceptionTest is Test {
     function test_exception_factory_case1() external {
         vm.prank(OWNER);
 
-        vm.expectRevert(abi.encodeWithSignature("FactoryAlreadCreatedBaseAddress(address)", address(BASE)));
-        FACTORY.createPair(
-            address(BASE), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e4, MAKER_FEE_PERMILE, TAKER_FEE_PERMILE
-        );
+        vm.expectRevert(abi.encodeWithSignature("FactoryAlreadyCreatedBaseAddress(address)", address(BASE)));
+        FACTORY.createPair(address(BASE), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e4, MAKER_FEE_PERMIL, TAKER_FEE_PERMIL);
     }
 
     // [Pair] Tick Size 보다 낮은 단위로 거래할 수 없다.
@@ -167,17 +165,17 @@ contract DEXExceptionTest is Test {
 
         // [market] 성공 확인
         uint256 denominator = PAIR.DENOMINATOR();
-        uint256 volumn = Math.mulDiv(quoteTickSize, baseTickSize, denominator);
+        uint256 volume = Math.mulDiv(quoteTickSize, baseTickSize, denominator);
         ROUTER.sellMarketOrder(pair, baseTickSize, 0);
-        ROUTER.buyMarketOrder(pair, volumn, 0);
+        ROUTER.buyMarketOrder(pair, volume, 0);
 
         // [market] 실패 확인
         vm.expectRevert(abi.encodeWithSignature("PairInvalidAmount(uint256)", invalidAmount));
         ROUTER.sellMarketOrder(pair, invalidAmount, 0);
 
         // [market] 실패 확인
-        vm.expectRevert(abi.encodeWithSignature("PairInsufficientTradeVolumn(uint256,uint256)", volumn - 1, volumn));
-        ROUTER.buyMarketOrder(pair, volumn - 1, 0);
+        vm.expectRevert(abi.encodeWithSignature("PairInsufficientTradeVolume(uint256,uint256)", volume - 1, volume));
+        ROUTER.buyMarketOrder(pair, volume - 1, 0);
     }
 
     // [Pair] 사용자는 직접 Pair 으로 거래를 요청할 수 없다.
@@ -192,7 +190,7 @@ contract DEXExceptionTest is Test {
             IPair.Order({
                 _type: IPair.OrderType.SELL,
                 owner: address(OWNER),
-                feePermile: 0,
+                feePermil: 0,
                 price: _toQuote(1),
                 amount: _toBase(1)
             }),
@@ -206,7 +204,7 @@ contract DEXExceptionTest is Test {
             IPair.Order({
                 _type: IPair.OrderType.BUY,
                 owner: address(OWNER),
-                feePermile: 0,
+                feePermil: 0,
                 price: _toQuote(1),
                 amount: _toBase(1)
             }),
@@ -217,7 +215,7 @@ contract DEXExceptionTest is Test {
         // sell market
         vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", address(OWNER)));
         PAIR.market(
-            IPair.Order({_type: IPair.OrderType.SELL, owner: address(OWNER), feePermile: 0, price: 0, amount: 0}),
+            IPair.Order({_type: IPair.OrderType.SELL, owner: address(OWNER), feePermil: 0, price: 0, amount: 0}),
             _toBase(1),
             0
         );
@@ -225,7 +223,7 @@ contract DEXExceptionTest is Test {
         // buy market
         vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", address(OWNER)));
         PAIR.market(
-            IPair.Order({_type: IPair.OrderType.BUY, owner: address(OWNER), feePermile: 0, price: 0, amount: 0}),
+            IPair.Order({_type: IPair.OrderType.BUY, owner: address(OWNER), feePermil: 0, price: 0, amount: 0}),
             _toQuote(1),
             0
         );

@@ -25,8 +25,8 @@ contract DEXCheckTest is Test {
     RouterImpl public ROUTER;
     PairImpl public PAIR;
 
-    uint256 public MAKER_FEE_PERMILE = 50; // 5%
-    uint256 public TAKER_FEE_PERMILE = 10; // 1%
+    uint256 public MAKER_FEE_PERMIL = 50; // 5%
+    uint256 public TAKER_FEE_PERMIL = 10; // 1%
 
     function setUp() external {
         vm.label(OWNER, "owner");
@@ -49,7 +49,7 @@ contract DEXCheckTest is Test {
         FactoryImpl F = FactoryImpl(factory);
 
         PAIR = PairImpl(
-            F.createPair(address(BASE), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e4, MAKER_FEE_PERMILE, TAKER_FEE_PERMILE)
+            F.createPair(address(BASE), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e4, MAKER_FEE_PERMIL, TAKER_FEE_PERMIL)
         );
 
         ROUTER.addPair(address(PAIR));
@@ -77,12 +77,12 @@ contract DEXCheckTest is Test {
 
         uint256 price = _toQuote(3);
         uint256 amount = _toBase(700);
-        uint256 volumn = Math.mulDiv(price, amount, BASE_DECIMALS);
+        uint256 volume = Math.mulDiv(price, amount, BASE_DECIMALS);
 
         vm.prank(OWNER);
         BASE.transfer(seller, amount);
         vm.prank(OWNER);
-        QUOTE.transfer(buyer, volumn);
+        QUOTE.transfer(buyer, volume);
 
         assertEq(0, QUOTE.balanceOf(FEE_COLLECTOR));
         assertEq(0, BASE.balanceOf(FEE_COLLECTOR));
@@ -97,15 +97,15 @@ contract DEXCheckTest is Test {
         ROUTER.buyLimitOrder(address(PAIR), price, amount, 0, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
-        uint256 makerFee = Math.mulDiv(volumn, MAKER_FEE_PERMILE, 1000);
-        uint256 takerFee = Math.mulDiv(amount, TAKER_FEE_PERMILE, 1000);
+        uint256 makerFee = Math.mulDiv(volume, MAKER_FEE_PERMIL, 1000);
+        uint256 takerFee = Math.mulDiv(amount, TAKER_FEE_PERMIL, 1000);
 
         // 수수료 확인
         assertEq(makerFee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid maker fee");
         assertEq(takerFee, BASE.balanceOf(FEE_COLLECTOR), "invalid taker fee");
 
         // 잔액 확인
-        assertEq(volumn - makerFee, QUOTE.balanceOf(seller));
+        assertEq(volume - makerFee, QUOTE.balanceOf(seller));
         assertEq(amount - takerFee, BASE.balanceOf(buyer));
     }
 
@@ -117,15 +117,15 @@ contract DEXCheckTest is Test {
         uint256 price = _toQuote(3);
         uint256 sellAmount = _toBase(700);
         uint256 buyAmount = _toBase(900);
-        uint256 buyerVolumn = Math.mulDiv(price, buyAmount, BASE_DECIMALS);
+        uint256 buyerVolume = Math.mulDiv(price, buyAmount, BASE_DECIMALS);
 
         uint256 matchAmount = Math.min(sellAmount, buyAmount);
-        uint256 matchVolumn = Math.mulDiv(price, matchAmount, BASE_DECIMALS);
+        uint256 matchVolume = Math.mulDiv(price, matchAmount, BASE_DECIMALS);
 
         vm.prank(OWNER);
         BASE.transfer(seller, sellAmount);
         vm.prank(OWNER);
-        QUOTE.transfer(buyer, buyerVolumn);
+        QUOTE.transfer(buyer, buyerVolume);
 
         assertEq(0, QUOTE.balanceOf(FEE_COLLECTOR));
         assertEq(0, BASE.balanceOf(FEE_COLLECTOR));
@@ -140,15 +140,15 @@ contract DEXCheckTest is Test {
         ROUTER.buyLimitOrder(address(PAIR), price, buyAmount, 0, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
-        uint256 makerFee = Math.mulDiv(matchVolumn, MAKER_FEE_PERMILE, 1000);
-        uint256 takerFee = Math.mulDiv(matchAmount, TAKER_FEE_PERMILE, 1000);
+        uint256 makerFee = Math.mulDiv(matchVolume, MAKER_FEE_PERMIL, 1000);
+        uint256 takerFee = Math.mulDiv(matchAmount, TAKER_FEE_PERMIL, 1000);
 
         // 수수료 확인
         assertEq(makerFee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid maker fee");
         assertEq(takerFee, BASE.balanceOf(FEE_COLLECTOR), "invalid taker fee");
 
         // 잔액 확인
-        assertEq(matchVolumn - makerFee, QUOTE.balanceOf(seller));
+        assertEq(matchVolume - makerFee, QUOTE.balanceOf(seller));
         assertEq(matchAmount - takerFee, BASE.balanceOf(buyer));
     }
 
@@ -160,15 +160,15 @@ contract DEXCheckTest is Test {
         uint256 price = _toQuote(3);
         uint256 sellAmount = _toBase(700);
         uint256 buyAmount = _toBase(300);
-        uint256 buyerVolumn = Math.mulDiv(price, buyAmount, BASE_DECIMALS);
+        uint256 buyerVolume = Math.mulDiv(price, buyAmount, BASE_DECIMALS);
 
         uint256 matchAmount = Math.min(sellAmount, buyAmount);
-        uint256 matchVolumn = Math.mulDiv(price, matchAmount, BASE_DECIMALS);
+        uint256 matchVolume = Math.mulDiv(price, matchAmount, BASE_DECIMALS);
 
         vm.prank(OWNER);
         BASE.transfer(seller, sellAmount);
         vm.prank(OWNER);
-        QUOTE.transfer(buyer, buyerVolumn);
+        QUOTE.transfer(buyer, buyerVolume);
 
         assertEq(0, QUOTE.balanceOf(FEE_COLLECTOR));
         assertEq(0, BASE.balanceOf(FEE_COLLECTOR));
@@ -183,15 +183,15 @@ contract DEXCheckTest is Test {
         ROUTER.buyLimitOrder(address(PAIR), price, buyAmount, 0, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
-        uint256 makerFee = Math.mulDiv(matchVolumn, MAKER_FEE_PERMILE, 1000);
-        uint256 takerFee = Math.mulDiv(matchAmount, TAKER_FEE_PERMILE, 1000);
+        uint256 makerFee = Math.mulDiv(matchVolume, MAKER_FEE_PERMIL, 1000);
+        uint256 takerFee = Math.mulDiv(matchAmount, TAKER_FEE_PERMIL, 1000);
 
         // 수수료 확인
         assertEq(makerFee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid maker fee");
         assertEq(takerFee, BASE.balanceOf(FEE_COLLECTOR), "invalid taker fee");
 
         // 잔액 확인
-        assertEq(matchVolumn - makerFee, QUOTE.balanceOf(seller));
+        assertEq(matchVolume - makerFee, QUOTE.balanceOf(seller));
         assertEq(matchAmount - takerFee, BASE.balanceOf(buyer));
     }
 
@@ -202,12 +202,12 @@ contract DEXCheckTest is Test {
 
         uint256 price = _toQuote(7);
         uint256 amount = _toBase(300);
-        uint256 volumn = Math.mulDiv(price, amount, BASE_DECIMALS);
+        uint256 volume = Math.mulDiv(price, amount, BASE_DECIMALS);
 
         vm.prank(OWNER);
         BASE.transfer(seller, amount);
         vm.prank(OWNER);
-        QUOTE.transfer(buyer, volumn);
+        QUOTE.transfer(buyer, volume);
 
         assertEq(0, QUOTE.balanceOf(FEE_COLLECTOR));
         assertEq(0, BASE.balanceOf(FEE_COLLECTOR));
@@ -222,15 +222,15 @@ contract DEXCheckTest is Test {
         ROUTER.sellLimitOrder(address(PAIR), price, amount, 0, 0);
         assertEq(0, BASE.balanceOf(seller));
 
-        uint256 makerFee = Math.mulDiv(amount, MAKER_FEE_PERMILE, 1000);
-        uint256 takerFee = Math.mulDiv(volumn, TAKER_FEE_PERMILE, 1000);
+        uint256 makerFee = Math.mulDiv(amount, MAKER_FEE_PERMIL, 1000);
+        uint256 takerFee = Math.mulDiv(volume, TAKER_FEE_PERMIL, 1000);
 
         // 수수료 확인
         assertEq(makerFee, BASE.balanceOf(FEE_COLLECTOR), "invalid taker fee");
         assertEq(takerFee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid maker fee");
 
         // 잔액 확인
-        assertEq(volumn - takerFee, QUOTE.balanceOf(seller));
+        assertEq(volume - takerFee, QUOTE.balanceOf(seller));
         assertEq(amount - makerFee, BASE.balanceOf(buyer));
     }
 
@@ -242,15 +242,15 @@ contract DEXCheckTest is Test {
         uint256 price = _toQuote(3);
         uint256 sellAmount = _toBase(700);
         uint256 buyAmount = _toBase(500);
-        uint256 buyerVolumn = Math.mulDiv(price, buyAmount, BASE_DECIMALS);
+        uint256 buyerVolume = Math.mulDiv(price, buyAmount, BASE_DECIMALS);
 
         uint256 matchAmount = Math.min(sellAmount, buyAmount);
-        uint256 matchVolumn = Math.mulDiv(price, matchAmount, BASE_DECIMALS);
+        uint256 matchVolume = Math.mulDiv(price, matchAmount, BASE_DECIMALS);
 
         vm.prank(OWNER);
         BASE.transfer(seller, sellAmount);
         vm.prank(OWNER);
-        QUOTE.transfer(buyer, buyerVolumn);
+        QUOTE.transfer(buyer, buyerVolume);
 
         assertEq(0, QUOTE.balanceOf(FEE_COLLECTOR));
         assertEq(0, BASE.balanceOf(FEE_COLLECTOR));
@@ -265,15 +265,15 @@ contract DEXCheckTest is Test {
         ROUTER.sellLimitOrder(address(PAIR), price, sellAmount, 0, 0);
         assertEq(0, BASE.balanceOf(seller));
 
-        uint256 makerFee = Math.mulDiv(matchAmount, MAKER_FEE_PERMILE, 1000);
-        uint256 takerFee = Math.mulDiv(matchVolumn, TAKER_FEE_PERMILE, 1000);
+        uint256 makerFee = Math.mulDiv(matchAmount, MAKER_FEE_PERMIL, 1000);
+        uint256 takerFee = Math.mulDiv(matchVolume, TAKER_FEE_PERMIL, 1000);
 
         // 수수료 확인
         assertEq(makerFee, BASE.balanceOf(FEE_COLLECTOR), "invalid maker fee");
         assertEq(takerFee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid taker fee");
 
         // 잔액 확인
-        assertEq(matchVolumn - takerFee, QUOTE.balanceOf(seller));
+        assertEq(matchVolume - takerFee, QUOTE.balanceOf(seller));
         assertEq(matchAmount - makerFee, BASE.balanceOf(buyer));
     }
 
@@ -285,15 +285,15 @@ contract DEXCheckTest is Test {
         uint256 price = _toQuote(3);
         uint256 sellAmount = _toBase(700);
         uint256 buyAmount = _toBase(900);
-        uint256 buyerVolumn = Math.mulDiv(price, buyAmount, BASE_DECIMALS);
+        uint256 buyerVolume = Math.mulDiv(price, buyAmount, BASE_DECIMALS);
 
         uint256 matchAmount = Math.min(sellAmount, buyAmount);
-        uint256 matchVolumn = Math.mulDiv(price, matchAmount, BASE_DECIMALS);
+        uint256 matchVolume = Math.mulDiv(price, matchAmount, BASE_DECIMALS);
 
         vm.prank(OWNER);
         BASE.transfer(seller, sellAmount);
         vm.prank(OWNER);
-        QUOTE.transfer(buyer, buyerVolumn);
+        QUOTE.transfer(buyer, buyerVolume);
 
         assertEq(0, QUOTE.balanceOf(FEE_COLLECTOR));
         assertEq(0, BASE.balanceOf(FEE_COLLECTOR));
@@ -308,15 +308,15 @@ contract DEXCheckTest is Test {
         ROUTER.sellLimitOrder(address(PAIR), price, sellAmount, 0, 0);
         assertEq(0, BASE.balanceOf(seller));
 
-        uint256 makerFee = Math.mulDiv(matchAmount, MAKER_FEE_PERMILE, 1000);
-        uint256 takerFee = Math.mulDiv(matchVolumn, TAKER_FEE_PERMILE, 1000);
+        uint256 makerFee = Math.mulDiv(matchAmount, MAKER_FEE_PERMIL, 1000);
+        uint256 takerFee = Math.mulDiv(matchVolume, TAKER_FEE_PERMIL, 1000);
 
         // 수수료 확인
         assertEq(makerFee, BASE.balanceOf(FEE_COLLECTOR), "invalid maker fee");
         assertEq(takerFee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid taker fee");
 
         // 잔액 확인
-        assertEq(matchVolumn - takerFee, QUOTE.balanceOf(seller));
+        assertEq(matchVolume - takerFee, QUOTE.balanceOf(seller));
         assertEq(matchAmount - makerFee, BASE.balanceOf(buyer));
     }
 
@@ -327,12 +327,12 @@ contract DEXCheckTest is Test {
 
         uint256 price = _toQuote(3);
         uint256 amount = _toBase(700);
-        uint256 volumn = Math.mulDiv(price, amount, BASE_DECIMALS);
+        uint256 volume = Math.mulDiv(price, amount, BASE_DECIMALS);
 
         vm.prank(OWNER);
         BASE.transfer(seller, amount);
         vm.prank(OWNER);
-        QUOTE.transfer(buyer, volumn);
+        QUOTE.transfer(buyer, volume);
 
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
@@ -347,7 +347,7 @@ contract DEXCheckTest is Test {
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
         // 199828
-        ROUTER.buyMarketOrder(address(PAIR), volumn, 0);
+        ROUTER.buyMarketOrder(address(PAIR), volume, 0);
         assertEq(0, QUOTE.balanceOf(buyer)); // 정확이 매칭 되었는지 확인
 
         (sellPrices, buyPrices) = PAIR.ticks();
@@ -363,14 +363,14 @@ contract DEXCheckTest is Test {
 
         uint256 price = _toQuote(3);
         uint256 amount = _toBase(700);
-        uint256 volumn = Math.mulDiv(price, amount * 2, BASE_DECIMALS);
+        uint256 volume = Math.mulDiv(price, amount * 2, BASE_DECIMALS);
 
         vm.prank(OWNER);
         BASE.transfer(seller1, amount);
         vm.prank(OWNER);
         BASE.transfer(seller2, amount);
         vm.prank(OWNER);
-        QUOTE.transfer(buyer, volumn);
+        QUOTE.transfer(buyer, volume);
 
         vm.startPrank(seller1);
         BASE.approve(address(ROUTER), type(uint256).max);
@@ -390,7 +390,7 @@ contract DEXCheckTest is Test {
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
         // 258729
-        ROUTER.buyMarketOrder(address(PAIR), volumn, 0);
+        ROUTER.buyMarketOrder(address(PAIR), volume, 0);
         assertEq(0, QUOTE.balanceOf(buyer)); // 정확이 매칭 되었는지 확인
 
         (sellPrices, buyPrices) = PAIR.ticks();
@@ -407,14 +407,14 @@ contract DEXCheckTest is Test {
         uint256 price1 = _toQuote(3);
         uint256 price2 = _toQuote(5);
         uint256 amount = _toBase(700);
-        uint256 volumn = Math.mulDiv(price1, amount, BASE_DECIMALS) + Math.mulDiv(price2, amount, BASE_DECIMALS);
+        uint256 volume = Math.mulDiv(price1, amount, BASE_DECIMALS) + Math.mulDiv(price2, amount, BASE_DECIMALS);
 
         vm.prank(OWNER);
         BASE.transfer(seller1, amount);
         vm.prank(OWNER);
         BASE.transfer(seller2, amount);
         vm.prank(OWNER);
-        QUOTE.transfer(buyer, volumn);
+        QUOTE.transfer(buyer, volume);
 
         vm.startPrank(seller1);
         BASE.approve(address(ROUTER), type(uint256).max);
@@ -434,7 +434,7 @@ contract DEXCheckTest is Test {
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
         // 266733
-        ROUTER.buyMarketOrder(address(PAIR), volumn, 0);
+        ROUTER.buyMarketOrder(address(PAIR), volume, 0);
         assertEq(0, QUOTE.balanceOf(buyer)); // 정확이 매칭 되었는지 확인
 
         (sellPrices, buyPrices) = PAIR.ticks();
@@ -449,12 +449,12 @@ contract DEXCheckTest is Test {
 
         uint256 price = _toQuote(3);
         uint256 amount = _toBase(700);
-        uint256 volumn = Math.mulDiv(price, amount, BASE_DECIMALS);
+        uint256 volume = Math.mulDiv(price, amount, BASE_DECIMALS);
 
         vm.prank(OWNER);
         BASE.transfer(seller, amount);
         vm.prank(OWNER);
-        QUOTE.transfer(buyer, volumn);
+        QUOTE.transfer(buyer, volume);
 
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
@@ -485,14 +485,14 @@ contract DEXCheckTest is Test {
 
         uint256 price = _toQuote(3);
         uint256 amount = _toBase(700);
-        uint256 volumn = Math.mulDiv(price, amount, BASE_DECIMALS);
+        uint256 volume = Math.mulDiv(price, amount, BASE_DECIMALS);
 
         vm.prank(OWNER);
         BASE.transfer(seller, amount * 2);
         vm.prank(OWNER);
-        QUOTE.transfer(buyer1, volumn);
+        QUOTE.transfer(buyer1, volume);
         vm.prank(OWNER);
-        QUOTE.transfer(buyer2, volumn);
+        QUOTE.transfer(buyer2, volume);
 
         vm.startPrank(buyer1);
         QUOTE.approve(address(ROUTER), type(uint256).max);
@@ -530,15 +530,15 @@ contract DEXCheckTest is Test {
         uint256 price1 = _toQuote(3);
         uint256 price2 = _toQuote(1);
         uint256 amount = _toBase(700);
-        uint256 volumn1 = Math.mulDiv(price1, amount, BASE_DECIMALS);
-        uint256 volumn2 = Math.mulDiv(price2, amount, BASE_DECIMALS);
+        uint256 volume1 = Math.mulDiv(price1, amount, BASE_DECIMALS);
+        uint256 volume2 = Math.mulDiv(price2, amount, BASE_DECIMALS);
 
         vm.prank(OWNER);
         BASE.transfer(seller, amount * 2);
         vm.prank(OWNER);
-        QUOTE.transfer(buyer1, volumn1);
+        QUOTE.transfer(buyer1, volume1);
         vm.prank(OWNER);
-        QUOTE.transfer(buyer2, volumn2);
+        QUOTE.transfer(buyer2, volume2);
 
         vm.startPrank(buyer1);
         QUOTE.approve(address(ROUTER), type(uint256).max);
