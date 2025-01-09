@@ -26,6 +26,8 @@ contract FactoryImpl is UUPSUpgradeable, OwnableUpgradeable {
     error FactoryAlreadCreatedBaseAddress(address);
     error FactoryDeployPair();
 
+    event PairCreated(address indexed pair, address indexed base, uint256 timestamp);
+
     address public QUOTE;
 
     address public router;
@@ -72,8 +74,8 @@ contract FactoryImpl is UUPSUpgradeable, OwnableUpgradeable {
         address base,
         uint256 quoteTickSize,
         uint256 baseTickSize,
-        uint256 quoteFeePermile,
-        uint256 baseFeePermile
+        uint256 makerFeePermile,
+        uint256 takerFeePermile
     ) external onlyOwner returns (address pair) {
         if (base == address(0)) revert FactoryInvalidBaseAddress(base);
         if (!_allBases.add(base)) revert FactoryAlreadCreatedBaseAddress(base);
@@ -90,12 +92,14 @@ contract FactoryImpl is UUPSUpgradeable, OwnableUpgradeable {
                 quoteTickSize,
                 baseTickSize,
                 feeCollector,
-                quoteFeePermile,
-                baseFeePermile
+                makerFeePermile,
+                takerFeePermile
             )
         );
         if (pair == address(0)) revert FactoryDeployPair();
         _allPairs[base] = pair;
+
+        emit PairCreated(pair, base, block.timestamp);
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}

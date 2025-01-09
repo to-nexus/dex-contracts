@@ -57,6 +57,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     error PairInvalidOrderType(OrderType);
     error PairInvalidPrice(uint256);
     error PairInvalidAmount(uint256);
+    error PairInsufficientTradeVolumn(uint256, uint256);
     error PairInvalidOrderId(uint256);
     error PairUnknownPrices(OrderType, uint256);
     error PairNotOwner(uint256, address);
@@ -95,12 +96,12 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     address public ROUTER;
     IERC20 public override BASE; // immutable
     IERC20 public override QUOTE; // immutable
-    uint256 public override BASE_DENOMINATOR; // immutable
-    uint256 public override QUOTE_DENOMINATOR; // immutable (not used)
+    uint256 public override DENOMINATOR; // immutable
 
     // 거래단위
     uint256 public baseTickSize;
     uint256 public quoteTickSize;
+    uint256 public minTradeVolumn; // (QUOTE) 거래당 최소 가치
 
     // 수수료
     address public feeCollector;
@@ -144,14 +145,14 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
         ROUTER = router;
         QUOTE = IERC20(quote);
         BASE = IERC20(base);
-        QUOTE_DENOMINATOR = 10 ** IERC20Metadata(quote).decimals();
-        BASE_DENOMINATOR = 10 ** IERC20Metadata(base).decimals();
-        if (_quoteTickSize * _baseTickSize % BASE_DENOMINATOR != 0) {
-            revert PairInvalidTickSize(_quoteTickSize, _baseTickSize, BASE_DENOMINATOR);
-        }
+        DENOMINATOR = 10 ** IERC20Metadata(base).decimals();
 
+        if (_quoteTickSize * _baseTickSize % DENOMINATOR != 0) {
+            revert PairInvalidTickSize(_quoteTickSize, _baseTickSize, DENOMINATOR);
+        }
         quoteTickSize = _quoteTickSize;
         baseTickSize = _baseTickSize;
+        minTradeVolumn = Math.mulDiv(_quoteTickSize, _baseTickSize, DENOMINATOR);
 
         feeCollector = _feeCollector;
         makerFeePermile = uint32(_makerFeePermile);
@@ -205,7 +206,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
 
             // 구매일 경우, 주문과 동시에 채결되었다면, 설정된 가격보다 싼 가격으로 샀을수 있기때문에 해당 잔액을 돌려준다.
             if (matchedBaseAmount != 0) {
-                uint256 measuredQuoteAmount = Math.mulDiv(order.price, matchedBaseAmount, BASE_DENOMINATOR);
+                uint256 measuredQuoteAmount = Math.mulDiv(order.price, matchedBaseAmount, DENOMINATOR);
                 uint256 diffQuoteAmount = measuredQuoteAmount - useQuoteAmount;
                 if (diffQuoteAmount != 0) QUOTE.safeTransfer(order.owner, diffQuoteAmount);
             }
@@ -239,7 +240,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
             order = _createSellOrder(orderId, order, maxMatchCount);
             if (order.amount != 0) BASE.transfer(order.owner, order.amount);
         } else {
-            // if (spendAmount < 0 || spendAmount % quoteTickSize != 0) revert(); todo
+            if (spendAmount < minTradeVolumn) revert PairInsufficientTradeVolumn(spendAmount, minTradeVolumn);
             order.price = type(uint256).max; // 구매는 spendAmount 을 모두 소진할때까지 가격을 올린다.
 
             uint256 useQuoteAmount;
@@ -253,7 +254,32 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     function cancel(address caller, uint256[] memory orderIds) external override onlyRouter {
         uint256 length = orderIds.length;
         for (uint256 i = 0; i < length;) {
-            _cancelOrder(caller, orderIds[i]);
+            uint256 orderId = orderIds[i];
+            Order memory order = _allOrders[orderId];
+            if (order._type == OrderType.NONE) revert PairInvalidOrderId(orderId);
+            if (order.owner != caller) revert PairNotOwner(orderId, caller);
+
+            DoubleLinkedList.U256 storage _orders;
+            bool isSellOrder = order._type == OrderType.SELL;
+
+            // 컨트랙트에 보유하고 있던 토큰을 돌려준다.
+            if (isSellOrder) {
+                _orders = _sellOrders[order.price];
+                BASE.safeTransfer(order.owner, order.amount);
+            } else {
+                _orders = _buyOrders[order.price];
+                QUOTE.safeTransfer(order.owner, Math.mulDiv(order.price, order.amount, DENOMINATOR));
+            }
+
+            // 해당 데이터를 제거한다.
+            _removeOrder(orderId, CloseType.CANCEL, _orders);
+
+            // 만약 해당 가격의 마지막 정보였다면 price 가격을 제거한다.
+            if (_orders.empty()) {
+                if (isSellOrder) _sellPrices.remove(order.price);
+                else _buyPrices.remove(order.price);
+            }
+
             unchecked {
                 ++i;
             }
@@ -300,7 +326,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
         // 입력된 수량의 조건을 확인한다.
         uint256 quoteAmount;
         if (spendQuoteAmount != 0) quoteAmount = spendQuoteAmount;
-        else quoteAmount = Math.mulDiv(order.price, order.amount, BASE_DENOMINATOR);
+        else quoteAmount = Math.mulDiv(order.price, order.amount, DENOMINATOR);
 
         // 1. 주문에 필요한 토큰을 가져온다.
         QUOTE.safeTransferFrom(_msgSender(), address(this), quoteAmount);
@@ -355,7 +381,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
                     BASE.safeTransfer(feeCollector, fee);
                     BASE.safeTransfer(targetOwner, tradeAmount - fee);
                 }
-                earnQuoteAmount += Math.mulDiv(price, tradeAmount, BASE_DENOMINATOR);
+                earnQuoteAmount += Math.mulDiv(price, tradeAmount, DENOMINATOR);
 
                 if (cOrder.amount == 0 || maxMatchCount == 0) {
                     if (_orders.empty()) {
@@ -394,7 +420,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
 
             // Market 거래일 경우 해당 가격으로 최대 구매할 수 있는 수량을 계산한다.
             if (quoteAmount != 0) {
-                uint256 tradableAmount = Math.mulDiv(quoteAmount - useQuoteAmount, BASE_DENOMINATOR, price);
+                uint256 tradableAmount = Math.mulDiv(quoteAmount - useQuoteAmount, DENOMINATOR, price);
                 tradableAmount -= tradableAmount % baseTickSize;
                 cOrder.amount = tradableAmount;
                 if (tradableAmount == 0) return (cOrder, matchedBaseAmount, useQuoteAmount);
@@ -410,7 +436,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
                 (address targetOwner, uint256 tradeAmount) =
                     _matchOrderAmount(orderId, cOrder, targetId, target, price, _orders);
                 // 거래 가치 계산
-                uint256 tradeQuoteAmount = Math.mulDiv(price, tradeAmount, BASE_DENOMINATOR);
+                uint256 tradeQuoteAmount = Math.mulDiv(price, tradeAmount, DENOMINATOR);
                 // 거래 성사
                 if (target.feePermile == 0) {
                     QUOTE.safeTransfer(targetOwner, tradeQuoteAmount);
@@ -492,37 +518,10 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
         emit OrderClosed(orderId, _type, block.timestamp);
     }
 
-    function _cancelOrder(address caller, uint256 orderId) private {
-        Order memory order = _allOrders[orderId];
-        if (order._type == OrderType.NONE) revert PairInvalidOrderId(orderId);
-        if (order.owner != caller) revert PairNotOwner(orderId, caller);
-
-        DoubleLinkedList.U256 storage _orders;
-        bool isSellOrder = order._type == OrderType.SELL;
-
-        // 컨트랙트에 보유하고 있던 토큰을 돌려준다.
-        if (isSellOrder) {
-            _orders = _sellOrders[order.price];
-            BASE.safeTransfer(order.owner, order.amount);
-        } else {
-            _orders = _buyOrders[order.price];
-            QUOTE.safeTransfer(order.owner, Math.mulDiv(order.price, order.amount, BASE_DENOMINATOR));
-        }
-
-        // 해당 데이터를 제거한다.
-        _removeOrder(orderId, CloseType.CANCEL, _orders);
-
-        // 만약 해당 가격의 마지막 정보였다면 price 가격을 제거한다.
-        if (_orders.empty()) {
-            if (isSellOrder) _sellPrices.remove(order.price);
-            else _buyPrices.remove(order.price);
-        }
-    }
-
     function setTickSize(uint256 _baseTickSize, uint256 _quoteTickSize) external onlyOwner {
         if (_quoteTickSize == 0 || _baseTickSize == 0) revert();
-        if (_quoteTickSize * _baseTickSize % BASE_DENOMINATOR != 0) {
-            revert PairInvalidTickSize(_quoteTickSize, _baseTickSize, BASE_DENOMINATOR);
+        if (_quoteTickSize * _baseTickSize % DENOMINATOR != 0) {
+            revert PairInvalidTickSize(_quoteTickSize, _baseTickSize, DENOMINATOR);
         }
 
         emit TickSizeUpdated(baseTickSize, _baseTickSize, quoteTickSize, _quoteTickSize);

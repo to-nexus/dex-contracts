@@ -33,10 +33,9 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
     event PairRemoved(address indexed pair);
 
     struct PairInfo {
-        IERC20 QUOTE;
         IERC20 BASE;
-        uint256 QUOTE_DENOMINATOR;
-        uint256 BASE_DENOMINATOR;
+        IERC20 QUOTE;
+        uint256 DENOMINATOR;
     }
 
     uint256 public maxMatchCount;
@@ -87,7 +86,7 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
         address owner = _msgSender();
 
         PairInfo memory info = _pairInfo(pair);
-        uint256 volumn = Math.mulDiv(price, amount, info.BASE_DENOMINATOR);
+        uint256 volumn = Math.mulDiv(price, amount, info.DENOMINATOR);
         info.QUOTE.safeTransferFrom(owner, address(this), volumn);
 
         IPair.Order memory order =
@@ -141,24 +140,17 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
         if (!_allPairs.add(pair)) revert RouterAlreadyAddedPair(pair);
 
         IPair ipair = IPair(pair);
-        uint256 QUOTE_DENOMINATOR = ipair.QUOTE_DENOMINATOR();
-        uint256 BASE_DENOMINATOR = ipair.BASE_DENOMINATOR();
+        uint256 DENOMINATOR = ipair.DENOMINATOR();
         IERC20 BASE = ipair.BASE();
         IERC20 QUOTE = ipair.QUOTE();
-        if (
-            QUOTE_DENOMINATOR == 0 || BASE_DENOMINATOR == 0 || address(QUOTE) == address(0)
-                || address(BASE) == address(0)
-        ) revert RouterInvalidPairAddress(pair);
+        if (DENOMINATOR == 0 || address(QUOTE) == address(0) || address(BASE) == address(0)) {
+            revert RouterInvalidPairAddress(pair);
+        }
 
         BASE.forceApprove(pair, type(uint256).max);
         QUOTE.forceApprove(pair, type(uint256).max);
 
-        pairInfo[pair] = PairInfo({
-            QUOTE: QUOTE,
-            BASE: BASE,
-            QUOTE_DENOMINATOR: QUOTE_DENOMINATOR,
-            BASE_DENOMINATOR: BASE_DENOMINATOR
-        });
+        pairInfo[pair] = PairInfo({BASE: BASE, QUOTE: QUOTE, DENOMINATOR: DENOMINATOR});
         emit PairAdded(pair, address(BASE), address(QUOTE));
     }
 

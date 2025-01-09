@@ -1,28 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
+import {IERC20, IERC20Metadata} from "@openzeppelin-contracts-5.1.0/token/ERC20/extensions/IERC20Metadata.sol";
+import {Math} from "@openzeppelin-contracts-5.1.0/utils/math/Math.sol";
+import {Test, console} from "forge-std/Test.sol";
+
 import {Factory, FactoryImpl} from "../src/Factory.sol";
 import {Pair, PairImpl} from "../src/Pair.sol";
 import {Router, RouterImpl} from "../src/Router.sol";
 import {IPair} from "../src/interfaces/IPair.sol";
-import {ERC20, IERC20} from "@openzeppelin-contracts-5.1.0/token/ERC20/ERC20.sol";
-import {IERC20Metadata} from "@openzeppelin-contracts-5.1.0/token/ERC20/extensions/IERC20Metadata.sol";
-import {Math} from "@openzeppelin-contracts-5.1.0/utils/math/Math.sol";
 
-import {Test, console} from "forge-std/Test.sol";
-
-contract T20 is ERC20 {
-    uint8 private immutable _decimals;
-
-    constructor(string memory name, string memory symbol, uint8 decimals_) ERC20(name, symbol) {
-        _mint(_msgSender(), type(uint256).max);
-        _decimals = decimals_;
-    }
-
-    function decimals() public view override returns (uint8) {
-        return _decimals;
-    }
-}
+import {T20} from "./mock/T20.sol";
 
 contract DEXTradeTest is Test {
     address public constant OWNER = address(bytes20("OWNER"));
@@ -74,7 +62,7 @@ contract DEXTradeTest is Test {
         return x * QUOTE_DECIMALS;
     }
 
-    function test_create_limit_sell() external {
+    function test_trade_create_limit_sell() external {
         address user = address(0x1);
         vm.label(user, "user");
 
@@ -97,7 +85,7 @@ contract DEXTradeTest is Test {
         assertEq(_toBase(100), BASE.balanceOf(address(PAIR)));
     }
 
-    function test_create_limit_buy() external {
+    function test_trade_create_limit_buy() external {
         address user = address(0x1);
         vm.label(user, "user");
 
@@ -120,7 +108,7 @@ contract DEXTradeTest is Test {
         assertEq(_toQuote(100), QUOTE.balanceOf(address(PAIR)));
     }
 
-    function test_limit_sell_limit_buy_all_match() external {
+    function test_trade_limit_sell_limit_buy_all_match() external {
         address user1 = address(0x1);
         address user2 = address(0x2);
         vm.label(user1, "user1");
@@ -161,7 +149,7 @@ contract DEXTradeTest is Test {
         assertEq(BASE.balanceOf(user2), _toBase(100), "BASE user2");
     }
 
-    function test_limit_buy_limit_sell_all_match() external {
+    function test_trade_limit_buy_limit_sell_all_match() external {
         address user1 = address(0x1);
         address user2 = address(0x2);
         vm.label(user1, "user1");
@@ -201,7 +189,7 @@ contract DEXTradeTest is Test {
         assertEq(QUOTE.balanceOf(user2), _toQuote(100), "QUOTE user2");
     }
 
-    function test_limit_sell_less_limit_buy() external {
+    function test_trade_limit_sell_less_limit_buy() external {
         // 100개를 판매하고, 50개를 구매한다.
         address user1 = address(0x1);
         address user2 = address(0x2);
@@ -243,7 +231,7 @@ contract DEXTradeTest is Test {
         assertEq(BASE.balanceOf(user2), _toBase(50), "BASE user2");
     }
 
-    function test_limit_buy_less_limit_sell() external {
+    function test_trade_limit_buy_less_limit_sell() external {
         // 100개 구매를 요청하고 50개를 판매한다.
         address user1 = address(0x1);
         address user2 = address(0x2);
@@ -284,7 +272,7 @@ contract DEXTradeTest is Test {
         assertEq(QUOTE.balanceOf(user2), _toQuote(50), "QUOTE user2");
     }
 
-    function test_limit_sell_over_limit_buy() external {
+    function test_trade_limit_sell_over_limit_buy() external {
         // 100개를 판매하고, 200개를 구매한다.
         address user1 = address(0x1);
         address user2 = address(0x2);
@@ -326,7 +314,7 @@ contract DEXTradeTest is Test {
         assertEq(BASE.balanceOf(user2), _toBase(100), "BASE user2");
     }
 
-    function test_limit_buy_over_limit_sell() external {
+    function test_trade_limit_buy_over_limit_sell() external {
         // 100개 구매를 요청하고 200개를 판매한다.
         address user1 = address(0x1);
         address user2 = address(0x2);
@@ -367,7 +355,7 @@ contract DEXTradeTest is Test {
         assertEq(QUOTE.balanceOf(user2), _toQuote(100), "QUOTE user2"); // 100개를 판 만큼의 수익이 들어와 있어야 한다.
     }
 
-    function test_multi_limit_sell_limit_buy_all_match() external {
+    function test_trade_multi_limit_sell_limit_buy_all_match() external {
         // 동일 가격으로 2명의 유저가 판매하고 한 유저가 구매한다.
         address user1 = address(0x1);
         address user2 = address(0x2);
@@ -423,7 +411,7 @@ contract DEXTradeTest is Test {
         assertEq(BASE.balanceOf(user3), _toBase(200), "BASE user3");
     }
 
-    function test_multi_limit_buy_limit_sell_all_match() external {
+    function test_trade_multi_limit_buy_limit_sell_all_match() external {
         // 동일 가격으로 2명의 유저가 구매하고 한 유저가 판매한다.
         address user1 = address(0x1);
         address user2 = address(0x2);
@@ -479,7 +467,7 @@ contract DEXTradeTest is Test {
         assertEq(BASE.balanceOf(user3), 0, "BASE user3");
     }
 
-    function test_multi_limit_sell_less_limit_buy() external {
+    function test_trade_multi_limit_sell_less_limit_buy() external {
         // 동일 가격으로 2명의 유저가 판매하고 한 유저가 구매한다.
         address user1 = address(0x1);
         address user2 = address(0x2);
@@ -535,7 +523,7 @@ contract DEXTradeTest is Test {
         assertEq(BASE.balanceOf(user3), _toBase(150), "BASE user3");
     }
 
-    function test_multi_limit_buy_less_limit_sell() external {
+    function test_trade_multi_limit_buy_less_limit_sell() external {
         // 동일 가격으로 2명의 유저가 판매하고 한 유저가 구매한다.
         address user1 = address(0x1);
         address user2 = address(0x2);
@@ -591,7 +579,7 @@ contract DEXTradeTest is Test {
         assertEq(BASE.balanceOf(user3), 0, "BASE user3");
     }
 
-    function test_multi_limit_sell_over_limit_buy() external {
+    function test_trade_multi_limit_sell_over_limit_buy() external {
         // 동일 가격으로 2명의 유저가 판매하고 한 유저가 구매한다.
         address user1 = address(0x1);
         address user2 = address(0x2);
@@ -647,7 +635,7 @@ contract DEXTradeTest is Test {
         assertEq(BASE.balanceOf(user3), _toBase(200), "BASE user3");
     }
 
-    function test_multi_limit_buy_over_limit_sell() external {
+    function test_trade_multi_limit_buy_over_limit_sell() external {
         // 동일 가격으로 2명의 유저가 판매하고 한 유저가 구매한다.
         address user1 = address(0x1);
         address user2 = address(0x2);
@@ -703,7 +691,7 @@ contract DEXTradeTest is Test {
         assertEq(BASE.balanceOf(user3), 0, "BASE user3");
     }
 
-    function test_limit_sell_multi_limit_buy_all_match() external {
+    function test_trade_limit_sell_multi_limit_buy_all_match() external {
         // 동일 가격으로 1명의 유저가 판매하고 2명의 유저가 구매한다.
         address user1 = address(0x1);
         address user2 = address(0x2);
@@ -758,7 +746,7 @@ contract DEXTradeTest is Test {
         assertEq(QUOTE.balanceOf(user3), 0, "QUOTE user3");
     }
 
-    function test_limit_buy_multi_limit_sell_all_match() external {
+    function test_trade_limit_buy_multi_limit_sell_all_match() external {
         // 동일 가격으로 1명의 유저가 구매하고 2명의 유저가 판매한다.
         address user1 = address(0x1);
         address user2 = address(0x2);
@@ -812,7 +800,7 @@ contract DEXTradeTest is Test {
         assertEq(QUOTE.balanceOf(user3), _toQuote(100), "QUOTE user3");
     }
 
-    function test_limit_sell_less_multi_limit_buy() external {
+    function test_trade_limit_sell_less_multi_limit_buy() external {
         // 동일 가격으로 1명의 유저가 판매하고 두명의 유저가 구매한다.
         address user1 = address(0x1);
         address user2 = address(0x2);
@@ -866,7 +854,7 @@ contract DEXTradeTest is Test {
         assertEq(QUOTE.balanceOf(user3), 0, "QUOTE user3");
     }
 
-    function test_limit_buy_less_multi_limit_sell() external {
+    function test_trade_limit_buy_less_multi_limit_sell() external {
         // 동일 가격으로 1명의 유저가 구매하고 두명의 유저가 판매한다.
         address user1 = address(0x1);
         address user2 = address(0x2);
@@ -919,7 +907,7 @@ contract DEXTradeTest is Test {
         assertEq(QUOTE.balanceOf(user3), _toQuote(50), "QUOTE user3");
     }
 
-    function test_ticks() external {
+    function test_trade_ticks() external {
         vm.startPrank(OWNER);
         BASE.approve(address(ROUTER), type(uint256).max);
         QUOTE.approve(address(ROUTER), type(uint256).max);
@@ -962,7 +950,7 @@ contract DEXTradeTest is Test {
 
     uint256 public constant fuzz_limit_length = 1000;
 
-    function testFuzz_limit_order(
+    function testFuzz_trade_limit_order(
         uint8[fuzz_limit_length] memory prices,
         uint8[fuzz_limit_length] memory amounts,
         bool[fuzz_limit_length] memory isSell
@@ -1023,7 +1011,7 @@ contract DEXTradeTest is Test {
         assertEq(usedQuoteAmount, checkQuoteBalance);
     }
 
-    function test_single_limit_sell_market_buy_all_match() external {
+    function test_trade_single_limit_sell_market_buy_all_match() external {
         address user1 = address(0x1);
         address user2 = address(0x2);
         vm.label(user1, "user1");
@@ -1063,7 +1051,7 @@ contract DEXTradeTest is Test {
         assertEq(BASE.balanceOf(user2), _toBase(100), "BASE user2");
     }
 
-    function test_multi_limit_sell_market_buy_all_match() external {
+    function test_trade_multi_limit_sell_market_buy_all_match() external {
         address user1 = address(0x1);
         address user2 = address(0x2);
         vm.label(user1, "user1");
@@ -1106,7 +1094,7 @@ contract DEXTradeTest is Test {
         assertEq(BASE.balanceOf(user2), _toBase(200), "BASE user2");
     }
 
-    function test_single_limit_sell_less_market_buy() external {
+    function test_trade_single_limit_sell_less_market_buy() external {
         address user1 = address(0x1);
         address user2 = address(0x2);
         vm.label(user1, "user1");
@@ -1146,7 +1134,7 @@ contract DEXTradeTest is Test {
         assertEq(BASE.balanceOf(user2), _toBase(50), "BASE user2");
     }
 
-    function test_multi_limit_sell_less_market_buy() external {
+    function test_trade_multi_limit_sell_less_market_buy() external {
         address user1 = address(0x1);
         address user2 = address(0x2);
         vm.label(user1, "user1");
@@ -1190,7 +1178,7 @@ contract DEXTradeTest is Test {
         assertEq(BASE.balanceOf(user2), _toBase(150), "BASE user2");
     }
 
-    function test_single_limit_sell_over_market_buy() external {
+    function test_trade_single_limit_sell_over_market_buy() external {
         address user1 = address(0x1);
         address user2 = address(0x2);
         vm.label(user1, "user1");
@@ -1230,7 +1218,7 @@ contract DEXTradeTest is Test {
         assertEq(BASE.balanceOf(user2), _toBase(100), "BASE user2");
     }
 
-    function test_multi_limit_sell_over_market_buy() external {
+    function test_trade_multi_limit_sell_over_market_buy() external {
         address user1 = address(0x1);
         address user2 = address(0x2);
         vm.label(user1, "user1");
@@ -1275,7 +1263,7 @@ contract DEXTradeTest is Test {
 
     uint256 private constant fuzz_market_length = 1000;
 
-    function testFuzz_market_order(
+    function testFuzz_trade_market_order(
         uint8[fuzz_market_length] memory prices,
         uint8[fuzz_market_length] memory amounts,
         uint8[fuzz_market_length] memory orderTypes
