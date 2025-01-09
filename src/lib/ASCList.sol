@@ -42,31 +42,37 @@ library ASCList {
         return _list._inner.values();
     }
 
-    function push(U256 storage _list, uint256 _data, uint256 _search) internal returns (bool) {
+    function searchPrev(U256 storage _list, uint256 _data, uint256 _search) internal view returns (bool, uint256) {
         if (_data == 0) revert ASCListZeroData();
 
         DoubleLinkedList.U256 storage list = _list._inner;
-        if (list.contains(_data)) return false;
+        if (list.contains(_data)) return (false, 0);
 
         if (_data < list.head || list.empty()) {
-            return list.insert(_data, 0);
+            return (true, 0); // list.insert(_data, 0);
         } else if (_data > list.tail) {
-            return list.insert(_data, list.tail);
+            return (true, list.tail); // list.insert(_data, list.tail);
         } else {
             uint256 current = list.contains(_search) ? _search : list.head;
             if (current < _data) {
                 while (current != 0) {
-                    if (_data < current) return list.insert(_data, list.nodes[current].prev);
+                    if (_data < current) return (true, list.nodes[current].prev); // list.insert(_data, list.nodes[current].prev);
                     current = list.nodes[current].next;
                 }
             } else {
                 while (current != 0) {
-                    if (_data > current) return list.insert(_data, current);
+                    if (_data > current) return (true, current); // list.insert(_data, current);
                     current = list.nodes[current].prev;
                 }
             }
             revert ASCListPushFailed();
         }
+    }
+
+    function push(U256 storage _list, uint256 _data, uint256 _search) internal returns (bool ok) {
+        uint256 prev;
+        (ok, prev) = searchPrev(_list, _data, _search);
+        if (ok) _list._inner.insert(_data, prev);
     }
 
     function push(U256 storage _list, uint256 _data) internal returns (bool) {

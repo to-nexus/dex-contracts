@@ -48,6 +48,16 @@ library DoubleLinkedList {
         return data;
     }
 
+    function prev(U256 storage _list, uint256 _data) internal view returns (bool ok, uint256 value) {
+        ok = contains(_list, _data);
+        if (ok) value = _list.nodes[_data].prev;
+    }
+
+    function next(U256 storage _list, uint256 _data) internal view returns (bool ok, uint256 value) {
+        ok = contains(_list, _data);
+        if (ok) value = _list.nodes[_data].next;
+    }
+
     function values(U256 storage _list) internal view returns (uint256[] memory) {
         uint256[] memory result = new uint256[](_list.length);
         uint256 _length = _list.length;
