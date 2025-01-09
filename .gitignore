@@ -15,3 +15,6 @@ docs/
 
 dependencies/
 .idea
+
+!remappings.txt
+*.txt

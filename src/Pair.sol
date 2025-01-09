@@ -370,14 +370,14 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
                 Order storage target = _allOrders[targetId];
 
                 // 채결 수량 업데이트
-                (address targetOwner, uint256 tradeAmount) =
+                (address targetOwner, uint256 tradeAmount, uint256 targetFeePermile) =
                     _matchOrderAmount(orderId, cOrder, targetId, target, price, _orders);
 
                 // 거래 성사
-                if (target.feePermile == 0) {
+                if (targetFeePermile == 0) {
                     BASE.safeTransfer(targetOwner, tradeAmount);
                 } else {
-                    uint256 fee = Math.mulDiv(tradeAmount, target.feePermile, 1000);
+                    uint256 fee = Math.mulDiv(tradeAmount, targetFeePermile, 1000);
                     BASE.safeTransfer(feeCollector, fee);
                     BASE.safeTransfer(targetOwner, tradeAmount - fee);
                 }
@@ -433,17 +433,18 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
                 Order storage target = _allOrders[targetId];
 
                 // 거래 수량 업데이트
-                (address targetOwner, uint256 tradeAmount) =
+                (address targetOwner, uint256 tradeAmount, uint256 targetFeePermile) =
                     _matchOrderAmount(orderId, cOrder, targetId, target, price, _orders);
                 // 거래 가치 계산
                 uint256 tradeQuoteAmount = Math.mulDiv(price, tradeAmount, DENOMINATOR);
+
                 // 거래 성사
-                if (target.feePermile == 0) {
+                if (targetFeePermile == 0) {
                     QUOTE.safeTransfer(targetOwner, tradeQuoteAmount);
                 } else {
-                    uint256 fee = Math.mulDiv(tradeQuoteAmount, target.feePermile, 1000);
+                    uint256 fee = Math.mulDiv(tradeQuoteAmount, targetFeePermile, 1000);
                     QUOTE.safeTransfer(feeCollector, fee);
-                    QUOTE.safeTransfer(target.owner, tradeQuoteAmount - fee);
+                    QUOTE.safeTransfer(targetOwner, tradeQuoteAmount - fee);
                 }
 
                 // 정보 업데이트
@@ -477,8 +478,9 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
         Order storage target,
         uint256 price,
         DoubleLinkedList.U256 storage _orders
-    ) private returns (address targetOwner, uint256 tradeAmount) {
-        (targetOwner, tradeAmount) = (target.owner, Math.min(order.amount, target.amount));
+    ) private returns (address targetOwner, uint256 tradeAmount, uint256 targetFeePermile) {
+        (targetOwner, tradeAmount, targetFeePermile) =
+            (target.owner, Math.min(order.amount, target.amount), target.feePermile);
 
         (uint256 sellId, uint256 buyId) = (order._type == OrderType.SELL ? (orderId, targetId) : (targetId, orderId));
         emit OrderMatched(sellId, buyId, price, tradeAmount, block.timestamp);
