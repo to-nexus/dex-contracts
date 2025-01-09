@@ -513,12 +513,16 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
         // 삭제
         _orders.remove(orderId);
         delete _allOrders[orderId];
+
+        // 가격 정보 수정
         uint256 price = order.price;
-        if (prevId == 0 || price != _allOrders[prevId].price) {
-            delete _latestOrderIDs[price]; // LatestOrderID 제거
-            _prices.remove(price); // Prices 제거
-        } else {
-            _latestOrderIDs[price] = prevId; // LatestOrderID 수정
+        if (_latestOrderIDs[price] == orderId) {
+            if (prevId == 0 || price != _allOrders[prevId].price) {
+                _prices.remove(price); // Prices 제거
+                delete _latestOrderIDs[price]; // LatestOrderID 제거
+            } else {
+                _latestOrderIDs[price] = prevId; // LatestOrderID 수정
+            }
         }
         emit OrderClosed(orderId, _type, block.timestamp);
 
