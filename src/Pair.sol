@@ -204,11 +204,11 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
                     // latestOrderId 이 없다면 이전 가격의 latestOrderId 를 찾는다.
                     // 1. 이전 가격을 찾는다.
                     (bool ok, uint256 prevPrice) = ASCList.searchPrev(_sellPrices, order.price, searchPrice);
-                    if (!ok) revert("1");
+                    if (!ok) revert PairInvalidPrice(order.price);
                     // 2. 이전 가격의 맨마지막의 orderId 를 찾는다.
                     latestOrderId = _sellPriceLatestOrderID[prevPrice];
                     // 3. price 를 등록한다.
-                    if (!ASCList.push(_sellPrices, order.price, prevPrice)) revert("2");
+                    ASCList.push(_sellPrices, order.price, prevPrice);
                 }
                 _sellOrders.insert(orderId, latestOrderId);
             }
@@ -240,11 +240,11 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
                     // latestOrderId 이 없다면 이전 가격의 latestOrderId 를 찾는다.
                     // 1. 이전 가격을 찾는다.
                     (bool ok, uint256 prevPrice) = DESCList.searchPrev(_buyPrices, order.price, searchPrice);
-                    if (!ok) revert("3");
+                    if (!ok) revert PairInvalidPrice(order.price);
                     // 2. 이전 가격의 맨마지막의 orderId 를 찾는다.
                     latestOrderId = _buyPriceLatestOrderID[prevPrice];
                     // 3. price 를 등록한다.
-                    if (!DESCList.push(_buyPrices, order.price, prevPrice)) revert("4");
+                    DESCList.push(_buyPrices, order.price, prevPrice);
                 }
                 _buyOrders.insert(orderId, latestOrderId);
             }
@@ -288,13 +288,19 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
             if (order.owner != caller) revert PairNotOwner(orderId, caller);
 
             bool isSellOrder = order._type == OrderType.SELL;
+            DoubleLinkedList.U256 storage _orders;
 
             // 컨트랙트에 보유하고 있던 토큰을 돌려준다.
-            if (isSellOrder) BASE.safeTransfer(order.owner, order.amount);
-            else QUOTE.safeTransfer(order.owner, Math.mulDiv(order.price, order.amount, DENOMINATOR));
+            if (isSellOrder) {
+                _orders = _sellOrders;
+                BASE.safeTransfer(order.owner, order.amount);
+            } else {
+                _orders = _buyOrders;
+                QUOTE.safeTransfer(order.owner, Math.mulDiv(order.price, order.amount, DENOMINATOR));
+            }
 
             // 해당 데이터를 제거한다.
-            _removeOrder(orderId, order, CloseType.CANCEL);
+            _removeOrder(orderId, CloseType.CANCEL, _orders);
 
             unchecked {
                 ++i;
@@ -376,15 +382,28 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
         cOrder = _copyOrder(order);
         DoubleLinkedList.U256 storage _orders = _buyOrders;
 
+        uint256 cachePrice;
         while (!_orders.empty()) {
             uint256 targetId = _orders.at(0);
             Order storage target = _allOrders[targetId];
             uint256 price = target.price;
-            if (price < order.price) break;
+
+            //  _buyPrices 의 정보를 제거한다.
+            if (cachePrice != price) {
+                if (cachePrice != 0) {
+                    if (!_buyPrices.remove(cachePrice)) revert PairUnknownPrices(OrderType.BUY, cachePrice);
+                    delete _buyPriceLatestOrderID[cachePrice];
+                }
+                cachePrice = price;
+            }
+
+            unchecked {
+                if (price < order.price || cOrder.amount == 0 || --maxMatchCount == 0) return (cOrder, earnQuoteAmount);
+            }
 
             // 채결 수량 업데이트
             (address targetOwner, uint256 tradeAmount, uint256 targetFeePermil) =
-                _matchOrderAmount(orderId, cOrder, targetId, target, price);
+                _matchOrderAmount(orderId, cOrder, targetId, target, price, _orders);
 
             // 거래 성사
             if (targetFeePermil == 0) {
@@ -395,12 +414,12 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
                 BASE.safeTransfer(targetOwner, tradeAmount - fee);
             }
             earnQuoteAmount += Math.mulDiv(price, tradeAmount, DENOMINATOR);
-
-            unchecked {
-                if (cOrder.amount == 0 || --maxMatchCount == 0) return (cOrder, earnQuoteAmount);
-            }
         }
 
+        if (cachePrice != 0) {
+            if (!_buyPrices.remove(cachePrice)) revert PairUnknownPrices(OrderType.BUY, cachePrice);
+            delete _buyPriceLatestOrderID[cachePrice];
+        }
         return (cOrder, earnQuoteAmount);
     }
 
@@ -414,26 +433,36 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
         cOrder = _copyOrder(order);
 
         DoubleLinkedList.U256 storage _orders = _sellOrders;
-        uint256 checkPrice;
+        uint256 cachePrice;
         while (!_orders.empty()) {
             uint256 targetId = _orders.at(0);
             Order storage target = _allOrders[targetId];
             uint256 price = target.price;
-            if (price > order.price) break;
 
-            // Market 거래일 경우 해당 가격으로 최대 구매할 수 있는 수량을 계산한다.
-            if (quoteAmount != 0 && checkPrice != price) {
-                checkPrice = price;
+            if (cachePrice != price) {
+                //  _sellPrices 의 정보를 제거한다.
+                if (cachePrice != 0) {
+                    if (!_sellPrices.remove(cachePrice)) revert PairUnknownPrices(OrderType.BUY, cachePrice);
+                    delete _sellPriceLatestOrderID[cachePrice];
+                }
+                // Market 거래일 경우 해당 가격으로 최대 구매할 수 있는 수량을 계산한다.
+                if (quoteAmount != 0) {
+                    uint256 buyAmount = Math.mulDiv(quoteAmount - useQuoteAmount, DENOMINATOR, price);
+                    buyAmount -= buyAmount % baseTickSize;
+                    cOrder.amount = buyAmount;
+                }
+                cachePrice = price;
+            }
 
-                uint256 buyAmount = Math.mulDiv(quoteAmount - useQuoteAmount, DENOMINATOR, price);
-                buyAmount -= buyAmount % baseTickSize;
-                cOrder.amount = buyAmount;
-                if (buyAmount == 0) return (cOrder, matchedBaseAmount, useQuoteAmount);
+            unchecked {
+                if (price > order.price || cOrder.amount == 0 || --maxMatchCount == 0) {
+                    return (cOrder, matchedBaseAmount, useQuoteAmount);
+                }
             }
 
             // 거래 수량 업데이트
             (address targetOwner, uint256 tradeAmount, uint256 targetFeePermil) =
-                _matchOrderAmount(orderId, cOrder, targetId, target, price);
+                _matchOrderAmount(orderId, cOrder, targetId, target, price, _orders);
             // 거래 가치 계산
             uint256 tradeQuoteAmount = Math.mulDiv(price, tradeAmount, DENOMINATOR);
 
@@ -449,9 +478,12 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
             // 정보 업데이트
             matchedBaseAmount += tradeAmount;
             useQuoteAmount += tradeQuoteAmount;
-            unchecked {
-                if (cOrder.amount == 0 || --maxMatchCount == 0) return (cOrder, matchedBaseAmount, useQuoteAmount);
-            }
+        }
+
+        //  _sellPrices 의 정보를 제거한다.
+        if (cachePrice != 0) {
+            if (!_sellPrices.remove(cachePrice)) revert PairUnknownPrices(OrderType.BUY, cachePrice);
+            delete _sellPriceLatestOrderID[cachePrice];
         }
         return (cOrder, matchedBaseAmount, useQuoteAmount);
     }
@@ -461,7 +493,8 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
         Order memory order,
         uint256 targetId,
         Order storage target,
-        uint256 price
+        uint256 price,
+        DoubleLinkedList.U256 storage _orders
     ) private returns (address targetOwner, uint256 tradeAmount, uint256 targetFeePermil) {
         (targetOwner, tradeAmount, targetFeePermil) =
             (target.owner, Math.min(order.amount, target.amount), target.feePermil);
@@ -471,7 +504,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
 
         //target 의 수량이 모두 거래되면 데이터를 지운다.
         if (tradeAmount == target.amount) {
-            _removeOrder(targetId, target, CloseType.ALL_MATCH);
+            _removeOrder(targetId, CloseType.ALL_MATCH, _orders);
         } else {
             unchecked {
                 target.amount -= tradeAmount;
@@ -498,39 +531,15 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
         });
     }
 
-    function _removeOrder(uint256 orderId, Order memory order, CloseType _type) private returns (uint256) {
-        (
-            DoubleLinkedList.U256 storage _orders,
-            DoubleLinkedList.U256 storage _prices,
-            mapping(uint256 => uint256) storage _latestOrderIDs
-        ) = order._type == OrderType.SELL
-            ? (_sellOrders, _sellPrices._inner, _sellPriceLatestOrderID)
-            : (_buyOrders, _buyPrices._inner, _buyPriceLatestOrderID);
-
-        (bool ok, uint256 prevId) = _orders.prev(orderId);
-        if (!ok) revert PairInvalidOrderId(orderId);
-
-        // 삭제
-        _orders.remove(orderId);
+    function _removeOrder(uint256 orderId, CloseType _type, DoubleLinkedList.U256 storage _orders) private {
+        if (!_orders.remove(orderId)) revert PairInvalidOrderId(orderId);
         delete _allOrders[orderId];
-
-        // 가격 정보 수정
-        uint256 price = order.price;
-        if (_latestOrderIDs[price] == orderId) {
-            if (prevId == 0 || price != _allOrders[prevId].price) {
-                _prices.remove(price); // Prices 제거
-                delete _latestOrderIDs[price]; // LatestOrderID 제거
-            } else {
-                _latestOrderIDs[price] = prevId; // LatestOrderID 수정
-            }
-        }
         emit OrderClosed(orderId, _type, block.timestamp);
-
-        return prevId;
     }
 
     function setTickSize(uint256 _baseTickSize, uint256 _quoteTickSize) external onlyOwner {
-        if (_quoteTickSize == 0 || _baseTickSize == 0) revert();
+        if (_quoteTickSize == 0) revert PairInvalidInitializeData("quoteTickSize");
+        if (_baseTickSize == 0) revert PairInvalidInitializeData("baseTickSize");
         if (_quoteTickSize * _baseTickSize % DENOMINATOR != 0) {
             revert PairInvalidTickSize(_quoteTickSize, _baseTickSize, DENOMINATOR);
         }
@@ -542,14 +551,16 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     }
 
     function setFeeCollector(address _feeCollector) external onlyOwner {
-        if (_feeCollector == address(0)) revert();
+        if (_feeCollector == address(0)) revert PairInvalidInitializeData("feeCollector");
         emit FeeCollectorUpdated(feeCollector, _feeCollector);
 
         feeCollector = _feeCollector;
     }
 
     function setFee(uint256 _makerFeePermil, uint256 _takerFeePermil) external onlyOwner {
-        if (_makerFeePermil > 1000 || _takerFeePermil > 1000) revert();
+        if (_makerFeePermil > 1000) revert PairInvalidInitializeData("makerFeePermil");
+        if (_takerFeePermil > 1000) revert PairInvalidInitializeData("takerFeePermil");
+
         emit FeeUpdated(makerFeePermil, _makerFeePermil, takerFeePermil, _takerFeePermil);
 
         makerFeePermil = uint32(_makerFeePermil);
