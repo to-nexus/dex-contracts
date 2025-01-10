@@ -48,7 +48,7 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
     }
 
     receive() external payable {
-        if (msg.value != 0) revert();
+        assert(msg.value == 0);
     }
 
     function initialize(uint256 _maxMatchCount) external initializer {
