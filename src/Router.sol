@@ -48,7 +48,7 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
     }
 
     receive() external payable {
-        if (msg.value != 0) revert();
+        assert(msg.value == 0);
     }
 
     function initialize(uint256 _maxMatchCount) external initializer {
@@ -166,5 +166,5 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
 
-    uint256[48] __gap;
+    uint256[47] private __gap;
 }

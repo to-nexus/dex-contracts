@@ -71,23 +71,18 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
         uint256 amount,
         uint256 timestamp
     );
-
     event OrderMatched(
         uint256 indexed sellId, uint256 indexed buyId, uint256 indexed price, uint256 amount, uint256 timestamp
     );
-
     event OrderClosed(uint256 indexed orderId, CloseType indexed _type, uint256 timestamp);
-
     event TickSizeUpdated(
         uint256 beforeBaseTickSize, uint256 newBaseTickSize, uint256 beforeQuoteTickSize, uint256 newQuoteTickSize
     );
-
+    event RouterUpdated(address before, address current);
     event FeeCollectorUpdated(address before, address current);
-
     event FeeUpdated(
         uint256 beforeMakerFeePermil, uint256 newTakerFeePermil, uint256 beforeTakerFeePermil, uint256 newMakerFeePermil
     );
-
     event Skim(address indexed caller, address indexed erc20, address indexed to, uint256 amount);
 
     address public ROUTER;
@@ -545,11 +540,17 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
         if (_quoteTickSize * _baseTickSize % DENOMINATOR != 0) {
             revert PairInvalidTickSize(_quoteTickSize, _baseTickSize, DENOMINATOR);
         }
-
         emit TickSizeUpdated(baseTickSize, _baseTickSize, quoteTickSize, _quoteTickSize);
 
         baseTickSize = _baseTickSize;
         quoteTickSize = _quoteTickSize;
+    }
+
+    function setRouter(address router) external onlyOwner {
+        if (router == address(0)) revert PairInvalidInitializeData("router");
+        emit RouterUpdated(ROUTER, router);
+
+        ROUTER = router;
     }
 
     function setFeeCollector(address _feeCollector) external onlyOwner {
@@ -562,7 +563,6 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     function setFee(uint256 _makerFeePermil, uint256 _takerFeePermil) external onlyOwner {
         if (_makerFeePermil > 1000) revert PairInvalidInitializeData("makerFeePermil");
         if (_takerFeePermil > 1000) revert PairInvalidInitializeData("takerFeePermil");
-
         emit FeeUpdated(makerFeePermil, _makerFeePermil, takerFeePermil, _takerFeePermil);
 
         makerFeePermil = uint32(_makerFeePermil);
@@ -581,5 +581,5 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
 
-    uint256[36] private __gap;
+    uint256[34] private __gap;
 }
