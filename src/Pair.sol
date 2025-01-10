@@ -397,9 +397,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
                 cachePrice = price;
             }
 
-            unchecked {
-                if (price < order.price || cOrder.amount == 0 || --maxMatchCount == 0) return (cOrder, earnQuoteAmount);
-            }
+            if (price < order.price || cOrder.amount == 0 || maxMatchCount == 0) return (cOrder, earnQuoteAmount);
 
             // 채결 수량 업데이트
             (address targetOwner, uint256 tradeAmount, uint256 targetFeePermil) =
@@ -413,7 +411,10 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
                 BASE.safeTransfer(feeCollector, fee);
                 BASE.safeTransfer(targetOwner, tradeAmount - fee);
             }
-            earnQuoteAmount += Math.mulDiv(price, tradeAmount, DENOMINATOR);
+            unchecked {
+                earnQuoteAmount += Math.mulDiv(price, tradeAmount, DENOMINATOR);
+                --maxMatchCount;
+            }
         }
 
         if (cachePrice != 0) {
@@ -454,10 +455,8 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
                 cachePrice = price;
             }
 
-            unchecked {
-                if (price > order.price || cOrder.amount == 0 || --maxMatchCount == 0) {
-                    return (cOrder, matchedBaseAmount, useQuoteAmount);
-                }
+            if (price > order.price || cOrder.amount == 0 || maxMatchCount == 0) {
+                return (cOrder, matchedBaseAmount, useQuoteAmount);
             }
 
             // 거래 수량 업데이트
@@ -475,9 +474,12 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
                 QUOTE.safeTransfer(targetOwner, tradeQuoteAmount - fee);
             }
 
-            // 정보 업데이트
-            matchedBaseAmount += tradeAmount;
-            useQuoteAmount += tradeQuoteAmount;
+            unchecked {
+                // 정보 업데이트
+                matchedBaseAmount += tradeAmount;
+                useQuoteAmount += tradeQuoteAmount;
+                --maxMatchCount;
+            }
         }
 
         //  _sellPrices 의 정보를 제거한다.
