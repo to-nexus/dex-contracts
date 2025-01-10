@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import "./DoubleLinkedList.sol";
+import "./List.sol";
 
 library DESCList {
-    using DoubleLinkedList for DoubleLinkedList.U256;
+    using List for List.U256;
 
     error DESCListPushFailed();
     error DESCListZeroData();
 
     struct U256 {
-        DoubleLinkedList.U256 _inner;
+        List.U256 _inner;
     }
 
     function empty(U256 storage _list) internal view returns (bool) {
@@ -18,7 +18,7 @@ library DESCList {
     }
 
     function length(U256 storage _list) internal view returns (uint256) {
-        return DoubleLinkedList.length(_list._inner);
+        return List.length(_list._inner);
     }
 
     function contains(U256 storage _list, uint256 _data) internal view returns (bool) {
@@ -41,7 +41,7 @@ library DESCList {
     function searchPrev(U256 storage _list, uint256 _data, uint256 _search) internal view returns (bool, uint256) {
         if (_data == 0) revert DESCListZeroData();
 
-        DoubleLinkedList.U256 storage list = _list._inner;
+        List.U256 storage list = _list._inner;
         if (list.contains(_data)) return (false, 0);
 
         if (_data > list.head) {

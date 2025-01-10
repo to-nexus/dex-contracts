@@ -12,7 +12,7 @@ import {PausableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.1.0/uti
 import {IPair} from "./interfaces/IPair.sol";
 import {ASCList} from "./lib/ASCList.sol";
 import {DESCList} from "./lib/DESCList.sol";
-import {DoubleLinkedList} from "./lib/DoubleLinkedList.sol";
+import {List} from "./lib/List.sol";
 
 contract Pair is ERC1967Proxy {
     constructor(
@@ -48,7 +48,7 @@ contract Pair is ERC1967Proxy {
 contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable {
     using SafeERC20 for IERC20;
     using Math for uint256;
-    using DoubleLinkedList for DoubleLinkedList.U256;
+    using List for List.U256;
     using DESCList for DESCList.U256;
     using ASCList for ASCList.U256;
 
@@ -112,8 +112,8 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     DESCList.U256 private _buyPrices; // buy order 의 가격 목록
     mapping(uint256 price => uint256) private _buyPriceLatestOrderID; // buy price 의 마지막 orderId
 
-    DoubleLinkedList.U256 private _sellOrders; // 판매 order id list
-    DoubleLinkedList.U256 private _buyOrders; // 구매 order id list
+    List.U256 private _sellOrders; // 판매 order id list
+    List.U256 private _buyOrders; // 구매 order id list
     mapping(uint256 orderId => Order) private _allOrders; // 모든 주문 정보
 
     modifier onlyRouter() {
@@ -288,7 +288,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
             if (order.owner != caller) revert PairNotOwner(orderId, caller);
 
             bool isSellOrder = order._type == OrderType.SELL;
-            DoubleLinkedList.U256 storage _orders;
+            List.U256 storage _orders;
 
             // 컨트랙트에 보유하고 있던 토큰을 돌려준다.
             if (isSellOrder) {
@@ -380,7 +380,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     {
         // (earnQuoteAmount) 판매로 인해 벌어들인 Quote 수량
         cOrder = _copyOrder(order);
-        DoubleLinkedList.U256 storage _orders = _buyOrders;
+        List.U256 storage _orders = _buyOrders;
 
         uint256 cachePrice;
         while (!_orders.empty()) {
@@ -432,7 +432,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     ) private returns (Order memory cOrder, uint256 matchedBaseAmount, uint256 useQuoteAmount) {
         cOrder = _copyOrder(order);
 
-        DoubleLinkedList.U256 storage _orders = _sellOrders;
+        List.U256 storage _orders = _sellOrders;
         uint256 cachePrice;
         while (!_orders.empty()) {
             uint256 targetId = _orders.at(0);
@@ -494,7 +494,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
         uint256 targetId,
         Order storage target,
         uint256 price,
-        DoubleLinkedList.U256 storage _orders
+        List.U256 storage _orders
     ) private returns (address targetOwner, uint256 tradeAmount, uint256 targetFeePermil) {
         (targetOwner, tradeAmount, targetFeePermil) =
             (target.owner, Math.min(order.amount, target.amount), target.feePermil);
@@ -531,7 +531,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
         });
     }
 
-    function _removeOrder(uint256 orderId, CloseType _type, DoubleLinkedList.U256 storage _orders) private {
+    function _removeOrder(uint256 orderId, CloseType _type, List.U256 storage _orders) private {
         if (!_orders.remove(orderId)) revert PairInvalidOrderId(orderId);
         delete _allOrders[orderId];
         emit OrderClosed(orderId, _type, block.timestamp);
