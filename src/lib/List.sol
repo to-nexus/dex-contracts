@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-library DoubleLinkedList {
+library List {
     struct Node {
         uint256 prev;
         uint256 next;
     }
 
-    error DoubleLinkedListZeroData();
-    error DoubleLinkedListInvalidIndex();
-    error DoubleLinkedListInvalidPrevNode();
+    error ListZeroData();
+    error ListInvalidIndex();
+    error ListInvalidPrevNode();
 
     function _linked(Node memory node) private pure returns (bool) {
         return node.prev != 0 || node.next != 0;
@@ -36,7 +36,7 @@ library DoubleLinkedList {
     }
 
     function at(U256 storage _list, uint256 _index) internal view returns (uint256) {
-        if (_index >= _list.length) revert DoubleLinkedListInvalidIndex();
+        if (_index >= _list.length) revert ListInvalidIndex();
 
         uint256 data = _list.head;
         for (uint256 i = _index; i != 0;) {
@@ -76,7 +76,7 @@ library DoubleLinkedList {
             if (_head != 0) _list.nodes[_head].prev = _data;
             newNode = Node({prev: 0, next: _head});
         } else {
-            if (!(_linked(prevNode) || _prev == _list.head)) revert DoubleLinkedListInvalidPrevNode();
+            if (!(_linked(prevNode) || _prev == _list.head)) revert ListInvalidPrevNode();
             uint256 prevNext = prevNode.next;
             newNode = Node({prev: _prev, next: prevNext});
             if (prevNext != 0) _list.nodes[prevNext].prev = _data;
