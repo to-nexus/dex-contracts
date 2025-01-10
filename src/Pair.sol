@@ -103,10 +103,9 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     // 주문
     uint256 private _orderIdCounter; // order id 생성기
     ASCList.U256 private _sellPrices; // sell order 의 가격 목록
-    mapping(uint256 price => uint256) private _sellPriceLatestOrderID; // sell price 의 마지막 orderId
     DESCList.U256 private _buyPrices; // buy order 의 가격 목록
+    mapping(uint256 price => uint256) private _sellPriceLatestOrderID; // sell price 의 마지막 orderId
     mapping(uint256 price => uint256) private _buyPriceLatestOrderID; // buy price 의 마지막 orderId
-
     List.U256 private _sellOrders; // 판매 order id list
     List.U256 private _buyOrders; // 구매 order id list
     mapping(uint256 orderId => Order) private _allOrders; // 모든 주문 정보
@@ -581,5 +580,5 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
 
-    uint256[34] private __gap;
+    uint256[32] private __gap;
 }
