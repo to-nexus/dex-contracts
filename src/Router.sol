@@ -166,5 +166,5 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
 
-    uint256[48] __gap;
+    uint256[47] private __gap;
 }

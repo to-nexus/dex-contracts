@@ -556,5 +556,5 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
 
-    uint256[36] private __gap;
+    uint256[34] private __gap;
 }
