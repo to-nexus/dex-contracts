@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {ERC1967Proxy} from "@openzeppelin-contracts-5.1.0/proxy/ERC1967/ERC1967Proxy.sol";
 import {UUPSUpgradeable} from "@openzeppelin-contracts-5.1.0/proxy/utils/UUPSUpgradeable.sol";
 import {IERC20} from "@openzeppelin-contracts-5.1.0/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin-contracts-5.1.0/token/ERC20/utils/SafeERC20.sol";
+import {Address} from "@openzeppelin-contracts-5.1.0/utils/Address.sol";
 import {Math} from "@openzeppelin-contracts-5.1.0/utils/math/Math.sol";
 
 import {EnumerableSet} from "@openzeppelin-contracts-5.1.0/utils/structs/EnumerableSet.sol";
@@ -13,21 +13,18 @@ import {ReentrancyGuardUpgradeable} from
     "@openzeppelin-contracts-upgradeable-5.1.0/utils/ReentrancyGuardUpgradeable.sol";
 
 import {IPair} from "./interfaces/IPair.sol";
+import {IRouter} from "./interfaces/IRouter.sol";
 
-contract Router is ERC1967Proxy {
-    constructor(address implementation, uint256 _maxMatchCount)
-        ERC1967Proxy(implementation, abi.encodeWithSelector(RouterImpl.initialize.selector, _maxMatchCount))
-    {}
-}
-
-contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
+    using Address for address payable;
     using Math for uint256;
 
     error RouterInitializeData(bytes32);
     error RouterAlreadyAddedPair(address);
     error RouterInvalidPairAddress(address);
+    error RouterInvalidValue();
 
     event PairAdded(address indexed pair, address indexed base, address indexed quote);
     event PairRemoved(address indexed pair);
@@ -38,6 +35,8 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
         uint256 DENOMINATOR;
     }
 
+    address payable public WETH; // immutable
+
     uint256 public maxMatchCount;
     EnumerableSet.AddressSet private _allPairs;
     mapping(address pair => PairInfo) public pairInfo;
@@ -47,17 +46,28 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
         _;
     }
 
-    receive() external payable {
-        assert(msg.value == 0);
+    modifier checkValue() {
+        _;
+        if (address(this).balance != 0) revert RouterInvalidValue();
     }
 
-    function initialize(uint256 _maxMatchCount) external initializer {
+    receive() external payable checkValue {
+        if (msg.value != 0) revert RouterInvalidValue();
+    }
+
+    function initialize(address payable weth, uint256 _maxMatchCount) external initializer {
+        if (weth == address(0)) revert RouterInitializeData("weth");
         if (_maxMatchCount == 0) revert RouterInitializeData("maxMatchCount");
 
+        WETH = weth;
         maxMatchCount = _maxMatchCount;
 
         __Ownable_init(_msgSender());
         __ReentrancyGuard_init();
+    }
+
+    function isPair(address pair) external view override returns (bool) {
+        return _allPairs.contains(pair);
     }
 
     function sellLimitOrder(address pair, uint256 price, uint256 amount, uint256 searchPrice, uint256 _maxMatchCount)
@@ -65,11 +75,16 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
         payable
         nonReentrant
         validPair(pair)
+        checkValue
         returns (uint256)
     {
         address owner = _msgSender();
 
-        _pairInfo(pair).BASE.safeTransferFrom(owner, address(this), amount);
+        PairInfo memory info = _pairInfo(pair);
+
+        IERC20 BASE = info.BASE;
+        if (address(BASE) == WETH) WETH.sendValue(amount);
+        else BASE.safeTransferFrom(owner, address(this), amount);
 
         IPair.Order memory order =
             IPair.Order({_type: IPair.OrderType.SELL, owner: owner, feePermil: 0, price: price, amount: amount});
@@ -81,13 +96,17 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
         payable
         nonReentrant
         validPair(pair)
+        checkValue
         returns (uint256)
     {
         address owner = _msgSender();
 
         PairInfo memory info = _pairInfo(pair);
         uint256 volume = Math.mulDiv(price, amount, info.DENOMINATOR);
-        info.QUOTE.safeTransferFrom(owner, address(this), volume);
+
+        IERC20 QUOTE = info.QUOTE;
+        if (address(QUOTE) == WETH) WETH.sendValue(volume);
+        else QUOTE.safeTransferFrom(owner, address(this), volume);
 
         IPair.Order memory order =
             IPair.Order({_type: IPair.OrderType.BUY, owner: owner, feePermil: 0, price: price, amount: amount});
@@ -99,10 +118,15 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
         payable
         nonReentrant
         validPair(pair)
+        checkValue
     {
         address owner = _msgSender();
 
-        _pairInfo(pair).BASE.safeTransferFrom(owner, address(this), amount);
+        PairInfo memory info = _pairInfo(pair);
+
+        IERC20 BASE = info.BASE;
+        if (address(BASE) == WETH) WETH.sendValue(amount);
+        else BASE.safeTransferFrom(owner, address(this), amount);
 
         IPair.Order memory order =
             IPair.Order({_type: IPair.OrderType.SELL, owner: owner, feePermil: 0, price: 0, amount: 0});
@@ -114,10 +138,15 @@ contract RouterImpl is UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgra
         payable
         nonReentrant
         validPair(pair)
+        checkValue
     {
         address owner = _msgSender();
 
-        _pairInfo(pair).QUOTE.safeTransferFrom(owner, address(this), amount);
+        PairInfo memory info = _pairInfo(pair);
+
+        IERC20 QUOTE = info.QUOTE;
+        if (address(QUOTE) == WETH) WETH.sendValue(amount);
+        else QUOTE.safeTransferFrom(owner, address(this), amount);
 
         IPair.Order memory order =
             IPair.Order({_type: IPair.OrderType.BUY, owner: owner, feePermil: 0, price: 0, amount: 0});

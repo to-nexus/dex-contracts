@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
+import {ERC1967Proxy} from "@openzeppelin-contracts-5.1.0/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20, IERC20Metadata} from "@openzeppelin-contracts-5.1.0/token/ERC20/extensions/IERC20Metadata.sol";
 import {Math} from "@openzeppelin-contracts-5.1.0/utils/math/Math.sol";
 import {Test, console} from "forge-std/Test.sol";
 
 import {Factory, FactoryImpl} from "../src/Factory.sol";
 import {Pair, PairImpl} from "../src/Pair.sol";
-import {Router, RouterImpl} from "../src/Router.sol";
+import {RouterImpl} from "../src/Router.sol";
+import {WETH} from "../src/WETH.sol";
 import {IPair} from "../src/interfaces/IPair.sol";
 
 import {T20} from "./mock/T20.sol";
@@ -17,6 +19,8 @@ contract DEXTradeTest is Test {
     address public constant FEE_COLLECTOR = address(bytes20("FEE_COLLECTOR"));
     RouterImpl public ROUTER;
     PairImpl public PAIR;
+
+    WETH public Weth;
     IERC20 public QUOTE;
     uint256 public QUOTE_DECIMALS;
     IERC20 public BASE;
@@ -34,8 +38,10 @@ contract DEXTradeTest is Test {
         BASE_DECIMALS = 10 ** IERC20Metadata(address(BASE)).decimals();
 
         address routerImpl = address(new RouterImpl());
-        address payable router = payable(address(new Router(routerImpl, type(uint256).max)));
-        ROUTER = RouterImpl(router);
+        address router = address(new ERC1967Proxy(routerImpl, ""));
+        Weth = new WETH("Wrap Cross", "WCross", payable(router));
+        ROUTER = RouterImpl(payable(router));
+        ROUTER.initialize(payable(address(Weth)), type(uint256).max);
 
         address pairImpl = address(new PairImpl());
         address factoryImpl = address(new FactoryImpl());

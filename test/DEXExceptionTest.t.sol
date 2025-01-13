@@ -1,18 +1,24 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
+import {ERC1967Proxy} from "@openzeppelin-contracts-5.1.0/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20, IERC20Metadata} from "@openzeppelin-contracts-5.1.0/token/ERC20/extensions/IERC20Metadata.sol";
+
+import {Address} from "@openzeppelin-contracts-5.1.0/utils/Address.sol";
 import {Math} from "@openzeppelin-contracts-5.1.0/utils/math/Math.sol";
 import {Test, console} from "forge-std/Test.sol";
 
 import {Factory, FactoryImpl} from "../src/Factory.sol";
 import {Pair, PairImpl} from "../src/Pair.sol";
-import {Router, RouterImpl} from "../src/Router.sol";
+import {RouterImpl} from "../src/Router.sol";
+import {WETH} from "../src/WETH.sol";
 import {IPair} from "../src/interfaces/IPair.sol";
 
 import {T20} from "./mock/T20.sol";
 
 contract DEXExceptionTest is Test {
+    using Address for address payable;
+
     address public constant OWNER = address(bytes20("OWNER"));
     address public constant FEE_COLLECTOR = address(bytes20("FEE_COLLECTOR"));
 
@@ -20,6 +26,7 @@ contract DEXExceptionTest is Test {
     uint256 public constant MAKER_FEE_PERMIL = 50; // 5%
     uint256 public constant TAKER_FEE_PERMIL = 20; // 2%
 
+    WETH public Weth;
     IERC20 public BASE;
     IERC20 public QUOTE;
     uint256 public BASE_DECIMALS;
@@ -38,8 +45,10 @@ contract DEXExceptionTest is Test {
         QUOTE_DECIMALS = 10 ** IERC20Metadata(address(QUOTE)).decimals();
 
         address routerImpl = address(new RouterImpl());
-        address payable router = payable(address(new Router(routerImpl, MAX_MATCH_COUNT)));
-        ROUTER = RouterImpl(router);
+        address router = address(new ERC1967Proxy(routerImpl, ""));
+        Weth = new WETH("Wrap Cross", "WCross", payable(router));
+        ROUTER = RouterImpl(payable(router));
+        ROUTER.initialize(payable(address(Weth)), type(uint256).max);
 
         address pairImpl = address(new PairImpl());
         address factoryImpl = address(new FactoryImpl());
@@ -130,6 +139,14 @@ contract DEXExceptionTest is Test {
         ROUTER.buyMarketOrder(pair, 1e18, 0);
 
         vm.stopPrank();
+    }
+
+    // [ROUTER] coin 을 전송 받을 수 없다.
+    function test_exception_weth_case1() external {
+        vm.startPrank(OWNER);
+        vm.deal(OWNER, 1);
+        vm.expectRevert(abi.encodeWithSignature("RouterInvalidValue()"));
+        payable(address(ROUTER)).sendValue(1);
     }
 
     // [Factory] 등록된 BASE 토큰은 중복해서 등록할 수 없다.
@@ -244,8 +261,9 @@ contract DEXExceptionTest is Test {
 
         // R 배포
         address routerImpl = address(new RouterImpl());
-        address payable router = payable(address(new Router(routerImpl, type(uint256).max)));
-        RouterImpl R = RouterImpl(router);
+        address router = address(new ERC1967Proxy(routerImpl, ""));
+        RouterImpl R = RouterImpl(payable(router));
+        R.initialize(payable(address(Weth)), type(uint256).max);
 
         // R 에 Pair 등록
         R.addPair(pair);
