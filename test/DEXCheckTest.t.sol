@@ -336,7 +336,6 @@ contract DEXCheckTest is Test {
 
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
-        // 363096
         ROUTER.sellLimitOrder(address(PAIR), price, amount, 0, 0);
         assertEq(0, BASE.balanceOf(seller));
 
@@ -355,7 +354,7 @@ contract DEXCheckTest is Test {
         assertEq(0, buyPrices.length);
     }
 
-    // [258406] SELL OnePrice -> BUY (2 orders)
+    // [258406(+59027)] SELL OnePrice -> BUY (2 orders)
     function test_check_gas_case2() external {
         address seller1 = address(0x1);
         address seller2 = address(0x2);
@@ -374,12 +373,10 @@ contract DEXCheckTest is Test {
 
         vm.startPrank(seller1);
         BASE.approve(address(ROUTER), type(uint256).max);
-        // 363096
         ROUTER.sellLimitOrder(address(PAIR), price, amount, 0, 0);
         assertEq(0, BASE.balanceOf(seller1));
         vm.startPrank(seller2);
         BASE.approve(address(ROUTER), type(uint256).max);
-        // 154368
         ROUTER.sellLimitOrder(address(PAIR), price, amount, 0, 0);
         assertEq(0, BASE.balanceOf(seller2));
 
@@ -398,7 +395,7 @@ contract DEXCheckTest is Test {
         assertEq(0, buyPrices.length);
     }
 
-    // [281273] SELL TwoPrices -> BUY (2 orders)
+    // [281273(+81894(+22867))] SELL TwoPrices -> BUY (2 orders)
     function test_check_gas_case3() external {
         address seller1 = address(0x1);
         address seller2 = address(0x2);
@@ -418,12 +415,10 @@ contract DEXCheckTest is Test {
 
         vm.startPrank(seller1);
         BASE.approve(address(ROUTER), type(uint256).max);
-        // 363096
         ROUTER.sellLimitOrder(address(PAIR), price1, amount, 0, 0);
         assertEq(0, BASE.balanceOf(seller1));
         vm.startPrank(seller2);
         BASE.approve(address(ROUTER), type(uint256).max);
-        // 225246
         ROUTER.sellLimitOrder(address(PAIR), price2, amount, 0, 0);
         assertEq(0, BASE.balanceOf(seller2));
 
@@ -458,7 +453,6 @@ contract DEXCheckTest is Test {
 
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        // 365469
         ROUTER.buyLimitOrder(address(PAIR), price, amount, 0, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
@@ -477,7 +471,7 @@ contract DEXCheckTest is Test {
         assertEq(0, buyPrices.length);
     }
 
-    // [253747] BUY OnePrice -> SELL (2 orders)
+    // [253583(+58990)] BUY OnePrice -> SELL (2 orders)
     function test_check_gas_case5() external {
         address seller = address(0x1);
         address buyer1 = address(0x2);
@@ -496,13 +490,11 @@ contract DEXCheckTest is Test {
 
         vm.startPrank(buyer1);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        // 365469
         ROUTER.buyLimitOrder(address(PAIR), price, amount, 0, 0);
         assertEq(0, QUOTE.balanceOf(buyer1));
 
         vm.startPrank(buyer2);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        // 154991
         ROUTER.buyLimitOrder(address(PAIR), price, amount, 0, 0);
         assertEq(0, QUOTE.balanceOf(buyer2));
 
@@ -521,7 +513,7 @@ contract DEXCheckTest is Test {
         assertEq(0, buyPrices.length);
     }
 
-    // [261085] BUY TwoPrices -> SELL (2 orders)
+    // [275819(+81226(+22236))] BUY TwoPrices -> SELL (2 orders)
     function test_check_gas_case6() external {
         address seller = address(0x1);
         address buyer1 = address(0x2);
@@ -542,13 +534,11 @@ contract DEXCheckTest is Test {
 
         vm.startPrank(buyer1);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        // 365469
         ROUTER.buyLimitOrder(address(PAIR), price1, amount, 0, 0);
         assertEq(0, QUOTE.balanceOf(buyer1));
 
         vm.startPrank(buyer2);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        // 225619
         ROUTER.buyLimitOrder(address(PAIR), price2, amount, 0, 0);
         assertEq(0, QUOTE.balanceOf(buyer2));
 
