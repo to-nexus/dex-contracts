@@ -7,9 +7,9 @@ import {Address} from "@openzeppelin-contracts-5.1.0/utils/Address.sol";
 import {Math} from "@openzeppelin-contracts-5.1.0/utils/math/Math.sol";
 import {Test, console} from "forge-std/Test.sol";
 
-import {Factory, FactoryImpl} from "../src/Factory.sol";
-import {Pair, PairImpl} from "../src/Pair.sol";
-import {RouterImpl} from "../src/Router.sol";
+import {FactoryImpl} from "../src/FactoryImpl.sol";
+import {PairImpl} from "../src/PairImpl.sol";
+import {RouterImpl} from "../src/RouterImpl.sol";
 import {WETH} from "../src/WETH.sol";
 import {IPair} from "../src/interfaces/IPair.sol";
 
@@ -291,7 +291,14 @@ contract DexWrapBaseTest is Test {
 
         address pairImpl = address(new PairImpl());
         address factoryImpl = address(new FactoryImpl());
-        address factory = address(new Factory(factoryImpl, address(ROUTER), FEE_COLLECTOR, address(QUOTE), pairImpl));
+        address factory = address(
+            new ERC1967Proxy(
+                factoryImpl,
+                abi.encodeWithSelector(
+                    FactoryImpl.initialize.selector, address(ROUTER), FEE_COLLECTOR, address(QUOTE), pairImpl
+                )
+            )
+        );
         FactoryImpl F = FactoryImpl(factory);
 
         PAIR = PairImpl(F.createPair(address(BASE), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e4, 0, 0));
@@ -323,7 +330,14 @@ contract DexWrapBaseTest is Test {
 
         address pairImpl = address(new PairImpl());
         address factoryImpl = address(new FactoryImpl());
-        address factory = address(new Factory(factoryImpl, address(ROUTER), FEE_COLLECTOR, address(QUOTE), pairImpl));
+        address factory = address(
+            new ERC1967Proxy(
+                factoryImpl,
+                abi.encodeWithSelector(
+                    FactoryImpl.initialize.selector, address(ROUTER), FEE_COLLECTOR, address(QUOTE), pairImpl
+                )
+            )
+        );
         FactoryImpl F = FactoryImpl(factory);
 
         PAIR = PairImpl(F.createPair(address(BASE), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e4, 0, 0));

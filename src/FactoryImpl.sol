@@ -7,16 +7,7 @@ import {IERC20Metadata} from "@openzeppelin-contracts-5.1.0/token/ERC20/extensio
 import {EnumerableSet} from "@openzeppelin-contracts-5.1.0/utils/structs/EnumerableSet.sol";
 import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.1.0/access/OwnableUpgradeable.sol";
 
-import {Pair, PairImpl} from "./Pair.sol";
-
-contract Factory is ERC1967Proxy {
-    constructor(address implementation, address router, address feeCollector, address quote, address pairImpl)
-        ERC1967Proxy(
-            implementation,
-            abi.encodeWithSelector(FactoryImpl.initialize.selector, router, feeCollector, quote, pairImpl)
-        )
-    {}
-}
+import {PairImpl} from "./PairImpl.sol";
 
 contract FactoryImpl is UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -83,17 +74,20 @@ contract FactoryImpl is UUPSUpgradeable, OwnableUpgradeable {
         if (baseDecimals == 0) revert FactoryInvalidBaseAddress(base);
 
         pair = address(
-            new Pair(
+            new ERC1967Proxy(
                 pairImpl,
-                owner(),
-                router,
-                QUOTE,
-                base,
-                quoteTickSize,
-                baseTickSize,
-                feeCollector,
-                makerFeePermil,
-                takerFeePermil
+                abi.encodeWithSelector(
+                    PairImpl.initialize.selector,
+                    owner(),
+                    router,
+                    QUOTE,
+                    base,
+                    quoteTickSize,
+                    baseTickSize,
+                    feeCollector,
+                    makerFeePermil,
+                    takerFeePermil
+                )
             )
         );
         if (pair == address(0)) revert FactoryDeployPair();

@@ -14,37 +14,6 @@ import {ASCList} from "./lib/ASCList.sol";
 import {DESCList} from "./lib/DESCList.sol";
 import {List} from "./lib/List.sol";
 
-contract Pair is ERC1967Proxy {
-    constructor(
-        address implementation,
-        address owner,
-        address router,
-        address quote,
-        address base,
-        uint256 quoteTickSize,
-        uint256 baseTickSize,
-        address feeCollector,
-        uint256 makerFeePermil,
-        uint256 takerFeePermil
-    )
-        ERC1967Proxy(
-            implementation,
-            abi.encodeWithSelector(
-                PairImpl.initialize.selector,
-                owner,
-                router,
-                quote,
-                base,
-                quoteTickSize,
-                baseTickSize,
-                feeCollector,
-                makerFeePermil,
-                takerFeePermil
-            )
-        )
-    {}
-}
-
 contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable {
     using SafeERC20 for IERC20;
     using Math for uint256;

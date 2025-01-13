@@ -8,9 +8,9 @@ import {Address} from "@openzeppelin-contracts-5.1.0/utils/Address.sol";
 import {Math} from "@openzeppelin-contracts-5.1.0/utils/math/Math.sol";
 import {Test, console} from "forge-std/Test.sol";
 
-import {Factory, FactoryImpl} from "../src/Factory.sol";
-import {Pair, PairImpl} from "../src/Pair.sol";
-import {RouterImpl} from "../src/Router.sol";
+import {FactoryImpl} from "../src/FactoryImpl.sol";
+import {PairImpl} from "../src/PairImpl.sol";
+import {RouterImpl} from "../src/RouterImpl.sol";
 import {WETH} from "../src/WETH.sol";
 import {IPair} from "../src/interfaces/IPair.sol";
 
@@ -52,7 +52,12 @@ contract DEXExceptionTest is Test {
 
         address pairImpl = address(new PairImpl());
         address factoryImpl = address(new FactoryImpl());
-        address factory = address(new Factory(factoryImpl, router, FEE_COLLECTOR, address(QUOTE), pairImpl));
+        address factory = address(
+            new ERC1967Proxy(
+                factoryImpl,
+                abi.encodeWithSelector(FactoryImpl.initialize.selector, router, FEE_COLLECTOR, address(QUOTE), pairImpl)
+            )
+        );
         FACTORY = FactoryImpl(factory);
 
         address pair = FACTORY.createPair(
