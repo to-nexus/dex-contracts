@@ -82,6 +82,205 @@ contract DEXCheckTest is Test {
         return x * QUOTE_DECIMALS;
     }
 
+    // 주문을 취소하면 데이터가 삭제 되고, 토큰을 돌려준다.
+    function test_check_cancel_case1() external {
+        address seller = address(0x1);
+        address buyer = address(0x2);
+
+        uint256 price = _toQuote(3);
+        uint256 amount = _toBase(700);
+        uint256 volume = Math.mulDiv(price, amount, BASE_DECIMALS);
+
+        vm.prank(OWNER);
+        BASE.transfer(seller, amount);
+        vm.prank(OWNER);
+        QUOTE.transfer(buyer, volume);
+
+        {
+            // cancel sell
+            vm.startPrank(seller);
+            BASE.approve(address(ROUTER), type(uint256).max);
+            uint256 sellOrderId = ROUTER.limitSell(address(PAIR), price, amount, 0, 0);
+            assertEq(0, BASE.balanceOf(seller));
+
+            uint256[] memory cancelOrderIds = new uint256[](1);
+            cancelOrderIds[0] = sellOrderId;
+
+            (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+            assertEq(1, sellPrices.length);
+            assertEq(0, buyPrices.length);
+
+            vm.startPrank(seller);
+            ROUTER.cancel(address(PAIR), cancelOrderIds);
+            assertEq(amount, BASE.balanceOf(seller));
+
+            (sellPrices, buyPrices) = PAIR.ticks();
+            assertEq(0, sellPrices.length);
+            assertEq(0, buyPrices.length);
+        }
+        {
+            // cancel buy
+            vm.startPrank(buyer);
+            QUOTE.approve(address(ROUTER), type(uint256).max);
+            uint256 buyOrderId = ROUTER.limitBuy(address(PAIR), price, amount, 0, 0);
+            assertEq(0, QUOTE.balanceOf(buyer));
+
+            uint256[] memory cancelOrderIds = new uint256[](1);
+            cancelOrderIds[0] = buyOrderId;
+
+            (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+            assertEq(0, sellPrices.length);
+            assertEq(1, buyPrices.length);
+
+            vm.startPrank(buyer);
+            ROUTER.cancel(address(PAIR), cancelOrderIds);
+            assertEq(volume, QUOTE.balanceOf(buyer));
+
+            (sellPrices, buyPrices) = PAIR.ticks();
+            assertEq(0, sellPrices.length);
+            assertEq(0, buyPrices.length);
+        }
+    }
+
+    // 거래가 일부분 이루어진 주문또한 취소하면 데이터가 삭제 되고, 남은 토큰을 돌려준다.
+    function test_check_cancel_case2() external {
+        address seller = address(0x1);
+        address buyer = address(0x2);
+
+        uint256 price = _toQuote(3);
+        uint256 amount = _toBase(700);
+        uint256 volume = Math.mulDiv(price, amount, BASE_DECIMALS);
+        vm.startPrank(OWNER);
+        BASE.approve(address(ROUTER), type(uint256).max);
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        vm.stopPrank();
+
+        vm.prank(OWNER);
+        BASE.transfer(seller, amount);
+        vm.prank(OWNER);
+        QUOTE.transfer(buyer, volume);
+
+        {
+            // cancel sell
+            vm.startPrank(seller);
+            BASE.approve(address(ROUTER), type(uint256).max);
+            uint256 sellOrderId = ROUTER.limitSell(address(PAIR), price, amount, 0, 0);
+            assertEq(0, BASE.balanceOf(seller));
+            vm.startPrank(OWNER);
+            ROUTER.limitBuy(address(PAIR), price, amount / 2, 0, 0);
+
+            uint256[] memory cancelOrderIds = new uint256[](1);
+            cancelOrderIds[0] = sellOrderId;
+
+            (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+            assertEq(1, sellPrices.length);
+            assertEq(0, buyPrices.length);
+
+            vm.startPrank(seller);
+            ROUTER.cancel(address(PAIR), cancelOrderIds);
+            assertEq(amount / 2, BASE.balanceOf(seller));
+
+            (sellPrices, buyPrices) = PAIR.ticks();
+            assertEq(0, sellPrices.length);
+            assertEq(0, buyPrices.length);
+        }
+        {
+            // cancel buy
+            vm.startPrank(buyer);
+            QUOTE.approve(address(ROUTER), type(uint256).max);
+            uint256 buyOrderId = ROUTER.limitBuy(address(PAIR), price, amount, 0, 0);
+            assertEq(0, QUOTE.balanceOf(buyer));
+
+            vm.startPrank(OWNER);
+            ROUTER.marketSell(address(PAIR), amount / 2, 0);
+
+            uint256[] memory cancelOrderIds = new uint256[](1);
+            cancelOrderIds[0] = buyOrderId;
+
+            (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+            assertEq(0, sellPrices.length);
+            assertEq(1, buyPrices.length);
+
+            vm.startPrank(buyer);
+            ROUTER.cancel(address(PAIR), cancelOrderIds);
+            assertEq(volume / 2, QUOTE.balanceOf(buyer));
+
+            (sellPrices, buyPrices) = PAIR.ticks();
+            assertEq(0, sellPrices.length);
+            assertEq(0, buyPrices.length);
+        }
+    }
+
+    // 거래 취소는 해당 주문의 OWNER 만 가능하다.
+    function test_check_cancel_case3() external {
+        address seller = address(0x1);
+        address buyer = address(0x2);
+        address hacker = address(0x3);
+
+        uint256 price = _toQuote(3);
+        uint256 amount = _toBase(700);
+        uint256 volume = Math.mulDiv(price, amount, BASE_DECIMALS);
+
+        vm.prank(OWNER);
+        BASE.transfer(seller, amount);
+        vm.prank(OWNER);
+        QUOTE.transfer(buyer, volume);
+
+        {
+            // cancel sell
+            vm.startPrank(seller);
+            BASE.approve(address(ROUTER), type(uint256).max);
+            uint256 sellOrderId = ROUTER.limitSell(address(PAIR), price, amount, 0, 0);
+            assertEq(0, BASE.balanceOf(seller));
+
+            uint256[] memory cancelOrderIds = new uint256[](1);
+            cancelOrderIds[0] = sellOrderId;
+
+            (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+            assertEq(1, sellPrices.length);
+            assertEq(0, buyPrices.length);
+
+            vm.startPrank(hacker);
+            vm.expectRevert(abi.encodeWithSignature("PairNotOwner(uint256,address)", sellOrderId, hacker));
+            ROUTER.cancel(address(PAIR), cancelOrderIds);
+            assertEq(0, BASE.balanceOf(seller));
+
+            (sellPrices, buyPrices) = PAIR.ticks();
+            assertEq(1, sellPrices.length);
+            assertEq(0, buyPrices.length);
+
+            vm.startPrank(seller);
+            ROUTER.cancel(address(PAIR), cancelOrderIds);
+
+            (sellPrices, buyPrices) = PAIR.ticks();
+            assertEq(0, sellPrices.length);
+            assertEq(0, buyPrices.length);
+        }
+        {
+            // cancel buy
+            vm.startPrank(buyer);
+            QUOTE.approve(address(ROUTER), type(uint256).max);
+            uint256 buyOrderId = ROUTER.limitBuy(address(PAIR), price, amount, 0, 0);
+            assertEq(0, QUOTE.balanceOf(buyer));
+
+            uint256[] memory cancelOrderIds = new uint256[](1);
+            cancelOrderIds[0] = buyOrderId;
+
+            (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+            assertEq(0, sellPrices.length);
+            assertEq(1, buyPrices.length);
+
+            vm.startPrank(hacker);
+            vm.expectRevert(abi.encodeWithSignature("PairNotOwner(uint256,address)", buyOrderId, hacker));
+            ROUTER.cancel(address(PAIR), cancelOrderIds);
+            assertEq(0, QUOTE.balanceOf(buyer));
+
+            (sellPrices, buyPrices) = PAIR.ticks();
+            assertEq(0, sellPrices.length);
+            assertEq(1, buyPrices.length);
+        }
+    }
+
     // [AMOUNT] sell == buy
     function test_check_fee_case1() external {
         address seller = address(0x1);
