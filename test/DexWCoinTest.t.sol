@@ -48,7 +48,7 @@ contract DexWrapBaseTest is Test {
 
         vm.deal(seller, amount);
         vm.prank(seller);
-        ROUTER.sellLimitOrder{value: amount}(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitSell{value: amount}(address(PAIR), price, amount, 0, 0);
 
         vm.assertEq(0, payable(seller).balance);
         vm.assertEq(0, payable(buyer).balance);
@@ -65,7 +65,7 @@ contract DexWrapBaseTest is Test {
         QUOTE.transfer(buyer, volume);
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.buyMarketOrder(address(PAIR), volume, 0);
+        ROUTER.marketBuy(address(PAIR), volume, 0);
 
         vm.assertEq(0, payable(seller).balance);
         vm.assertEq(amount, payable(buyer).balance);
@@ -93,7 +93,7 @@ contract DexWrapBaseTest is Test {
         QUOTE.transfer(buyer, volume);
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.buyLimitOrder(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitBuy(address(PAIR), price, amount, 0, 0);
         vm.stopPrank();
 
         vm.assertEq(0, payable(seller).balance);
@@ -108,7 +108,7 @@ contract DexWrapBaseTest is Test {
 
         vm.deal(seller, amount);
         vm.prank(seller);
-        ROUTER.sellMarketOrder{value: amount}(address(PAIR), amount, 0);
+        ROUTER.marketSell{value: amount}(address(PAIR), amount, 0);
 
         vm.assertEq(0, payable(seller).balance);
         vm.assertEq(amount, payable(buyer).balance);
@@ -135,7 +135,7 @@ contract DexWrapBaseTest is Test {
         BASE.transfer(seller, amount);
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.sellLimitOrder(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitSell(address(PAIR), price, amount, 0, 0);
         vm.stopPrank();
 
         vm.assertEq(0, payable(seller).balance);
@@ -151,7 +151,7 @@ contract DexWrapBaseTest is Test {
         uint256 volume = Math.mulDiv(price, amount, BASE_DECIMALS);
         vm.deal(buyer, volume);
         vm.prank(buyer);
-        ROUTER.buyMarketOrder{value: volume}(address(PAIR), volume, 0);
+        ROUTER.marketBuy{value: volume}(address(PAIR), volume, 0);
 
         vm.assertEq(volume, payable(seller).balance);
         vm.assertEq(0, payable(buyer).balance);
@@ -177,7 +177,7 @@ contract DexWrapBaseTest is Test {
         uint256 volume = Math.mulDiv(price, amount, BASE_DECIMALS);
         vm.deal(buyer, volume);
         vm.prank(buyer);
-        ROUTER.buyLimitOrder{value: volume}(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitBuy{value: volume}(address(PAIR), price, amount, 0, 0);
 
         vm.assertEq(0, payable(seller).balance);
         vm.assertEq(0, payable(buyer).balance);
@@ -194,7 +194,7 @@ contract DexWrapBaseTest is Test {
 
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.sellMarketOrder(address(PAIR), amount, 0);
+        ROUTER.marketSell(address(PAIR), amount, 0);
         vm.stopPrank();
 
         vm.assertEq(volume, payable(seller).balance);
@@ -231,11 +231,11 @@ contract DexWrapBaseTest is Test {
         vm.deal(seller, amount + 1);
         vm.prank(seller);
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidValue()"));
-        ROUTER.sellLimitOrder{value: amount + 1}(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitSell{value: amount + 1}(address(PAIR), price, amount, 0, 0);
 
         vm.prank(seller);
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidValue()"));
-        ROUTER.sellMarketOrder{value: amount + 1}(address(PAIR), amount, 0);
+        ROUTER.marketSell{value: amount + 1}(address(PAIR), amount, 0);
     }
 
     // msg.value 가 맞지 않으면 에러를 리턴한다.
@@ -250,11 +250,11 @@ contract DexWrapBaseTest is Test {
         vm.deal(buyer, volume + 1);
         vm.prank(buyer);
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidValue()"));
-        ROUTER.buyLimitOrder{value: volume + 1}(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitBuy{value: volume + 1}(address(PAIR), price, amount, 0, 0);
 
         vm.prank(buyer);
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidValue()"));
-        ROUTER.buyMarketOrder{value: volume + 1}(address(PAIR), volume, 0);
+        ROUTER.marketBuy{value: volume + 1}(address(PAIR), volume, 0);
     }
 
     function _toBase(uint256 x) private view returns (uint256) {

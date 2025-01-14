@@ -70,7 +70,7 @@ contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyG
         return _allPairs.contains(pair);
     }
 
-    function sellLimitOrder(address pair, uint256 price, uint256 amount, uint256 searchPrice, uint256 _maxMatchCount)
+    function limitSell(address pair, uint256 price, uint256 amount, uint256 searchPrice, uint256 _maxMatchCount)
         external
         payable
         nonReentrant
@@ -91,7 +91,7 @@ contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyG
         return IPair(pair).limit(order, searchPrice, _toMaxMatchCount(_maxMatchCount));
     }
 
-    function buyLimitOrder(address pair, uint256 price, uint256 amount, uint256 searchPrice, uint256 _maxMatchCount)
+    function limitBuy(address pair, uint256 price, uint256 amount, uint256 searchPrice, uint256 _maxMatchCount)
         external
         payable
         nonReentrant
@@ -113,7 +113,7 @@ contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyG
         return IPair(pair).limit(order, searchPrice, _toMaxMatchCount(_maxMatchCount));
     }
 
-    function sellMarketOrder(address pair, uint256 amount, uint256 _maxMatchCount)
+    function marketSell(address pair, uint256 amount, uint256 _maxMatchCount)
         external
         payable
         nonReentrant
@@ -133,7 +133,7 @@ contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyG
         IPair(pair).market(order, amount, _toMaxMatchCount(_maxMatchCount));
     }
 
-    function buyMarketOrder(address pair, uint256 amount, uint256 _maxMatchCount)
+    function marketBuy(address pair, uint256 amount, uint256 _maxMatchCount)
         external
         payable
         nonReentrant
@@ -153,7 +153,7 @@ contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyG
         IPair(pair).market(order, amount, _toMaxMatchCount(_maxMatchCount));
     }
 
-    function cancelOrder(address pair, uint256[] calldata orderIds) external validPair(pair) {
+    function cancel(address pair, uint256[] calldata orderIds) external validPair(pair) {
         IPair(pair).cancel(_msgSender(), orderIds);
     }
 

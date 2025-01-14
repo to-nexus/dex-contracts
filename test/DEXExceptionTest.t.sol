@@ -107,16 +107,16 @@ contract DEXExceptionTest is Test {
 
         // 거래 및 실패 확인
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidPairAddress(address)", pair));
-        ROUTER.sellLimitOrder(pair, 1e18, 1e18, 0, 0);
+        ROUTER.limitSell(pair, 1e18, 1e18, 0, 0);
 
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidPairAddress(address)", pair));
-        ROUTER.buyLimitOrder(pair, 1e18, 1e18, 0, 0);
+        ROUTER.limitBuy(pair, 1e18, 1e18, 0, 0);
 
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidPairAddress(address)", pair));
-        ROUTER.sellMarketOrder(pair, 1e18, 0);
+        ROUTER.marketSell(pair, 1e18, 0);
 
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidPairAddress(address)", pair));
-        ROUTER.buyMarketOrder(pair, 1e18, 0);
+        ROUTER.marketBuy(pair, 1e18, 0);
 
         vm.stopPrank();
     }
@@ -132,16 +132,16 @@ contract DEXExceptionTest is Test {
 
         // 거래 및 실패 확인
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidPairAddress(address)", pair));
-        ROUTER.sellLimitOrder(pair, 1e18, 1e18, 0, 0);
+        ROUTER.limitSell(pair, 1e18, 1e18, 0, 0);
 
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidPairAddress(address)", pair));
-        ROUTER.buyLimitOrder(pair, 1e18, 1e18, 0, 0);
+        ROUTER.limitBuy(pair, 1e18, 1e18, 0, 0);
 
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidPairAddress(address)", pair));
-        ROUTER.sellMarketOrder(pair, 1e18, 0);
+        ROUTER.marketSell(pair, 1e18, 0);
 
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidPairAddress(address)", pair));
-        ROUTER.buyMarketOrder(pair, 1e18, 0);
+        ROUTER.marketBuy(pair, 1e18, 0);
 
         vm.stopPrank();
     }
@@ -174,30 +174,30 @@ contract DEXExceptionTest is Test {
         QUOTE.approve(address(ROUTER), type(uint256).max);
         // [limit] 성공 확인
         address pair = address(PAIR);
-        ROUTER.sellLimitOrder(pair, quoteTickSize * 2, baseTickSize, 0, 0);
-        ROUTER.buyLimitOrder(pair, quoteTickSize, baseTickSize, 0, 0);
+        ROUTER.limitSell(pair, quoteTickSize * 2, baseTickSize, 0, 0);
+        ROUTER.limitBuy(pair, quoteTickSize, baseTickSize, 0, 0);
 
         // [limit] 실패 확인
         vm.expectRevert(abi.encodeWithSignature("PairInvalidPrice(uint256)", invalidPrice));
-        ROUTER.sellLimitOrder(pair, invalidPrice, baseTickSize, 0, 0);
+        ROUTER.limitSell(pair, invalidPrice, baseTickSize, 0, 0);
 
         // [limit] 실패 확인
         vm.expectRevert(abi.encodeWithSignature("PairInvalidAmount(uint256)", invalidAmount));
-        ROUTER.sellLimitOrder(pair, quoteTickSize, invalidAmount, 0, 0);
+        ROUTER.limitSell(pair, quoteTickSize, invalidAmount, 0, 0);
 
         // [market] 성공 확인
         uint256 denominator = PAIR.DENOMINATOR();
         uint256 volume = Math.mulDiv(quoteTickSize, baseTickSize, denominator);
-        ROUTER.sellMarketOrder(pair, baseTickSize, 0);
-        ROUTER.buyMarketOrder(pair, volume, 0);
+        ROUTER.marketSell(pair, baseTickSize, 0);
+        ROUTER.marketBuy(pair, volume, 0);
 
         // [market] 실패 확인
         vm.expectRevert(abi.encodeWithSignature("PairInvalidAmount(uint256)", invalidAmount));
-        ROUTER.sellMarketOrder(pair, invalidAmount, 0);
+        ROUTER.marketSell(pair, invalidAmount, 0);
 
         // [market] 실패 확인
         vm.expectRevert(abi.encodeWithSignature("PairInsufficientTradeVolume(uint256,uint256)", volume - 1, volume));
-        ROUTER.buyMarketOrder(pair, volume - 1, 0);
+        ROUTER.marketBuy(pair, volume - 1, 0);
     }
 
     // [Pair] 사용자는 직접 Pair 으로 거래를 요청할 수 없다.
@@ -259,10 +259,10 @@ contract DEXExceptionTest is Test {
         // ROUTER 로는 거래할 수 있다.
         BASE.approve(address(ROUTER), type(uint256).max);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.sellLimitOrder(pair, _toQuote(1), _toBase(1), 0, 0);
-        ROUTER.buyLimitOrder(pair, _toQuote(1), _toBase(1), 0, 0);
-        ROUTER.sellMarketOrder(pair, _toBase(1), 0);
-        ROUTER.buyMarketOrder(pair, _toQuote(1), 0);
+        ROUTER.limitSell(pair, _toQuote(1), _toBase(1), 0, 0);
+        ROUTER.limitBuy(pair, _toQuote(1), _toBase(1), 0, 0);
+        ROUTER.marketSell(pair, _toBase(1), 0);
+        ROUTER.marketBuy(pair, _toQuote(1), 0);
 
         // R 배포
         address routerImpl = address(new RouterImpl());
@@ -278,13 +278,13 @@ contract DEXExceptionTest is Test {
 
         // R 로 주문은 넣을수 없다.
         vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", router));
-        R.sellLimitOrder(pair, _toQuote(1), _toBase(1), 0, 0);
+        R.limitSell(pair, _toQuote(1), _toBase(1), 0, 0);
         vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", router));
-        R.buyLimitOrder(pair, _toQuote(1), _toBase(1), 0, 0);
+        R.limitBuy(pair, _toQuote(1), _toBase(1), 0, 0);
         vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", router));
-        R.sellMarketOrder(pair, _toBase(1), 0);
+        R.marketSell(pair, _toBase(1), 0);
         vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", router));
-        R.buyMarketOrder(pair, _toQuote(1), 0);
+        R.marketBuy(pair, _toQuote(1), 0);
 
         vm.stopPrank();
     }

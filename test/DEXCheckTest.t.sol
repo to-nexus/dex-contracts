@@ -101,12 +101,12 @@ contract DEXCheckTest is Test {
 
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.sellLimitOrder(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitSell(address(PAIR), price, amount, 0, 0);
         assertEq(0, BASE.balanceOf(seller));
 
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.buyLimitOrder(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitBuy(address(PAIR), price, amount, 0, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
         uint256 makerFee = Math.mulDiv(volume, MAKER_FEE_PERMIL, 1000);
@@ -144,12 +144,12 @@ contract DEXCheckTest is Test {
 
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.sellLimitOrder(address(PAIR), price, sellAmount, 0, 0);
+        ROUTER.limitSell(address(PAIR), price, sellAmount, 0, 0);
         assertEq(0, BASE.balanceOf(seller));
 
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.buyLimitOrder(address(PAIR), price, buyAmount, 0, 0);
+        ROUTER.limitBuy(address(PAIR), price, buyAmount, 0, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
         uint256 makerFee = Math.mulDiv(matchVolume, MAKER_FEE_PERMIL, 1000);
@@ -187,12 +187,12 @@ contract DEXCheckTest is Test {
 
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.sellLimitOrder(address(PAIR), price, sellAmount, 0, 0);
+        ROUTER.limitSell(address(PAIR), price, sellAmount, 0, 0);
         assertEq(0, BASE.balanceOf(seller));
 
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.buyLimitOrder(address(PAIR), price, buyAmount, 0, 0);
+        ROUTER.limitBuy(address(PAIR), price, buyAmount, 0, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
         uint256 makerFee = Math.mulDiv(matchVolume, MAKER_FEE_PERMIL, 1000);
@@ -226,12 +226,12 @@ contract DEXCheckTest is Test {
 
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.buyLimitOrder(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitBuy(address(PAIR), price, amount, 0, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.sellLimitOrder(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitSell(address(PAIR), price, amount, 0, 0);
         assertEq(0, BASE.balanceOf(seller));
 
         uint256 makerFee = Math.mulDiv(amount, MAKER_FEE_PERMIL, 1000);
@@ -269,12 +269,12 @@ contract DEXCheckTest is Test {
 
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.buyLimitOrder(address(PAIR), price, buyAmount, 0, 0);
+        ROUTER.limitBuy(address(PAIR), price, buyAmount, 0, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.sellLimitOrder(address(PAIR), price, sellAmount, 0, 0);
+        ROUTER.limitSell(address(PAIR), price, sellAmount, 0, 0);
         assertEq(0, BASE.balanceOf(seller));
 
         uint256 makerFee = Math.mulDiv(matchAmount, MAKER_FEE_PERMIL, 1000);
@@ -312,12 +312,12 @@ contract DEXCheckTest is Test {
 
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.buyLimitOrder(address(PAIR), price, buyAmount, 0, 0);
+        ROUTER.limitBuy(address(PAIR), price, buyAmount, 0, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.sellLimitOrder(address(PAIR), price, sellAmount, 0, 0);
+        ROUTER.limitSell(address(PAIR), price, sellAmount, 0, 0);
         assertEq(0, BASE.balanceOf(seller));
 
         uint256 makerFee = Math.mulDiv(matchAmount, MAKER_FEE_PERMIL, 1000);
@@ -348,7 +348,7 @@ contract DEXCheckTest is Test {
 
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.sellLimitOrder(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitSell(address(PAIR), price, amount, 0, 0);
         assertEq(0, BASE.balanceOf(seller));
 
         (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
@@ -358,7 +358,7 @@ contract DEXCheckTest is Test {
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
         // 199981
-        ROUTER.buyMarketOrder(address(PAIR), volume, 0);
+        ROUTER.marketBuy(address(PAIR), volume, 0);
         assertEq(0, QUOTE.balanceOf(buyer)); // 정확이 매칭 되었는지 확인
 
         (sellPrices, buyPrices) = PAIR.ticks();
@@ -385,11 +385,11 @@ contract DEXCheckTest is Test {
 
         vm.startPrank(seller1);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.sellLimitOrder(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitSell(address(PAIR), price, amount, 0, 0);
         assertEq(0, BASE.balanceOf(seller1));
         vm.startPrank(seller2);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.sellLimitOrder(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitSell(address(PAIR), price, amount, 0, 0);
         assertEq(0, BASE.balanceOf(seller2));
 
         (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
@@ -399,7 +399,7 @@ contract DEXCheckTest is Test {
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
         // 258882
-        ROUTER.buyMarketOrder(address(PAIR), volume, 0);
+        ROUTER.marketBuy(address(PAIR), volume, 0);
         assertEq(0, QUOTE.balanceOf(buyer)); // 정확이 매칭 되었는지 확인
 
         (sellPrices, buyPrices) = PAIR.ticks();
@@ -427,11 +427,11 @@ contract DEXCheckTest is Test {
 
         vm.startPrank(seller1);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.sellLimitOrder(address(PAIR), price1, amount, 0, 0);
+        ROUTER.limitSell(address(PAIR), price1, amount, 0, 0);
         assertEq(0, BASE.balanceOf(seller1));
         vm.startPrank(seller2);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.sellLimitOrder(address(PAIR), price2, amount, 0, 0);
+        ROUTER.limitSell(address(PAIR), price2, amount, 0, 0);
         assertEq(0, BASE.balanceOf(seller2));
 
         (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
@@ -441,7 +441,7 @@ contract DEXCheckTest is Test {
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
         // 266886
-        ROUTER.buyMarketOrder(address(PAIR), volume, 0);
+        ROUTER.marketBuy(address(PAIR), volume, 0);
         assertEq(0, QUOTE.balanceOf(buyer)); // 정확이 매칭 되었는지 확인
 
         (sellPrices, buyPrices) = PAIR.ticks();
@@ -465,7 +465,7 @@ contract DEXCheckTest is Test {
 
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.buyLimitOrder(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitBuy(address(PAIR), price, amount, 0, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
         (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
@@ -475,7 +475,7 @@ contract DEXCheckTest is Test {
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
         // 195076
-        ROUTER.sellMarketOrder(address(PAIR), amount, 0);
+        ROUTER.marketSell(address(PAIR), amount, 0);
         assertEq(0, BASE.balanceOf(seller)); // 정확이 매칭 되었는지 확인
 
         (sellPrices, buyPrices) = PAIR.ticks();
@@ -502,12 +502,12 @@ contract DEXCheckTest is Test {
 
         vm.startPrank(buyer1);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.buyLimitOrder(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitBuy(address(PAIR), price, amount, 0, 0);
         assertEq(0, QUOTE.balanceOf(buyer1));
 
         vm.startPrank(buyer2);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.buyLimitOrder(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitBuy(address(PAIR), price, amount, 0, 0);
         assertEq(0, QUOTE.balanceOf(buyer2));
 
         (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
@@ -517,7 +517,7 @@ contract DEXCheckTest is Test {
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
         // 253878
-        ROUTER.sellMarketOrder(address(PAIR), amount * 2, 0);
+        ROUTER.marketSell(address(PAIR), amount * 2, 0);
         assertEq(0, BASE.balanceOf(seller)); // 정확이 매칭 되었는지 확인
 
         (sellPrices, buyPrices) = PAIR.ticks();
@@ -546,12 +546,12 @@ contract DEXCheckTest is Test {
 
         vm.startPrank(buyer1);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.buyLimitOrder(address(PAIR), price1, amount, 0, 0);
+        ROUTER.limitBuy(address(PAIR), price1, amount, 0, 0);
         assertEq(0, QUOTE.balanceOf(buyer1));
 
         vm.startPrank(buyer2);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.buyLimitOrder(address(PAIR), price2, amount, 0, 0);
+        ROUTER.limitBuy(address(PAIR), price2, amount, 0, 0);
         assertEq(0, QUOTE.balanceOf(buyer2));
 
         (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
@@ -561,7 +561,7 @@ contract DEXCheckTest is Test {
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
         // 261216
-        ROUTER.sellMarketOrder(address(PAIR), amount * 2, 0);
+        ROUTER.marketSell(address(PAIR), amount * 2, 0);
         assertEq(0, BASE.balanceOf(seller)); // 정확이 매칭 되었는지 확인
 
         (sellPrices, buyPrices) = PAIR.ticks();
