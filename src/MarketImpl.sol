@@ -9,7 +9,7 @@ import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/acce
 
 import {PairImpl} from "./PairImpl.sol";
 
-contract FactoryImpl is UUPSUpgradeable, OwnableUpgradeable {
+contract MarketImpl is UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     error FactoryInvalidInitializeData(bytes32);
@@ -27,6 +27,8 @@ contract FactoryImpl is UUPSUpgradeable, OwnableUpgradeable {
 
     EnumerableSet.AddressSet private _allBases;
     mapping(address erc20 => address) private _allPairs;
+
+    uint256[44] private __gap;
 
     function initialize(address _router, address _feeCollector, address _quote, address _pairImpl)
         external
@@ -97,6 +99,4 @@ contract FactoryImpl is UUPSUpgradeable, OwnableUpgradeable {
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
-
-    uint256[44] private __gap;
 }
