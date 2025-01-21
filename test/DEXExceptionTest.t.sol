@@ -8,7 +8,7 @@ import {Address} from "@openzeppelin-contracts-5.2.0/utils/Address.sol";
 import {Math} from "@openzeppelin-contracts-5.2.0/utils/math/Math.sol";
 import {Test, console} from "forge-std/Test.sol";
 
-import {FactoryImpl} from "../src/FactoryImpl.sol";
+import {MarketImpl} from "../src/MarketImpl.sol";
 import {PairImpl} from "../src/PairImpl.sol";
 import {RouterImpl} from "../src/RouterImpl.sol";
 import {WETH} from "../src/WETH.sol";
@@ -33,7 +33,7 @@ contract DEXExceptionTest is Test {
     uint256 public QUOTE_DECIMALS;
 
     RouterImpl public ROUTER;
-    FactoryImpl public FACTORY;
+    MarketImpl public FACTORY;
     PairImpl public PAIR;
 
     function setUp() external {
@@ -51,14 +51,14 @@ contract DEXExceptionTest is Test {
         ROUTER.initialize(payable(address(Weth)), type(uint256).max);
 
         address pairImpl = address(new PairImpl());
-        address factoryImpl = address(new FactoryImpl());
+        address factoryImpl = address(new MarketImpl());
         address factory = address(
             new ERC1967Proxy(
                 factoryImpl,
-                abi.encodeWithSelector(FactoryImpl.initialize.selector, router, FEE_COLLECTOR, address(QUOTE), pairImpl)
+                abi.encodeWithSelector(MarketImpl.initialize.selector, router, FEE_COLLECTOR, address(QUOTE), pairImpl)
             )
         );
-        FACTORY = FactoryImpl(factory);
+        FACTORY = MarketImpl(factory);
 
         address pair = FACTORY.createPair(
             address(BASE), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e4, MAKER_FEE_PERMIL, TAKER_FEE_PERMIL

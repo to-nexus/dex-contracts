@@ -77,6 +77,8 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     mapping(uint256 price => List.U256) private _buyOrders; //  price => 구매 order id list
     mapping(uint256 orderId => Order) private _allOrders; // 모든 주문 정보
 
+    uint256[34] private __gap;
+
     modifier onlyRouter() {
         if (_msgSender() != ROUTER) revert PairInvalidRouter(_msgSender());
         _;
@@ -527,6 +529,4 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
-
-    uint256[34] private __gap;
 }

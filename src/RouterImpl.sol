@@ -41,6 +41,8 @@ contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyG
     EnumerableSet.AddressSet private _allPairs;
     mapping(address pair => PairInfo) public pairInfo;
 
+    uint256[46] private __gap;
+
     modifier validPair(address pair) {
         if (!_allPairs.contains(pair)) revert RouterInvalidPairAddress(pair);
         _;
@@ -194,6 +196,4 @@ contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyG
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
-
-    uint256[47] private __gap;
 }
