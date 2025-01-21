@@ -43,7 +43,9 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
             // deploy router
             RouterImpl routerImpl = new RouterImpl();
             ERC1967Proxy proxy = new ERC1967Proxy(address(routerImpl), hex"");
-            RouterImpl router = RouterImpl(payable(address(proxy)));
+            ROUTER = payable(address(proxy));
+
+            RouterImpl router = RouterImpl(ROUTER);
             router.initialize(_owner, _maxMatchCount);
         }
         {
@@ -54,11 +56,19 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
         __Ownable_init(_owner);
     }
 
-    function allMarkets() external view returns (address[] memory, address[] memory) {
-        return (_allQuotes.values(), _allMarkets.values());
+    function allQuotes() external view returns (address[] memory) {
+        return _allQuotes.values();
     }
 
-    function createMarket(address _owner, address _fee_collector, address _quote) external onlyOwner {
+    function allMarkets() external view returns (address[] memory) {
+        return _allMarkets.values();
+    }
+
+    function createMarket(address _owner, address _fee_collector, address _quote)
+        external
+        onlyOwner
+        returns (address)
+    {
         if (!_allQuotes.add(_quote)) revert CrossDexAlreadyCreatedMarketQuote(_quote);
 
         MarketImpl _market = MarketImpl(address(new ERC1967Proxy(marketImpl, hex"")));
@@ -69,6 +79,7 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
         quoteToMarket[_quote] = market;
 
         emit CreatedMarket(_quote, market, _owner, _fee_collector);
+        return market;
     }
 
     function notifyPairCreated(address pair) external onlyMarket {

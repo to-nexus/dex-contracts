@@ -14,10 +14,10 @@ import {ICrossDex} from "./interfaces/ICrossDex.sol";
 contract MarketImpl is UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    error FactoryInvalidInitializeData(bytes32);
-    error FactoryInvalidBaseAddress(address);
-    error FactoryAlreadyCreatedBaseAddress(address);
-    error FactoryDeployPair();
+    error MarketInvalidInitializeData(bytes32);
+    error MarketInvalidBaseAddress(address);
+    error MarketAlreadyCreatedBaseAddress(address);
+    error MarketDeployPair();
 
     event PairCreated(address indexed pair, address indexed base, uint256 timestamp);
 
@@ -37,11 +37,11 @@ contract MarketImpl is UUPSUpgradeable, OwnableUpgradeable {
         external
         initializer
     {
-        if (_owner == address(0)) revert FactoryInvalidInitializeData("owner");
-        if (_router == address(0)) revert FactoryInvalidInitializeData("router");
-        if (_feeCollector == address(0)) revert FactoryInvalidInitializeData("feeCollector");
-        if (_quote == address(0)) revert FactoryInvalidInitializeData("quote");
-        if (_pairImpl == address(0)) revert FactoryInvalidInitializeData("pairImpl");
+        if (_owner == address(0)) revert MarketInvalidInitializeData("owner");
+        if (_router == address(0)) revert MarketInvalidInitializeData("router");
+        if (_feeCollector == address(0)) revert MarketInvalidInitializeData("feeCollector");
+        if (_quote == address(0)) revert MarketInvalidInitializeData("quote");
+        if (_pairImpl == address(0)) revert MarketInvalidInitializeData("pairImpl");
 
         CROSS_DEX = ICrossDex(_msgSender());
         QUOTE = _quote;
@@ -76,10 +76,10 @@ contract MarketImpl is UUPSUpgradeable, OwnableUpgradeable {
         uint256 makerFeePermil,
         uint256 takerFeePermil
     ) external onlyOwner returns (address pair) {
-        if (base == address(0)) revert FactoryInvalidBaseAddress(base);
-        if (!_allBases.add(base)) revert FactoryAlreadyCreatedBaseAddress(base);
+        if (base == address(0)) revert MarketInvalidBaseAddress(base);
+        if (!_allBases.add(base)) revert MarketAlreadyCreatedBaseAddress(base);
         uint256 baseDecimals = IERC20Metadata(base).decimals();
-        if (baseDecimals == 0) revert FactoryInvalidBaseAddress(base);
+        if (baseDecimals == 0) revert MarketInvalidBaseAddress(base);
 
         pair = address(
             new ERC1967Proxy(
@@ -98,7 +98,7 @@ contract MarketImpl is UUPSUpgradeable, OwnableUpgradeable {
                 )
             )
         );
-        if (pair == address(0)) revert FactoryDeployPair();
+        if (pair == address(0)) revert MarketDeployPair();
         _allPairs[base] = pair;
 
         CROSS_DEX.notifyPairCreated(pair);

@@ -1,40 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {ERC1967Proxy} from "@openzeppelin-contracts-5.2.0/proxy/ERC1967/ERC1967Proxy.sol";
-import {IERC20, IERC20Metadata} from "@openzeppelin-contracts-5.2.0/token/ERC20/extensions/IERC20Metadata.sol";
+import "./DexBase.t.sol";
 import {Address} from "@openzeppelin-contracts-5.2.0/utils/Address.sol";
-import {Math} from "@openzeppelin-contracts-5.2.0/utils/math/Math.sol";
-import {Test, console} from "forge-std/Test.sol";
 
-import {MarketImpl} from "../src/MarketImpl.sol";
-import {PairImpl} from "../src/PairImpl.sol";
-import {RouterImpl} from "../src/RouterImpl.sol";
-import {WCROSS} from "../src/WCROSS.sol";
-import {IPair} from "../src/interfaces/IPair.sol";
-
-import {T20} from "./mock/T20.sol";
-
-contract DexWrapBaseTest is Test {
+contract DexWrapBaseTest is DEXBaseTest {
     using Address for address payable;
 
-    address public constant OWNER = address(bytes20("OWNER"));
-    address public constant FEE_COLLECTOR = address(bytes20("FEE_COLLECTOR"));
-
-    WCROSS public Wcross;
-    IERC20 public BASE;
-    IERC20 public QUOTE;
-
-    uint256 public BASE_DECIMALS;
-    uint256 public QUOTE_DECIMALS;
-
-    RouterImpl public ROUTER;
-    PairImpl public PAIR;
-
-    function setUp() external {
-        vm.label(OWNER, "owner");
-        vm.label(FEE_COLLECTOR, "feeCollector");
-    }
+    function setUp() external {}
 
     // [WRAP BASE] create limit sell -> buy market
     function test_wrap_trade_base_case1() external wrapBase {
@@ -55,10 +28,10 @@ contract DexWrapBaseTest is Test {
         vm.assertEq(0, payable(address(ROUTER)).balance);
         vm.assertEq(0, payable(address(PAIR)).balance);
 
-        vm.assertEq(0, Wcross.balanceOf(seller));
-        vm.assertEq(0, Wcross.balanceOf(buyer));
-        vm.assertEq(0, Wcross.balanceOf(address(ROUTER)));
-        vm.assertEq(amount, Wcross.balanceOf(address(PAIR)));
+        vm.assertEq(0, WCross.balanceOf(seller));
+        vm.assertEq(0, WCross.balanceOf(buyer));
+        vm.assertEq(0, WCross.balanceOf(address(ROUTER)));
+        vm.assertEq(amount, WCross.balanceOf(address(PAIR)));
 
         uint256 volume = Math.mulDiv(price, amount, BASE_DECIMALS);
         vm.prank(OWNER);
@@ -72,10 +45,10 @@ contract DexWrapBaseTest is Test {
         vm.assertEq(0, payable(address(ROUTER)).balance);
         vm.assertEq(0, payable(address(PAIR)).balance);
 
-        vm.assertEq(0, Wcross.balanceOf(seller));
-        vm.assertEq(0, Wcross.balanceOf(buyer));
-        vm.assertEq(0, Wcross.balanceOf(address(ROUTER)));
-        vm.assertEq(0, Wcross.balanceOf(address(PAIR)));
+        vm.assertEq(0, WCross.balanceOf(seller));
+        vm.assertEq(0, WCross.balanceOf(buyer));
+        vm.assertEq(0, WCross.balanceOf(address(ROUTER)));
+        vm.assertEq(0, WCross.balanceOf(address(PAIR)));
     }
 
     // [WRAP BASE] create limit buy -> sell market
@@ -101,10 +74,10 @@ contract DexWrapBaseTest is Test {
         vm.assertEq(0, payable(address(ROUTER)).balance);
         vm.assertEq(0, payable(address(PAIR)).balance);
 
-        vm.assertEq(0, Wcross.balanceOf(seller));
-        vm.assertEq(0, Wcross.balanceOf(buyer));
-        vm.assertEq(0, Wcross.balanceOf(address(ROUTER)));
-        vm.assertEq(0, Wcross.balanceOf(address(PAIR)));
+        vm.assertEq(0, WCross.balanceOf(seller));
+        vm.assertEq(0, WCross.balanceOf(buyer));
+        vm.assertEq(0, WCross.balanceOf(address(ROUTER)));
+        vm.assertEq(0, WCross.balanceOf(address(PAIR)));
 
         vm.deal(seller, amount);
         vm.prank(seller);
@@ -115,10 +88,10 @@ contract DexWrapBaseTest is Test {
         vm.assertEq(0, payable(address(ROUTER)).balance);
         vm.assertEq(0, payable(address(PAIR)).balance);
 
-        vm.assertEq(0, Wcross.balanceOf(seller));
-        vm.assertEq(0, Wcross.balanceOf(buyer));
-        vm.assertEq(0, Wcross.balanceOf(address(ROUTER)));
-        vm.assertEq(0, Wcross.balanceOf(address(PAIR)));
+        vm.assertEq(0, WCross.balanceOf(seller));
+        vm.assertEq(0, WCross.balanceOf(buyer));
+        vm.assertEq(0, WCross.balanceOf(address(ROUTER)));
+        vm.assertEq(0, WCross.balanceOf(address(PAIR)));
     }
 
     // [WRAP QUOTE] create limit sell -> buy market
@@ -143,10 +116,10 @@ contract DexWrapBaseTest is Test {
         vm.assertEq(0, payable(address(ROUTER)).balance);
         vm.assertEq(0, payable(address(PAIR)).balance);
 
-        vm.assertEq(0, Wcross.balanceOf(seller));
-        vm.assertEq(0, Wcross.balanceOf(buyer));
-        vm.assertEq(0, Wcross.balanceOf(address(ROUTER)));
-        vm.assertEq(0, Wcross.balanceOf(address(PAIR)));
+        vm.assertEq(0, WCross.balanceOf(seller));
+        vm.assertEq(0, WCross.balanceOf(buyer));
+        vm.assertEq(0, WCross.balanceOf(address(ROUTER)));
+        vm.assertEq(0, WCross.balanceOf(address(PAIR)));
 
         uint256 volume = Math.mulDiv(price, amount, BASE_DECIMALS);
         vm.deal(buyer, volume);
@@ -158,10 +131,10 @@ contract DexWrapBaseTest is Test {
         vm.assertEq(0, payable(address(ROUTER)).balance);
         vm.assertEq(0, payable(address(PAIR)).balance);
 
-        vm.assertEq(0, Wcross.balanceOf(seller));
-        vm.assertEq(0, Wcross.balanceOf(buyer));
-        vm.assertEq(0, Wcross.balanceOf(address(ROUTER)));
-        vm.assertEq(0, Wcross.balanceOf(address(PAIR)));
+        vm.assertEq(0, WCross.balanceOf(seller));
+        vm.assertEq(0, WCross.balanceOf(buyer));
+        vm.assertEq(0, WCross.balanceOf(address(ROUTER)));
+        vm.assertEq(0, WCross.balanceOf(address(PAIR)));
     }
 
     // [WRAP QUOTE] create limit buy -> sell market
@@ -184,10 +157,10 @@ contract DexWrapBaseTest is Test {
         vm.assertEq(0, payable(address(ROUTER)).balance);
         vm.assertEq(0, payable(address(PAIR)).balance);
 
-        vm.assertEq(0, Wcross.balanceOf(seller));
-        vm.assertEq(0, Wcross.balanceOf(buyer));
-        vm.assertEq(0, Wcross.balanceOf(address(ROUTER)));
-        vm.assertEq(volume, Wcross.balanceOf(address(PAIR)));
+        vm.assertEq(0, WCross.balanceOf(seller));
+        vm.assertEq(0, WCross.balanceOf(buyer));
+        vm.assertEq(0, WCross.balanceOf(address(ROUTER)));
+        vm.assertEq(volume, WCross.balanceOf(address(PAIR)));
 
         vm.prank(OWNER);
         BASE.transfer(seller, amount);
@@ -202,10 +175,10 @@ contract DexWrapBaseTest is Test {
         vm.assertEq(0, payable(address(ROUTER)).balance);
         vm.assertEq(0, payable(address(PAIR)).balance);
 
-        vm.assertEq(0, Wcross.balanceOf(seller));
-        vm.assertEq(0, Wcross.balanceOf(buyer));
-        vm.assertEq(0, Wcross.balanceOf(address(ROUTER)));
-        vm.assertEq(0, Wcross.balanceOf(address(PAIR)));
+        vm.assertEq(0, WCross.balanceOf(seller));
+        vm.assertEq(0, WCross.balanceOf(buyer));
+        vm.assertEq(0, WCross.balanceOf(address(ROUTER)));
+        vm.assertEq(0, WCross.balanceOf(address(PAIR)));
     }
 
     // EOA 는 토큰 형태로 WETH를 가질 수 없다.
@@ -215,8 +188,8 @@ contract DexWrapBaseTest is Test {
         uint256 beforeBalance = OWNER.balance;
         assertNotEq(0, beforeBalance);
 
-        payable(address(Wcross)).sendValue(10);
-        assertEq(0, Wcross.balanceOf(OWNER));
+        payable(address(WCross)).sendValue(10);
+        assertEq(0, WCross.balanceOf(OWNER));
         assertEq(beforeBalance, OWNER.balance);
     }
 
@@ -257,14 +230,6 @@ contract DexWrapBaseTest is Test {
         ROUTER.marketBuy{value: volume + 1}(address(PAIR), volume, 0);
     }
 
-    function _toBase(uint256 x) private view returns (uint256) {
-        return x * BASE_DECIMALS;
-    }
-
-    function _toQuote(uint256 x) private view returns (uint256) {
-        return x * QUOTE_DECIMALS;
-    }
-
     modifier wrapBase() {
         _setWrapBase();
         _;
@@ -276,79 +241,43 @@ contract DexWrapBaseTest is Test {
     }
 
     function _setWrapBase() private {
+        uint256 quote_tick_size = 1e4;
+        uint256 base_tick_size = 1e2;
+
+        _deploy(18, 18, quote_tick_size, base_tick_size);
+        BASE = IERC20(address(WCross));
+
         vm.startPrank(OWNER);
-        QUOTE = IERC20(address(new T20("QUOTE", "Q", 6)));
-        QUOTE_DECIMALS = 10 ** IERC20Metadata(address(QUOTE)).decimals();
-
-        address routerImpl = address(new RouterImpl());
-        address router = address(new ERC1967Proxy(routerImpl, ""));
-        Wcross = new WCROSS();
-        ROUTER = RouterImpl(payable(router));
-        ROUTER.initialize(payable(address(Wcross)), type(uint256).max);
-
-        BASE = IERC20(address(Wcross));
-        BASE_DECIMALS = 10 ** IERC20Metadata(address(BASE)).decimals();
-
-        address pairImpl = address(new PairImpl());
-        address factoryImpl = address(new MarketImpl());
-        address factory = address(
-            new ERC1967Proxy(
-                factoryImpl,
-                abi.encodeWithSelector(
-                    MarketImpl.initialize.selector, address(ROUTER), FEE_COLLECTOR, address(QUOTE), pairImpl
-                )
-            )
+        address pair = MARKET.createPair(
+            address(BASE),
+            QUOTE_DECIMALS / quote_tick_size,
+            BASE_DECIMALS / base_tick_size,
+            MAKER_FEE_PERMIL,
+            TAKER_FEE_PERMIL
         );
-        MarketImpl F = MarketImpl(factory);
 
-        PAIR = PairImpl(F.createPair(address(BASE), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e4, 0, 0));
-
-        ROUTER.addPair(address(PAIR));
-
-        vm.label(address(ROUTER), "ROUTER");
-        vm.label(address(PAIR), "PAIR");
-        vm.label(address(QUOTE), "QUOTE");
-        vm.label(address(BASE), "BASE");
-
+        PAIR = PairImpl(pair);
         vm.stopPrank();
     }
 
     function _setWrapQuote() private {
+        uint256 quote_tick_size = 1e4;
+        uint256 base_tick_size = 1e2;
+
+        _deploy(18, 18, quote_tick_size, base_tick_size);
+        QUOTE = IERC20(address(WCross));
+
         vm.startPrank(OWNER);
-        // deploy wrap quote
-        BASE = IERC20(address(new T20("BASE", "Q", 6)));
-        BASE_DECIMALS = 10 ** IERC20Metadata(address(BASE)).decimals();
-
-        address routerImpl = address(new RouterImpl());
-        address router = address(new ERC1967Proxy(routerImpl, ""));
-        Wcross = new WCROSS();
-        ROUTER = RouterImpl(payable(router));
-        ROUTER.initialize(payable(address(Wcross)), type(uint256).max);
-
-        QUOTE = IERC20(address(Wcross));
-        QUOTE_DECIMALS = 10 ** IERC20Metadata(address(QUOTE)).decimals();
-
-        address pairImpl = address(new PairImpl());
-        address factoryImpl = address(new MarketImpl());
-        address factory = address(
-            new ERC1967Proxy(
-                factoryImpl,
-                abi.encodeWithSelector(
-                    MarketImpl.initialize.selector, address(ROUTER), FEE_COLLECTOR, address(QUOTE), pairImpl
-                )
-            )
+        address market = CROSS_DEX.createMarket(OWNER, FEE_COLLECTOR, address(QUOTE));
+        MARKET = MarketImpl(market);
+        address pair = MARKET.createPair(
+            address(BASE),
+            QUOTE_DECIMALS / quote_tick_size,
+            BASE_DECIMALS / base_tick_size,
+            MAKER_FEE_PERMIL,
+            TAKER_FEE_PERMIL
         );
-        MarketImpl F = MarketImpl(factory);
-
-        PAIR = PairImpl(F.createPair(address(BASE), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e4, 0, 0));
-
-        ROUTER.addPair(address(PAIR));
-
-        vm.label(address(ROUTER), "ROUTER");
-        vm.label(address(PAIR), "PAIR");
-        vm.label(address(QUOTE), "QUOTE");
-        vm.label(address(BASE), "BASE");
-
+        PAIR = PairImpl(pair);
         vm.stopPrank();
     }
 }

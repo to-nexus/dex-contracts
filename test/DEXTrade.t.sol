@@ -1,78 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {ERC1967Proxy} from "@openzeppelin-contracts-5.2.0/proxy/ERC1967/ERC1967Proxy.sol";
-import {IERC20, IERC20Metadata} from "@openzeppelin-contracts-5.2.0/token/ERC20/extensions/IERC20Metadata.sol";
-import {Math} from "@openzeppelin-contracts-5.2.0/utils/math/Math.sol";
-import {Test, console} from "forge-std/Test.sol";
+import "./DEXBase.t.sol";
 
-import {MarketImpl} from "../src/MarketImpl.sol";
-import {PairImpl} from "../src/PairImpl.sol";
-import {RouterImpl} from "../src/RouterImpl.sol";
-import {WCROSS} from "../src/WCROSS.sol";
-import {IPair} from "../src/interfaces/IPair.sol";
-
-import {T20} from "./mock/T20.sol";
-
-contract DEXTradeTest is Test {
-    address public constant OWNER = address(bytes20("OWNER"));
-    address public constant FEE_COLLECTOR = address(bytes20("FEE_COLLECTOR"));
-    RouterImpl public ROUTER;
-    PairImpl public PAIR;
-
-    WCROSS public Wcross;
-    IERC20 public QUOTE;
-    uint256 public QUOTE_DECIMALS;
-    IERC20 public BASE;
-    uint256 public BASE_DECIMALS;
-
+contract DEXTradeTest is DEXBaseTest {
     function setUp() external {
-        vm.label(OWNER, "owner");
-        vm.label(FEE_COLLECTOR, "feeCollector");
-
-        vm.startPrank(OWNER);
-
-        QUOTE = IERC20(address(new T20("QUOTE", "Q", 6)));
-        BASE = IERC20(address(new T20("BASE", "B", 18)));
-        QUOTE_DECIMALS = 10 ** IERC20Metadata(address(QUOTE)).decimals();
-        BASE_DECIMALS = 10 ** IERC20Metadata(address(BASE)).decimals();
-
-        address routerImpl = address(new RouterImpl());
-        address router = address(new ERC1967Proxy(routerImpl, ""));
-        Wcross = new WCROSS();
-        ROUTER = RouterImpl(payable(router));
-        ROUTER.initialize(payable(address(Wcross)), type(uint256).max);
-
-        address pairImpl = address(new PairImpl());
-        address factoryImpl = address(new MarketImpl());
-        address factory = address(
-            new ERC1967Proxy(
-                factoryImpl,
-                abi.encodeWithSelector(
-                    MarketImpl.initialize.selector, address(ROUTER), FEE_COLLECTOR, address(QUOTE), pairImpl
-                )
-            )
-        );
-        MarketImpl F = MarketImpl(factory);
-
-        PAIR = PairImpl(F.createPair(address(BASE), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e4, 0, 0));
-
-        ROUTER.addPair(address(PAIR));
-
-        vm.label(address(ROUTER), "ROUTER");
-        vm.label(address(PAIR), "PAIR");
-        vm.label(address(QUOTE), "QUOTE");
-        vm.label(address(BASE), "BASE");
-
-        vm.stopPrank();
-    }
-
-    function _toBase(uint256 x) private view returns (uint256) {
-        return x * BASE_DECIMALS;
-    }
-
-    function _toQuote(uint256 x) private view returns (uint256) {
-        return x * QUOTE_DECIMALS;
+        _deploy(18, 18, 1e2, 1e6);
     }
 
     function test_trade_create_limit_sell() external {

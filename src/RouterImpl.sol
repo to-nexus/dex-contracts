@@ -23,7 +23,7 @@ contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyG
     using Address for address payable;
     using Math for uint256;
 
-    error RouterUnauthorizedAccount(address);
+    error RouterInvalidCrossDex(address);
     error RouterInitializeData(bytes32);
     error RouterAlreadyAddedPair(address);
     error RouterInvalidPairAddress(address);
@@ -48,7 +48,7 @@ contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyG
     uint256[46] private __gap;
 
     modifier onlyCrossDex() {
-        if (_msgSender() != CROSS_DEX) revert RouterUnauthorizedAccount(_msgSender());
+        if (_msgSender() != CROSS_DEX) revert RouterInvalidCrossDex(_msgSender());
         _;
     }
 
@@ -62,9 +62,7 @@ contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyG
         if (address(this).balance != 0) revert RouterInvalidValue();
     }
 
-    receive() external payable checkValue {
-        if (msg.value != 0) revert RouterInvalidValue();
-    }
+    receive() external payable checkValue {}
 
     function initialize(address _owner, uint256 _maxMatchCount) external initializer {
         if (_maxMatchCount == 0) revert RouterInitializeData("maxMatchCount");
