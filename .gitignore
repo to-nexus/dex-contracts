@@ -14,7 +14,8 @@ docs/
 .env
 
 dependencies/
-.idea
 
 !remappings.txt
 *.txt
+
+.idea
