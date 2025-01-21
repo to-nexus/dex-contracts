@@ -39,7 +39,7 @@ contract DEXTradeTest is Test {
 
         address routerImpl = address(new RouterImpl());
         address router = address(new ERC1967Proxy(routerImpl, ""));
-        Wcross = new WCROSS(payable(router));
+        Wcross = new WCROSS();
         ROUTER = RouterImpl(payable(router));
         ROUTER.initialize(payable(address(Wcross)), type(uint256).max);
 

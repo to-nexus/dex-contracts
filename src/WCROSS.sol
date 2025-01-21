@@ -11,8 +11,8 @@ contract WCROSS is ERC20 {
 
     address payable public immutable ROUTER;
 
-    constructor(address payable _router) ERC20("Wrapped Cross", "WCROSS") {
-        ROUTER = _router;
+    constructor() ERC20("CrossDEX Wrapped Cross", "cdCROSS") {
+        ROUTER = payable(_msgSender());
     }
 
     receive() external payable {

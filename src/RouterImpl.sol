@@ -6,11 +6,13 @@ import {IERC20} from "@openzeppelin-contracts-5.2.0/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin-contracts-5.2.0/token/ERC20/utils/SafeERC20.sol";
 import {Address} from "@openzeppelin-contracts-5.2.0/utils/Address.sol";
 import {Math} from "@openzeppelin-contracts-5.2.0/utils/math/Math.sol";
-
 import {EnumerableSet} from "@openzeppelin-contracts-5.2.0/utils/structs/EnumerableSet.sol";
+
 import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/access/OwnableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from
     "@openzeppelin-contracts-upgradeable-5.2.0/utils/ReentrancyGuardUpgradeable.sol";
+
+import {WCROSS} from "./WCROSS.sol";
 
 import {IPair} from "./interfaces/IPair.sol";
 import {IRouter} from "./interfaces/IRouter.sol";
@@ -21,6 +23,7 @@ contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyG
     using Address for address payable;
     using Math for uint256;
 
+    error RouterUnauthorizedAccount(address);
     error RouterInitializeData(bytes32);
     error RouterAlreadyAddedPair(address);
     error RouterInvalidPairAddress(address);
@@ -35,13 +38,19 @@ contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyG
         uint256 DENOMINATOR;
     }
 
-    address payable public WCROSS; // immutable
+    address public CROSS_DEX; // immutable
+    address payable public WCross; // immutable
 
     uint256 public maxMatchCount;
     EnumerableSet.AddressSet private _allPairs;
     mapping(address pair => PairInfo) public pairInfo;
 
     uint256[46] private __gap;
+
+    modifier onlyCrossDex() {
+        if (_msgSender() != CROSS_DEX) revert RouterUnauthorizedAccount(_msgSender());
+        _;
+    }
 
     modifier validPair(address pair) {
         if (!_allPairs.contains(pair)) revert RouterInvalidPairAddress(pair);
@@ -57,14 +66,14 @@ contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyG
         if (msg.value != 0) revert RouterInvalidValue();
     }
 
-    function initialize(address payable weth, uint256 _maxMatchCount) external initializer {
-        if (weth == address(0)) revert RouterInitializeData("weth");
+    function initialize(address _owner, uint256 _maxMatchCount) external initializer {
         if (_maxMatchCount == 0) revert RouterInitializeData("maxMatchCount");
 
-        WCROSS = weth;
+        CROSS_DEX = _msgSender();
+        WCross = payable(address(new WCROSS()));
         maxMatchCount = _maxMatchCount;
 
-        __Ownable_init(_msgSender());
+        __Ownable_init(_owner);
         __ReentrancyGuard_init();
     }
 
@@ -85,7 +94,7 @@ contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyG
         PairInfo memory info = _pairInfo(pair);
 
         IERC20 BASE = info.BASE;
-        if (address(BASE) == WCROSS) WCROSS.sendValue(amount);
+        if (address(BASE) == WCross) WCross.sendValue(amount);
         else BASE.safeTransferFrom(owner, address(this), amount);
 
         IPair.Order memory order =
@@ -107,7 +116,7 @@ contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyG
         uint256 volume = Math.mulDiv(price, amount, info.DENOMINATOR);
 
         IERC20 QUOTE = info.QUOTE;
-        if (address(QUOTE) == WCROSS) WCROSS.sendValue(volume);
+        if (address(QUOTE) == WCross) WCross.sendValue(volume);
         else QUOTE.safeTransferFrom(owner, address(this), volume);
 
         IPair.Order memory order =
@@ -127,7 +136,7 @@ contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyG
         PairInfo memory info = _pairInfo(pair);
 
         IERC20 BASE = info.BASE;
-        if (address(BASE) == WCROSS) WCROSS.sendValue(amount);
+        if (address(BASE) == WCross) WCross.sendValue(amount);
         else BASE.safeTransferFrom(owner, address(this), amount);
 
         IPair.Order memory order =
@@ -147,7 +156,7 @@ contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyG
         PairInfo memory info = _pairInfo(pair);
 
         IERC20 QUOTE = info.QUOTE;
-        if (address(QUOTE) == WCROSS) WCROSS.sendValue(amount);
+        if (address(QUOTE) == WCross) WCross.sendValue(amount);
         else QUOTE.safeTransferFrom(owner, address(this), amount);
 
         IPair.Order memory order =
@@ -167,7 +176,7 @@ contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyG
         return _maxMatchCount == 0 || _maxMatchCount > maxMatchCount ? maxMatchCount : _maxMatchCount;
     }
 
-    function addPair(address pair) external onlyOwner {
+    function addPair(address pair) external override onlyCrossDex {
         if (!_allPairs.add(pair)) revert RouterAlreadyAddedPair(pair);
 
         IPair iPair = IPair(pair);

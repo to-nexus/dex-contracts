@@ -5,9 +5,11 @@ import {ERC1967Proxy} from "@openzeppelin-contracts-5.2.0/proxy/ERC1967/ERC1967P
 import {UUPSUpgradeable} from "@openzeppelin-contracts-5.2.0/proxy/utils/UUPSUpgradeable.sol";
 import {IERC20Metadata} from "@openzeppelin-contracts-5.2.0/token/ERC20/extensions/IERC20Metadata.sol";
 import {EnumerableSet} from "@openzeppelin-contracts-5.2.0/utils/structs/EnumerableSet.sol";
+
 import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/access/OwnableUpgradeable.sol";
 
 import {PairImpl} from "./PairImpl.sol";
+import {ICrossDex} from "./interfaces/ICrossDex.sol";
 
 contract MarketImpl is UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -19,7 +21,8 @@ contract MarketImpl is UUPSUpgradeable, OwnableUpgradeable {
 
     event PairCreated(address indexed pair, address indexed base, uint256 timestamp);
 
-    address public QUOTE;
+    ICrossDex public CROSS_DEX; // immutable
+    address public QUOTE; // immutable
 
     address public router;
     address public feeCollector;
@@ -30,21 +33,24 @@ contract MarketImpl is UUPSUpgradeable, OwnableUpgradeable {
 
     uint256[44] private __gap;
 
-    function initialize(address _router, address _feeCollector, address _quote, address _pairImpl)
+    function initialize(address _owner, address _router, address _feeCollector, address _quote, address _pairImpl)
         external
         initializer
     {
+        if (_owner == address(0)) revert FactoryInvalidInitializeData("owner");
         if (_router == address(0)) revert FactoryInvalidInitializeData("router");
         if (_feeCollector == address(0)) revert FactoryInvalidInitializeData("feeCollector");
         if (_quote == address(0)) revert FactoryInvalidInitializeData("quote");
         if (_pairImpl == address(0)) revert FactoryInvalidInitializeData("pairImpl");
 
-        pairImpl = _pairImpl;
-        router = _router;
-        feeCollector = _feeCollector;
+        CROSS_DEX = ICrossDex(_msgSender());
         QUOTE = _quote;
 
-        __Ownable_init(_msgSender());
+        router = _router;
+        feeCollector = _feeCollector;
+        pairImpl = _pairImpl;
+
+        __Ownable_init(_owner);
     }
 
     function allPairs() external view returns (address[] memory bases, address[] memory pairs) {
@@ -95,6 +101,7 @@ contract MarketImpl is UUPSUpgradeable, OwnableUpgradeable {
         if (pair == address(0)) revert FactoryDeployPair();
         _allPairs[base] = pair;
 
+        CROSS_DEX.notifyPairCreated(pair);
         emit PairCreated(pair, base, block.timestamp);
     }
 
