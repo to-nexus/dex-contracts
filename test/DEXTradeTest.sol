@@ -9,7 +9,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {MarketImpl} from "../src/MarketImpl.sol";
 import {PairImpl} from "../src/PairImpl.sol";
 import {RouterImpl} from "../src/RouterImpl.sol";
-import {WETH} from "../src/WETH.sol";
+import {WCROSS} from "../src/WCROSS.sol";
 import {IPair} from "../src/interfaces/IPair.sol";
 
 import {T20} from "./mock/T20.sol";
@@ -20,7 +20,7 @@ contract DEXTradeTest is Test {
     RouterImpl public ROUTER;
     PairImpl public PAIR;
 
-    WETH public Weth;
+    WCROSS public Wcross;
     IERC20 public QUOTE;
     uint256 public QUOTE_DECIMALS;
     IERC20 public BASE;
@@ -39,9 +39,9 @@ contract DEXTradeTest is Test {
 
         address routerImpl = address(new RouterImpl());
         address router = address(new ERC1967Proxy(routerImpl, ""));
-        Weth = new WETH("Wrap Cross", "WCross", payable(router));
+        Wcross = new WCROSS(payable(router));
         ROUTER = RouterImpl(payable(router));
-        ROUTER.initialize(payable(address(Weth)), type(uint256).max);
+        ROUTER.initialize(payable(address(Wcross)), type(uint256).max);
 
         address pairImpl = address(new PairImpl());
         address factoryImpl = address(new MarketImpl());

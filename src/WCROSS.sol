@@ -6,12 +6,12 @@ import {Address} from "@openzeppelin-contracts-5.2.0/utils/Address.sol";
 
 import {IRouter} from "./interfaces/IRouter.sol";
 
-contract WETH is ERC20 {
+contract WCROSS is ERC20 {
     using Address for address payable;
 
     address payable public immutable ROUTER;
 
-    constructor(string memory _name, string memory _symbol, address payable _router) ERC20(_name, _symbol) {
+    constructor(address payable _router) ERC20("Wrapped Cross", "WCROSS") {
         ROUTER = _router;
     }
 

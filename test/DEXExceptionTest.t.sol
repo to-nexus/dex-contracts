@@ -11,7 +11,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {MarketImpl} from "../src/MarketImpl.sol";
 import {PairImpl} from "../src/PairImpl.sol";
 import {RouterImpl} from "../src/RouterImpl.sol";
-import {WETH} from "../src/WETH.sol";
+import {WCROSS} from "../src/WCROSS.sol";
 import {IPair} from "../src/interfaces/IPair.sol";
 
 import {T20} from "./mock/T20.sol";
@@ -26,7 +26,7 @@ contract DEXExceptionTest is Test {
     uint256 public constant MAKER_FEE_PERMIL = 50; // 5%
     uint256 public constant TAKER_FEE_PERMIL = 20; // 2%
 
-    WETH public Weth;
+    WCROSS public Wcross;
     IERC20 public BASE;
     IERC20 public QUOTE;
     uint256 public BASE_DECIMALS;
@@ -46,9 +46,9 @@ contract DEXExceptionTest is Test {
 
         address routerImpl = address(new RouterImpl());
         address router = address(new ERC1967Proxy(routerImpl, ""));
-        Weth = new WETH("Wrap Cross", "WCross", payable(router));
+        Wcross = new WCROSS(payable(router));
         ROUTER = RouterImpl(payable(router));
-        ROUTER.initialize(payable(address(Weth)), type(uint256).max);
+        ROUTER.initialize(payable(address(Wcross)), type(uint256).max);
 
         address pairImpl = address(new PairImpl());
         address factoryImpl = address(new MarketImpl());
@@ -268,7 +268,7 @@ contract DEXExceptionTest is Test {
         address routerImpl = address(new RouterImpl());
         address router = address(new ERC1967Proxy(routerImpl, ""));
         RouterImpl R = RouterImpl(payable(router));
-        R.initialize(payable(address(Weth)), type(uint256).max);
+        R.initialize(payable(address(Wcross)), type(uint256).max);
 
         // R 에 Pair 등록
         R.addPair(pair);

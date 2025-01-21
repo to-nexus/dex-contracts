@@ -10,7 +10,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {MarketImpl} from "../src/MarketImpl.sol";
 import {PairImpl} from "../src/PairImpl.sol";
 import {RouterImpl} from "../src/RouterImpl.sol";
-import {WETH} from "../src/WETH.sol";
+import {WCROSS} from "../src/WCROSS.sol";
 import {IPair} from "../src/interfaces/IPair.sol";
 
 import {T20} from "./mock/T20.sol";
@@ -21,7 +21,7 @@ contract DexWrapBaseTest is Test {
     address public constant OWNER = address(bytes20("OWNER"));
     address public constant FEE_COLLECTOR = address(bytes20("FEE_COLLECTOR"));
 
-    WETH public Weth;
+    WCROSS public Wcross;
     IERC20 public BASE;
     IERC20 public QUOTE;
 
@@ -55,10 +55,10 @@ contract DexWrapBaseTest is Test {
         vm.assertEq(0, payable(address(ROUTER)).balance);
         vm.assertEq(0, payable(address(PAIR)).balance);
 
-        vm.assertEq(0, Weth.balanceOf(seller));
-        vm.assertEq(0, Weth.balanceOf(buyer));
-        vm.assertEq(0, Weth.balanceOf(address(ROUTER)));
-        vm.assertEq(amount, Weth.balanceOf(address(PAIR)));
+        vm.assertEq(0, Wcross.balanceOf(seller));
+        vm.assertEq(0, Wcross.balanceOf(buyer));
+        vm.assertEq(0, Wcross.balanceOf(address(ROUTER)));
+        vm.assertEq(amount, Wcross.balanceOf(address(PAIR)));
 
         uint256 volume = Math.mulDiv(price, amount, BASE_DECIMALS);
         vm.prank(OWNER);
@@ -72,10 +72,10 @@ contract DexWrapBaseTest is Test {
         vm.assertEq(0, payable(address(ROUTER)).balance);
         vm.assertEq(0, payable(address(PAIR)).balance);
 
-        vm.assertEq(0, Weth.balanceOf(seller));
-        vm.assertEq(0, Weth.balanceOf(buyer));
-        vm.assertEq(0, Weth.balanceOf(address(ROUTER)));
-        vm.assertEq(0, Weth.balanceOf(address(PAIR)));
+        vm.assertEq(0, Wcross.balanceOf(seller));
+        vm.assertEq(0, Wcross.balanceOf(buyer));
+        vm.assertEq(0, Wcross.balanceOf(address(ROUTER)));
+        vm.assertEq(0, Wcross.balanceOf(address(PAIR)));
     }
 
     // [WRAP BASE] create limit buy -> sell market
@@ -101,10 +101,10 @@ contract DexWrapBaseTest is Test {
         vm.assertEq(0, payable(address(ROUTER)).balance);
         vm.assertEq(0, payable(address(PAIR)).balance);
 
-        vm.assertEq(0, Weth.balanceOf(seller));
-        vm.assertEq(0, Weth.balanceOf(buyer));
-        vm.assertEq(0, Weth.balanceOf(address(ROUTER)));
-        vm.assertEq(0, Weth.balanceOf(address(PAIR)));
+        vm.assertEq(0, Wcross.balanceOf(seller));
+        vm.assertEq(0, Wcross.balanceOf(buyer));
+        vm.assertEq(0, Wcross.balanceOf(address(ROUTER)));
+        vm.assertEq(0, Wcross.balanceOf(address(PAIR)));
 
         vm.deal(seller, amount);
         vm.prank(seller);
@@ -115,10 +115,10 @@ contract DexWrapBaseTest is Test {
         vm.assertEq(0, payable(address(ROUTER)).balance);
         vm.assertEq(0, payable(address(PAIR)).balance);
 
-        vm.assertEq(0, Weth.balanceOf(seller));
-        vm.assertEq(0, Weth.balanceOf(buyer));
-        vm.assertEq(0, Weth.balanceOf(address(ROUTER)));
-        vm.assertEq(0, Weth.balanceOf(address(PAIR)));
+        vm.assertEq(0, Wcross.balanceOf(seller));
+        vm.assertEq(0, Wcross.balanceOf(buyer));
+        vm.assertEq(0, Wcross.balanceOf(address(ROUTER)));
+        vm.assertEq(0, Wcross.balanceOf(address(PAIR)));
     }
 
     // [WRAP QUOTE] create limit sell -> buy market
@@ -143,10 +143,10 @@ contract DexWrapBaseTest is Test {
         vm.assertEq(0, payable(address(ROUTER)).balance);
         vm.assertEq(0, payable(address(PAIR)).balance);
 
-        vm.assertEq(0, Weth.balanceOf(seller));
-        vm.assertEq(0, Weth.balanceOf(buyer));
-        vm.assertEq(0, Weth.balanceOf(address(ROUTER)));
-        vm.assertEq(0, Weth.balanceOf(address(PAIR)));
+        vm.assertEq(0, Wcross.balanceOf(seller));
+        vm.assertEq(0, Wcross.balanceOf(buyer));
+        vm.assertEq(0, Wcross.balanceOf(address(ROUTER)));
+        vm.assertEq(0, Wcross.balanceOf(address(PAIR)));
 
         uint256 volume = Math.mulDiv(price, amount, BASE_DECIMALS);
         vm.deal(buyer, volume);
@@ -158,10 +158,10 @@ contract DexWrapBaseTest is Test {
         vm.assertEq(0, payable(address(ROUTER)).balance);
         vm.assertEq(0, payable(address(PAIR)).balance);
 
-        vm.assertEq(0, Weth.balanceOf(seller));
-        vm.assertEq(0, Weth.balanceOf(buyer));
-        vm.assertEq(0, Weth.balanceOf(address(ROUTER)));
-        vm.assertEq(0, Weth.balanceOf(address(PAIR)));
+        vm.assertEq(0, Wcross.balanceOf(seller));
+        vm.assertEq(0, Wcross.balanceOf(buyer));
+        vm.assertEq(0, Wcross.balanceOf(address(ROUTER)));
+        vm.assertEq(0, Wcross.balanceOf(address(PAIR)));
     }
 
     // [WRAP QUOTE] create limit buy -> sell market
@@ -184,10 +184,10 @@ contract DexWrapBaseTest is Test {
         vm.assertEq(0, payable(address(ROUTER)).balance);
         vm.assertEq(0, payable(address(PAIR)).balance);
 
-        vm.assertEq(0, Weth.balanceOf(seller));
-        vm.assertEq(0, Weth.balanceOf(buyer));
-        vm.assertEq(0, Weth.balanceOf(address(ROUTER)));
-        vm.assertEq(volume, Weth.balanceOf(address(PAIR)));
+        vm.assertEq(0, Wcross.balanceOf(seller));
+        vm.assertEq(0, Wcross.balanceOf(buyer));
+        vm.assertEq(0, Wcross.balanceOf(address(ROUTER)));
+        vm.assertEq(volume, Wcross.balanceOf(address(PAIR)));
 
         vm.prank(OWNER);
         BASE.transfer(seller, amount);
@@ -202,10 +202,10 @@ contract DexWrapBaseTest is Test {
         vm.assertEq(0, payable(address(ROUTER)).balance);
         vm.assertEq(0, payable(address(PAIR)).balance);
 
-        vm.assertEq(0, Weth.balanceOf(seller));
-        vm.assertEq(0, Weth.balanceOf(buyer));
-        vm.assertEq(0, Weth.balanceOf(address(ROUTER)));
-        vm.assertEq(0, Weth.balanceOf(address(PAIR)));
+        vm.assertEq(0, Wcross.balanceOf(seller));
+        vm.assertEq(0, Wcross.balanceOf(buyer));
+        vm.assertEq(0, Wcross.balanceOf(address(ROUTER)));
+        vm.assertEq(0, Wcross.balanceOf(address(PAIR)));
     }
 
     // EOA 는 토큰 형태로 WETH를 가질 수 없다.
@@ -215,8 +215,8 @@ contract DexWrapBaseTest is Test {
         uint256 beforeBalance = OWNER.balance;
         assertNotEq(0, beforeBalance);
 
-        payable(address(Weth)).sendValue(10);
-        assertEq(0, Weth.balanceOf(OWNER));
+        payable(address(Wcross)).sendValue(10);
+        assertEq(0, Wcross.balanceOf(OWNER));
         assertEq(beforeBalance, OWNER.balance);
     }
 
@@ -282,11 +282,11 @@ contract DexWrapBaseTest is Test {
 
         address routerImpl = address(new RouterImpl());
         address router = address(new ERC1967Proxy(routerImpl, ""));
-        Weth = new WETH("Wrap Cross", "WCross", payable(router));
+        Wcross = new WCROSS(payable(router));
         ROUTER = RouterImpl(payable(router));
-        ROUTER.initialize(payable(address(Weth)), type(uint256).max);
+        ROUTER.initialize(payable(address(Wcross)), type(uint256).max);
 
-        BASE = IERC20(address(Weth));
+        BASE = IERC20(address(Wcross));
         BASE_DECIMALS = 10 ** IERC20Metadata(address(BASE)).decimals();
 
         address pairImpl = address(new PairImpl());
@@ -321,11 +321,11 @@ contract DexWrapBaseTest is Test {
 
         address routerImpl = address(new RouterImpl());
         address router = address(new ERC1967Proxy(routerImpl, ""));
-        Weth = new WETH("Wrap Cross", "WCross", payable(router));
+        Wcross = new WCROSS(payable(router));
         ROUTER = RouterImpl(payable(router));
-        ROUTER.initialize(payable(address(Weth)), type(uint256).max);
+        ROUTER.initialize(payable(address(Wcross)), type(uint256).max);
 
-        QUOTE = IERC20(address(Weth));
+        QUOTE = IERC20(address(Wcross));
         QUOTE_DECIMALS = 10 ** IERC20Metadata(address(QUOTE)).decimals();
 
         address pairImpl = address(new PairImpl());

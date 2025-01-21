@@ -35,7 +35,7 @@ contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyG
         uint256 DENOMINATOR;
     }
 
-    address payable public WETH; // immutable
+    address payable public WCROSS; // immutable
 
     uint256 public maxMatchCount;
     EnumerableSet.AddressSet private _allPairs;
@@ -61,7 +61,7 @@ contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyG
         if (weth == address(0)) revert RouterInitializeData("weth");
         if (_maxMatchCount == 0) revert RouterInitializeData("maxMatchCount");
 
-        WETH = weth;
+        WCROSS = weth;
         maxMatchCount = _maxMatchCount;
 
         __Ownable_init(_msgSender());
@@ -85,7 +85,7 @@ contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyG
         PairInfo memory info = _pairInfo(pair);
 
         IERC20 BASE = info.BASE;
-        if (address(BASE) == WETH) WETH.sendValue(amount);
+        if (address(BASE) == WCROSS) WCROSS.sendValue(amount);
         else BASE.safeTransferFrom(owner, address(this), amount);
 
         IPair.Order memory order =
@@ -107,7 +107,7 @@ contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyG
         uint256 volume = Math.mulDiv(price, amount, info.DENOMINATOR);
 
         IERC20 QUOTE = info.QUOTE;
-        if (address(QUOTE) == WETH) WETH.sendValue(volume);
+        if (address(QUOTE) == WCROSS) WCROSS.sendValue(volume);
         else QUOTE.safeTransferFrom(owner, address(this), volume);
 
         IPair.Order memory order =
@@ -127,7 +127,7 @@ contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyG
         PairInfo memory info = _pairInfo(pair);
 
         IERC20 BASE = info.BASE;
-        if (address(BASE) == WETH) WETH.sendValue(amount);
+        if (address(BASE) == WCROSS) WCROSS.sendValue(amount);
         else BASE.safeTransferFrom(owner, address(this), amount);
 
         IPair.Order memory order =
@@ -147,7 +147,7 @@ contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyG
         PairInfo memory info = _pairInfo(pair);
 
         IERC20 QUOTE = info.QUOTE;
-        if (address(QUOTE) == WETH) WETH.sendValue(amount);
+        if (address(QUOTE) == WCROSS) WCROSS.sendValue(amount);
         else QUOTE.safeTransferFrom(owner, address(this), amount);
 
         IPair.Order memory order =
