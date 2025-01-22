@@ -10,9 +10,9 @@ import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/acce
 
 import {PairImpl} from "./PairImpl.sol";
 import {ICrossDex} from "./interfaces/ICrossDex.sol";
-import {IMarket, IMarketInitializer} from "./interfaces/IMarket.sol";
+import {IMarketInitializer} from "./interfaces/IMarket.sol";
 
-contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
+contract MarketImpl is IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     error MarketInvalidInitializeData(bytes32);
@@ -30,9 +30,9 @@ contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgr
     address public pairImpl;
 
     EnumerableSet.AddressSet private _allBases;
-    mapping(address base => address) public override baseToPair;
+    mapping(address base => address) public baseToPair;
 
-    uint256[44] private __gap;
+    uint256[43] private __gap;
 
     function initialize(address _owner, address _router, address _feeCollector, address _quote, address _pairImpl)
         external
@@ -99,6 +99,7 @@ contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgr
         if (pair == address(0)) revert MarketDeployPair();
         baseToPair[base] = pair;
 
+        CROSS_DEX.pairCreated(pair);
         emit PairCreated(pair, base, block.timestamp);
     }
 

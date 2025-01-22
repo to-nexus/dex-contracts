@@ -30,9 +30,6 @@ interface IPair {
         uint256 DENOMINATOR;
     }
 
-    function QUOTE() external view returns (IERC20);
-    function BASE() external view returns (IERC20);
-    function DENOMINATOR() external view returns (uint256);
     function getTokenConfig() external view returns (TokenConfig memory);
 
     function limit(Order memory order, uint256 searchPrice, uint256 maxMatchCount) external returns (uint256 orderId);

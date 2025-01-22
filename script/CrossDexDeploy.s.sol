@@ -19,7 +19,7 @@ contract CrossDexDeployScript is Script {
     --broadcast \
     --private-key $PRIVATE_KEY \
     --sig "deploy(address,uint256)" \
-    ./script/CrossDexDeploy.s.sol:CrossDexDeployScript $OWNER $MAX_MATCH_COUNT
+    ./script/CrossDexDeploy.s.sol:CrossDexDeployScript $ADDRESS $MAX_MATCH_COUNT
     */
     function deploy(address owner, uint256 maxMatchCount) external {
         vm.startBroadcast();

@@ -29,7 +29,10 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
 
     EnumerableSet.AddressSet private _allQuotes;
     EnumerableSet.AddressSet private _allMarkets;
-    mapping(address quote => address) public override quoteToMarket;
+    mapping(address quote => address) public quoteToMarket;
+    mapping(address pair => address) public override pairToMarket;
+
+    uint256[43] __gap;
 
     modifier onlyMarket() {
         if (!_allMarkets.contains(_msgSender())) revert CrossDexInvalidMarketAddress(_msgSender());
@@ -81,6 +84,10 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
 
         emit CreatedMarket(_quote, market, _owner, _fee_collector);
         return market;
+    }
+
+    function pairCreated(address pair) external override onlyMarket {
+        pairToMarket[pair] = _msgSender();
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}

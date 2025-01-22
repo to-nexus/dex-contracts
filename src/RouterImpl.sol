@@ -15,7 +15,6 @@ import {ReentrancyGuardUpgradeable} from
 import {WCROSS} from "./WCROSS.sol";
 
 import {ICrossDex} from "./interfaces/ICrossDex.sol";
-import {IMarket} from "./interfaces/IMarket.sol";
 import {IPair} from "./interfaces/IPair.sol";
 import {IRouter, IRouterInitializer} from "./interfaces/IRouter.sol";
 import {IWCROSS} from "./interfaces/IWCROSS.sol";
@@ -44,6 +43,11 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, OwnableUpgr
         if (address(this).balance != 0) revert RouterInvalidValue();
     }
 
+    modifier validPair(address pair) {
+        if (!isPair(pair)) revert RouterInvalidPairAddress(pair);
+        _;
+    }
+
     receive() external payable checkValue {}
 
     function initialize(address _owner, uint256 _maxMatchCount) external override initializer {
@@ -57,22 +61,20 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, OwnableUpgr
         __ReentrancyGuard_init();
     }
 
-    function isPair(address pair) external view override returns (bool) {
-        (bool ok,) = _validPairInfo(pair);
-        return ok;
+    function isPair(address pair) public view override returns (bool) {
+        return CROSS_DEX.pairToMarket(pair) != address(0);
     }
 
     function limitSell(address pair, uint256 price, uint256 amount, uint256 searchPrice, uint256 _maxMatchCount)
         external
         payable
         nonReentrant
+        validPair(pair)
         checkValue
         returns (uint256)
     {
         address owner = _msgSender();
-
-        (bool ok, IPair.TokenConfig memory info) = _validPairInfo(pair);
-        if (!ok) revert RouterInvalidPairAddress(pair);
+        IPair.TokenConfig memory info = IPair(pair).getTokenConfig();
 
         IERC20 BASE = info.BASE;
         if (address(BASE) == address(WCross)) WCross.mintTo{value: amount}(address(pair));
@@ -87,13 +89,12 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, OwnableUpgr
         external
         payable
         nonReentrant
+        validPair(pair)
         checkValue
         returns (uint256)
     {
         address owner = _msgSender();
-
-        (bool ok, IPair.TokenConfig memory info) = _validPairInfo(pair);
-        if (!ok) revert RouterInvalidPairAddress(pair);
+        IPair.TokenConfig memory info = IPair(pair).getTokenConfig();
 
         IERC20 QUOTE = info.QUOTE;
         uint256 volume = Math.mulDiv(price, amount, info.DENOMINATOR);
@@ -109,12 +110,11 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, OwnableUpgr
         external
         payable
         nonReentrant
+        validPair(pair)
         checkValue
     {
         address owner = _msgSender();
-
-        (bool ok, IPair.TokenConfig memory info) = _validPairInfo(pair);
-        if (!ok) revert RouterInvalidPairAddress(pair);
+        IPair.TokenConfig memory info = IPair(pair).getTokenConfig();
 
         IERC20 BASE = info.BASE;
         if (address(BASE) == address(WCross)) WCross.mintTo{value: amount}(address(pair));
@@ -125,11 +125,15 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, OwnableUpgr
         IPair(pair).market(order, amount, _toMaxMatchCount(_maxMatchCount));
     }
 
-    function marketBuy(address pair, uint256 amount, uint256 _maxMatchCount) external payable nonReentrant checkValue {
+    function marketBuy(address pair, uint256 amount, uint256 _maxMatchCount)
+        external
+        payable
+        nonReentrant
+        validPair(pair)
+        checkValue
+    {
         address owner = _msgSender();
-
-        (bool ok, IPair.TokenConfig memory info) = _validPairInfo(pair);
-        if (!ok) revert RouterInvalidPairAddress(pair);
+        IPair.TokenConfig memory info = IPair(pair).getTokenConfig();
 
         IERC20 QUOTE = info.QUOTE;
         if (address(QUOTE) == address(WCross)) WCross.mintTo{value: amount}(address(pair));
@@ -140,23 +144,8 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, OwnableUpgr
         IPair(pair).market(order, amount, _toMaxMatchCount(_maxMatchCount));
     }
 
-    function cancel(address pair, uint256[] calldata orderIds) external {
-        (bool ok,) = _validPairInfo(pair);
-        if (!ok) revert RouterInvalidPairAddress(pair);
-
+    function cancel(address pair, uint256[] calldata orderIds) external validPair(pair) {
         IPair(pair).cancel(_msgSender(), orderIds);
-    }
-
-    function _validPairInfo(address pair) private view returns (bool, IPair.TokenConfig memory) {
-        IPair.TokenConfig memory info = IPair(pair).getTokenConfig();
-        address _market = CROSS_DEX.quoteToMarket(address(info.QUOTE));
-        if (_market == address(0)) return (false, info);
-
-        IMarket market = IMarket(CROSS_DEX.quoteToMarket(address(info.QUOTE)));
-        address marketPair = market.baseToPair(address(info.BASE));
-        if (marketPair != pair) return (false, info);
-
-        return (true, info);
     }
 
     function _toMaxMatchCount(uint256 _maxMatchCount) private view returns (uint256) {

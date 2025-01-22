@@ -57,9 +57,9 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     event Skim(address indexed caller, address indexed erc20, address indexed to, uint256 amount);
 
     address public ROUTER; // immutable
-    IERC20 public override BASE; // immutable
-    IERC20 public override QUOTE; // immutable
-    uint256 public override DENOMINATOR; // immutable
+    IERC20 public BASE; // immutable
+    IERC20 public QUOTE; // immutable
+    uint256 public DENOMINATOR; // immutable
 
     // 리저브 수량
     uint256 public baseReserve;
@@ -83,7 +83,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     mapping(uint256 price => List.U256) private _buyOrders; //  price => 구매 order id list
     mapping(uint256 orderId => Order) private _allOrders; // 모든 주문 정보
 
-    uint256[34] private __gap;
+    uint256[32] private __gap;
 
     modifier onlyRouter() {
         if (_msgSender() != ROUTER) revert PairInvalidRouter(_msgSender());
