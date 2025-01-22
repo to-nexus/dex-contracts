@@ -460,7 +460,6 @@ contract DEXCheckTest is DEXBaseTest {
         assertEq(matchAmount - makerFee, BASE.balanceOf(buyer));
     }
 
-    // [199981] SELL OnePrice -> BUY (1 orders)
     function test_check_gas_case1() external {
         address seller = address(0x1);
         address buyer = address(0x2);
@@ -485,7 +484,7 @@ contract DEXCheckTest is DEXBaseTest {
 
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        // 199981
+
         ROUTER.marketBuy(address(PAIR), volume, 0);
         assertEq(0, QUOTE.balanceOf(buyer)); // 정확이 매칭 되었는지 확인
 
@@ -494,7 +493,6 @@ contract DEXCheckTest is DEXBaseTest {
         assertEq(0, buyPrices.length);
     }
 
-    // [258882(+58901)] SELL OnePrice -> BUY (2 orders)
     function test_check_gas_case2() external {
         address seller1 = address(0x1);
         address seller2 = address(0x2);
@@ -526,7 +524,7 @@ contract DEXCheckTest is DEXBaseTest {
 
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        // 258882
+
         ROUTER.marketBuy(address(PAIR), volume, 0);
         assertEq(0, QUOTE.balanceOf(buyer)); // 정확이 매칭 되었는지 확인
 
@@ -535,7 +533,6 @@ contract DEXCheckTest is DEXBaseTest {
         assertEq(0, buyPrices.length);
     }
 
-    // [266886(+66905(+8004))] SELL TwoPrices -> BUY (2 orders)
     function test_check_gas_case3() external {
         address seller1 = address(0x1);
         address seller2 = address(0x2);
@@ -568,7 +565,7 @@ contract DEXCheckTest is DEXBaseTest {
 
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        // 266886
+
         ROUTER.marketBuy(address(PAIR), volume, 0);
         assertEq(0, QUOTE.balanceOf(buyer)); // 정확이 매칭 되었는지 확인
 
@@ -577,7 +574,6 @@ contract DEXCheckTest is DEXBaseTest {
         assertEq(0, buyPrices.length);
     }
 
-    // [195076] BUY OnePrice -> SELL (1 orders)
     function test_check_gas_case4() external {
         address seller = address(0x1);
         address buyer = address(0x2);
@@ -602,7 +598,7 @@ contract DEXCheckTest is DEXBaseTest {
 
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
-        // 195076
+
         ROUTER.marketSell(address(PAIR), amount, 0);
         assertEq(0, BASE.balanceOf(seller)); // 정확이 매칭 되었는지 확인
 
@@ -611,7 +607,6 @@ contract DEXCheckTest is DEXBaseTest {
         assertEq(0, buyPrices.length);
     }
 
-    // [253878(+58802)] BUY OnePrice -> SELL (2 orders)
     function test_check_gas_case5() external {
         address seller = address(0x1);
         address buyer1 = address(0x2);
@@ -644,7 +639,7 @@ contract DEXCheckTest is DEXBaseTest {
 
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
-        // 253878
+
         ROUTER.marketSell(address(PAIR), amount * 2, 0);
         assertEq(0, BASE.balanceOf(seller)); // 정확이 매칭 되었는지 확인
 
@@ -653,7 +648,6 @@ contract DEXCheckTest is DEXBaseTest {
         assertEq(0, buyPrices.length);
     }
 
-    // [261216(+66140(+7338))] BUY TwoPrices -> SELL (2 orders)
     function test_check_gas_case6() external {
         address seller = address(0x1);
         address buyer1 = address(0x2);
@@ -688,12 +682,82 @@ contract DEXCheckTest is DEXBaseTest {
 
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
-        // 261216
+
         ROUTER.marketSell(address(PAIR), amount * 2, 0);
         assertEq(0, BASE.balanceOf(seller)); // 정확이 매칭 되었는지 확인
 
         (sellPrices, buyPrices) = PAIR.ticks();
         assertEq(0, sellPrices.length);
         assertEq(0, buyPrices.length);
+    }
+
+    function test_check_skim_case1() external {
+        address seller = address(0x1);
+
+        uint256 price = _toQuote(1);
+        uint256 amount = _toBase(100);
+
+        vm.prank(OWNER);
+        BASE.transfer(seller, amount);
+
+        vm.startPrank(seller);
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId = ROUTER.limitSell(address(PAIR), price, amount, 0, 0);
+        assertNotEq(0, orderId);
+        vm.stopPrank();
+
+        assertEq(BASE.balanceOf(address(PAIR)), amount);
+
+        vm.startPrank(OWNER);
+        vm.expectRevert(abi.encodeWithSignature("PairInvalidReserve(address)", address(BASE)));
+        PAIR.skim(BASE, OWNER, amount);
+
+        BASE.transfer(address(PAIR), amount);
+        address receiver = address(bytes20("RECEIVER"));
+
+        PAIR.skim(BASE, receiver, amount);
+        assertEq(BASE.balanceOf(receiver), amount);
+        vm.stopPrank();
+    }
+
+    function test_check_skim_case2() external {
+        address buyer = address(0x1);
+
+        uint256 price = _toQuote(1);
+        uint256 amount = _toBase(100);
+        uint256 volume = Math.mulDiv(price, amount, BASE_DECIMALS);
+
+        vm.prank(OWNER);
+        QUOTE.transfer(buyer, volume);
+
+        vm.startPrank(buyer);
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        uint256 orderId = ROUTER.limitBuy(address(PAIR), price, amount, 0, 0);
+        assertNotEq(0, orderId);
+        vm.stopPrank();
+        assertEq(QUOTE.balanceOf(address(PAIR)), volume);
+
+        vm.startPrank(OWNER);
+        vm.expectRevert(abi.encodeWithSignature("PairInvalidReserve(address)", address(QUOTE)));
+        PAIR.skim(QUOTE, OWNER, volume - 1);
+        QUOTE.transfer(address(PAIR), amount);
+        address receiver = address(bytes20("RECEIVER"));
+
+        PAIR.skim(QUOTE, receiver, amount);
+        assertEq(QUOTE.balanceOf(receiver), amount);
+        vm.stopPrank();
+    }
+
+    function test_check_skim_case3() external {
+        vm.startPrank(OWNER);
+
+        IERC20 erc20 = IERC20(address(new T20("ERC20", "E20", 18)));
+        uint256 amount = 100 ether;
+        erc20.transfer(address(PAIR), amount);
+
+        address receiver = address(bytes20("RECEIVER"));
+        PAIR.skim(erc20, receiver, amount);
+
+        vm.stopPrank();
     }
 }

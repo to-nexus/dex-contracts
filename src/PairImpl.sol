@@ -547,7 +547,9 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
         takerFeePermil = uint32(_takerFeePermil);
     }
 
-    function skim(IERC20 erc20, address to, uint256 amount) external onlyOwner whenPaused {
+    function skim(IERC20 erc20, address to, uint256 amount) external onlyOwner {
+        if (amount == 0) return;
+
         if (erc20 == BASE && BASE.balanceOf(address(this)) - amount < baseReserve) {
             revert PairInvalidReserve(address(BASE));
         } else if (erc20 == QUOTE && QUOTE.balanceOf(address(this)) - amount < quoteReserve) {

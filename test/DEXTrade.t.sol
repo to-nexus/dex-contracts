@@ -933,6 +933,12 @@ contract DEXTradeTest is DEXBaseTest {
         uint256 pairBaseBalance = BASE.balanceOf(address(PAIR));
         uint256 pairQuoteBalance = QUOTE.balanceOf(address(PAIR));
 
+        uint256 baseReserve = PAIR.baseReserve();
+        uint256 quoteReserve = PAIR.quoteReserve();
+
+        assertEq(baseReserve, pairBaseBalance);
+        assertEq(quoteReserve, pairQuoteBalance);
+
         uint256 checkBaseBalance = 0;
         uint256 checkQuoteBalance = 0;
         for (uint256 i = 1; i <= latestOrderId; i++) {
@@ -1269,6 +1275,12 @@ contract DEXTradeTest is DEXBaseTest {
 
         uint256 pairBaseBalance = BASE.balanceOf(address(PAIR));
         uint256 pairQuoteBalance = QUOTE.balanceOf(address(PAIR));
+
+        uint256 baseReserve = PAIR.baseReserve();
+        uint256 quoteReserve = PAIR.quoteReserve();
+
+        assertEq(baseReserve, pairBaseBalance);
+        assertEq(quoteReserve, pairQuoteBalance);
 
         uint256 checkBaseBalance = 0;
         uint256 checkQuoteBalance = 0;
