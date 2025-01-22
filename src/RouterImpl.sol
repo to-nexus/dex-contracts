@@ -8,18 +8,19 @@ import {Address} from "@openzeppelin-contracts-5.2.0/utils/Address.sol";
 import {Math} from "@openzeppelin-contracts-5.2.0/utils/math/Math.sol";
 import {EnumerableSet} from "@openzeppelin-contracts-5.2.0/utils/structs/EnumerableSet.sol";
 
-import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/access/OwnableUpgradeable.sol";
+import {ContextUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/utils/ContextUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from
     "@openzeppelin-contracts-upgradeable-5.2.0/utils/ReentrancyGuardUpgradeable.sol";
 
 import {WCROSS} from "./WCROSS.sol";
 
 import {ICrossDex} from "./interfaces/ICrossDex.sol";
+import {IOwnable} from "./interfaces/IOwnable.sol";
 import {IPair} from "./interfaces/IPair.sol";
 import {IRouter, IRouterInitializer} from "./interfaces/IRouter.sol";
 import {IWCROSS} from "./interfaces/IWCROSS.sol";
 
-contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgradeable, ReentrancyGuardUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
     using Math for uint256;
@@ -31,7 +32,7 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, OwnableUpgr
     event PairAdded(address indexed pair, address indexed base, address indexed quote);
     event PairRemoved(address indexed pair);
 
-    ICrossDex public CROSS_DEX; // immutable
+    address public CROSS_DEX; // immutable
     IWCROSS public WCross; // immutable
 
     uint256 public maxMatchCount;
@@ -48,21 +49,26 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, OwnableUpgr
         _;
     }
 
+    modifier onlyOwner() {
+        if (_msgSender() != IOwnable(CROSS_DEX).owner()) revert IOwnable.OwnableUnauthorizedAccount(_msgSender());
+        _;
+    }
+
     receive() external payable checkValue {}
 
-    function initialize(address _owner, uint256 _maxMatchCount) external override initializer {
+    function initialize(uint256 _maxMatchCount) external override initializer {
         if (_maxMatchCount == 0) revert RouterInitializeData("maxMatchCount");
 
-        CROSS_DEX = ICrossDex(_msgSender());
+        CROSS_DEX = _msgSender();
         WCross = IWCROSS(payable(address(new WCROSS())));
         maxMatchCount = _maxMatchCount;
 
-        __Ownable_init(_owner);
+        __Context_init();
         __ReentrancyGuard_init();
     }
 
     function isPair(address pair) public view override returns (bool) {
-        return CROSS_DEX.pairToMarket(pair) != address(0);
+        return ICrossDex(CROSS_DEX).pairToMarket(pair) != address(0);
     }
 
     function limitSell(address pair, uint256 price, uint256 amount, uint256 searchPrice, uint256 _maxMatchCount)

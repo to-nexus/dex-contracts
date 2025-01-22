@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 interface IRouterInitializer {
-    function initialize(address owner, uint256 maxMatchCount) external;
+    function initialize(uint256 maxMatchCount) external;
 }
 
 interface IRouter {

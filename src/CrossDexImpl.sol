@@ -50,7 +50,7 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
             // deploy router
             ERC1967Proxy proxy = new ERC1967Proxy(_routerImpl, hex"");
             ROUTER = payable(address(proxy));
-            IRouterInitializer(ROUTER).initialize(_owner, _maxMatchCount);
+            IRouterInitializer(ROUTER).initialize(_maxMatchCount);
         }
         {
             // deploy market & pair logic contracts

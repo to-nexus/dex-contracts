@@ -7,15 +7,15 @@ import {IERC20, IERC20Metadata} from "@openzeppelin-contracts-5.2.0/token/ERC20/
 import {SafeERC20} from "@openzeppelin-contracts-5.2.0/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin-contracts-5.2.0/utils/math/Math.sol";
 
-import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/access/OwnableUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/utils/PausableUpgradeable.sol";
 
+import {IOwnable} from "./interfaces/IOwnable.sol";
 import {IPair} from "./interfaces/IPair.sol";
 import {ASCList} from "./lib/ASCList.sol";
 import {DESCList} from "./lib/DESCList.sol";
 import {List} from "./lib/List.sol";
 
-contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable {
+contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
     using SafeERC20 for IERC20;
     using Math for uint256;
     using List for List.U256;
@@ -56,6 +56,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     );
     event Skim(address indexed caller, address indexed erc20, address indexed to, uint256 amount);
 
+    address public MARKET; // immutable
     address public ROUTER; // immutable
     IERC20 public BASE; // immutable
     IERC20 public QUOTE; // immutable
@@ -83,7 +84,12 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     mapping(uint256 price => List.U256) private _buyOrders; //  price => 구매 order id list
     mapping(uint256 orderId => Order) private _allOrders; // 모든 주문 정보
 
-    uint256[32] private __gap;
+    uint256[31] private __gap;
+
+    modifier onlyOwner() {
+        if (_msgSender() != IOwnable(MARKET).owner()) revert IOwnable.OwnableUnauthorizedAccount(_msgSender());
+        _;
+    }
 
     modifier onlyRouter() {
         if (_msgSender() != ROUTER) revert PairInvalidRouter(_msgSender());
@@ -91,7 +97,6 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     }
 
     function initialize(
-        address owner,
         address router,
         address quote,
         address base,
@@ -101,7 +106,6 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
         uint256 _makerFeePermil,
         uint256 _takerFeePermil
     ) external initializer {
-        if (owner == address(0)) revert PairInvalidInitializeData("owner");
         if (router == address(0)) revert PairInvalidInitializeData("router");
         if (quote == address(0)) revert PairInvalidInitializeData("quote");
         if (base == address(0)) revert PairInvalidInitializeData("base");
@@ -111,6 +115,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
         if (_makerFeePermil > 1000) revert PairInvalidInitializeData("makerFeePermil");
         if (_takerFeePermil > 1000) revert PairInvalidInitializeData("takerFeePermil");
 
+        MARKET = _msgSender();
         ROUTER = router;
         QUOTE = IERC20(quote);
         BASE = IERC20(base);
@@ -127,7 +132,6 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
         makerFeePermil = uint32(_makerFeePermil);
         takerFeePermil = uint32(_takerFeePermil);
 
-        __Ownable_init(owner);
         __Pausable_init();
     }
 

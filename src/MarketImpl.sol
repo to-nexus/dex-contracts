@@ -84,7 +84,6 @@ contract MarketImpl is IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
                 pairImpl,
                 abi.encodeWithSelector(
                     PairImpl.initialize.selector,
-                    owner(),
                     router,
                     QUOTE,
                     base,
