@@ -15,9 +15,9 @@ import {ReentrancyGuardUpgradeable} from
 import {WCROSS} from "./WCROSS.sol";
 
 import {IPair} from "./interfaces/IPair.sol";
-import {IRouter} from "./interfaces/IRouter.sol";
+import {IRouter, IRouterInitializer} from "./interfaces/IRouter.sol";
 
-contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
     using Address for address payable;
@@ -64,7 +64,7 @@ contract RouterImpl is IRouter, UUPSUpgradeable, OwnableUpgradeable, ReentrancyG
 
     receive() external payable checkValue {}
 
-    function initialize(address _owner, uint256 _maxMatchCount) external initializer {
+    function initialize(address _owner, uint256 _maxMatchCount) external override initializer {
         if (_maxMatchCount == 0) revert RouterInitializeData("maxMatchCount");
 
         CROSS_DEX = _msgSender();

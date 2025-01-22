@@ -8,13 +8,11 @@ import {EnumerableSet} from "@openzeppelin-contracts-5.2.0/utils/structs/Enumera
 
 import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/access/OwnableUpgradeable.sol";
 
-import {MarketImpl} from "./MarketImpl.sol";
-import {PairImpl} from "./PairImpl.sol";
-import {RouterImpl} from "./RouterImpl.sol";
-import {WCROSS} from "./WCROSS.sol";
-
 import {ICrossDex} from "./interfaces/ICrossDex.sol";
-import {IRouter} from "./interfaces/IRouter.sol";
+import {IMarketInitializer} from "./interfaces/IMarket.sol";
+import {IRouter, IRouterInitializer} from "./interfaces/IRouter.sol";
+
+import {WCROSS} from "./WCROSS.sol";
 
 contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -38,20 +36,23 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
         _;
     }
 
-    function initialize(address _owner, uint256 _maxMatchCount) external initializer {
+    function initialize(
+        address _owner,
+        address _routerImpl,
+        uint256 _maxMatchCount,
+        address _marketImpl,
+        address _pairImpl
+    ) external initializer {
         {
             // deploy router
-            RouterImpl routerImpl = new RouterImpl();
-            ERC1967Proxy proxy = new ERC1967Proxy(address(routerImpl), hex"");
+            ERC1967Proxy proxy = new ERC1967Proxy(_routerImpl, hex"");
             ROUTER = payable(address(proxy));
-
-            RouterImpl router = RouterImpl(ROUTER);
-            router.initialize(_owner, _maxMatchCount);
+            IRouterInitializer(ROUTER).initialize(_owner, _maxMatchCount);
         }
         {
             // deploy market & pair logic contracts
-            marketImpl = address(new MarketImpl());
-            pairImpl = address(new PairImpl());
+            marketImpl = _marketImpl;
+            pairImpl = _pairImpl;
         }
         __Ownable_init(_owner);
     }
@@ -71,7 +72,7 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
     {
         if (!_allQuotes.add(_quote)) revert CrossDexAlreadyCreatedMarketQuote(_quote);
 
-        MarketImpl _market = MarketImpl(address(new ERC1967Proxy(marketImpl, hex"")));
+        IMarketInitializer _market = IMarketInitializer(address(new ERC1967Proxy(marketImpl, hex"")));
         _market.initialize(_owner, ROUTER, _fee_collector, _quote, pairImpl);
 
         address market = address(_market);

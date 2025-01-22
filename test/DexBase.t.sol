@@ -48,11 +48,16 @@ contract DEXBaseTest is Test {
         BASE_DECIMALS = 10 ** base_decimals;
 
         {
+            // deploy impl contracts
+            address routerImpl = address(new RouterImpl());
+            address marketImpl = address(new MarketImpl());
+            address pairImpl = address(new PairImpl());
+
             // deploy cross dex
             address crossDexImpl = address(new CrossDexImpl());
             ERC1967Proxy proxy = new ERC1967Proxy(crossDexImpl, hex"");
             CROSS_DEX = CrossDexImpl(address(proxy));
-            CROSS_DEX.initialize(OWNER, MAX_MATCH_COUNT);
+            CROSS_DEX.initialize(OWNER, routerImpl, MAX_MATCH_COUNT, marketImpl, pairImpl);
         }
         {
             // get contracts from CROSS_DEX

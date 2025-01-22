@@ -55,7 +55,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     );
     event Skim(address indexed caller, address indexed erc20, address indexed to, uint256 amount);
 
-    address public ROUTER;
+    address public ROUTER; // immutable
     IERC20 public override BASE; // immutable
     IERC20 public override QUOTE; // immutable
     uint256 public override DENOMINATOR; // immutable
@@ -494,13 +494,6 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
 
         baseTickSize = _baseTickSize;
         quoteTickSize = _quoteTickSize;
-    }
-
-    function setRouter(address router) external onlyOwner {
-        if (router == address(0)) revert PairInvalidInitializeData("router");
-        emit RouterUpdated(ROUTER, router);
-
-        ROUTER = router;
     }
 
     function setFeeCollector(address _feeCollector) external onlyOwner {
