@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import "./DexBase.t.sol";
+import "./DEXBase.t.sol";
 import {Address} from "@openzeppelin-contracts-5.2.0/utils/Address.sol";
 
 contract DexWrapBaseTest is DEXBaseTest {
