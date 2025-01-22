@@ -62,7 +62,7 @@ contract DEXBaseTest is Test {
         {
             // get contracts from CROSS_DEX
             ROUTER = RouterImpl(CROSS_DEX.ROUTER());
-            WCross = WCROSS(ROUTER.WCross());
+            WCross = WCROSS(payable(address(ROUTER.WCross())));
         }
         {
             // deploy base and quote tokens

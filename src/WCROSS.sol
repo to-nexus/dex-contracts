@@ -19,6 +19,10 @@ contract WCROSS is ERC20 {
         _mint(_msgSender(), msg.value);
     }
 
+    function mintTo(address to) external payable {
+        _mint(to, msg.value);
+    }
+
     function _update(address from, address to, uint256 value) internal override {
         super._update(from, to, value);
         // burn 이 아닌경우 Router 또는 Pair가 아닌 경우에만 burn 후 transfer

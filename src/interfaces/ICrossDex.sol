@@ -2,5 +2,5 @@
 pragma solidity ^0.8.0;
 
 interface ICrossDex {
-    function notifyPairCreated(address pair) external;
+    function quoteToMarket(address quote) external view returns (address);
 }

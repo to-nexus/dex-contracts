@@ -10,9 +10,9 @@ import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/acce
 
 import {PairImpl} from "./PairImpl.sol";
 import {ICrossDex} from "./interfaces/ICrossDex.sol";
-import {IMarketInitializer} from "./interfaces/IMarket.sol";
+import {IMarket, IMarketInitializer} from "./interfaces/IMarket.sol";
 
-contract MarketImpl is IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
+contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     error MarketInvalidInitializeData(bytes32);
@@ -30,7 +30,7 @@ contract MarketImpl is IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
     address public pairImpl;
 
     EnumerableSet.AddressSet private _allBases;
-    mapping(address base => address) private _allPairs;
+    mapping(address base => address) public override baseToPair;
 
     uint256[44] private __gap;
 
@@ -60,15 +60,11 @@ contract MarketImpl is IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
         uint256 length = bases.length;
         pairs = new address[](length);
         for (uint256 i = 0; i < length;) {
-            pairs[i] = _allPairs[bases[i]];
+            pairs[i] = baseToPair[bases[i]];
             unchecked {
                 ++i;
             }
         }
-    }
-
-    function pairByBase(address base) external view returns (address) {
-        return _allPairs[base];
     }
 
     function createPair(
@@ -101,9 +97,8 @@ contract MarketImpl is IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
             )
         );
         if (pair == address(0)) revert MarketDeployPair();
-        _allPairs[base] = pair;
+        baseToPair[base] = pair;
 
-        CROSS_DEX.notifyPairCreated(pair);
         emit PairCreated(pair, base, block.timestamp);
     }
 

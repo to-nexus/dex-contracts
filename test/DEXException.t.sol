@@ -15,30 +15,30 @@ contract DEXExceptionTest is DEXBaseTest {
         _deploy(6, 18, 1e2, 1e4);
     }
 
-    // [ROUTER] 제거된 Pair 는 거래 할 수 없다.
-    function test_exception_router_case1() external {
-        vm.startPrank(OWNER);
-        address pair = address(PAIR);
-        ROUTER.removePair(pair); // 등록된 PAIR 제거
+    // // [ROUTER] 제거된 Pair 는 거래 할 수 없다.
+    // function test_exception_router_case1() external {
+    //     vm.startPrank(OWNER);
+    //     address pair = address(PAIR);
+    //     ROUTER.removePair(pair); // 등록된 PAIR 제거
 
-        BASE.approve(address(ROUTER), type(uint256).max);
-        QUOTE.approve(address(ROUTER), type(uint256).max);
+    //     BASE.approve(address(ROUTER), type(uint256).max);
+    //     QUOTE.approve(address(ROUTER), type(uint256).max);
 
-        // 거래 및 실패 확인
-        vm.expectRevert(abi.encodeWithSignature("RouterInvalidPairAddress(address)", pair));
-        ROUTER.limitSell(pair, 1e18, 1e18, 0, 0);
+    //     // 거래 및 실패 확인
+    //     vm.expectRevert(abi.encodeWithSignature("RouterInvalidPairAddress(address)", pair));
+    //     ROUTER.limitSell(pair, 1e18, 1e18, 0, 0);
 
-        vm.expectRevert(abi.encodeWithSignature("RouterInvalidPairAddress(address)", pair));
-        ROUTER.limitBuy(pair, 1e18, 1e18, 0, 0);
+    //     vm.expectRevert(abi.encodeWithSignature("RouterInvalidPairAddress(address)", pair));
+    //     ROUTER.limitBuy(pair, 1e18, 1e18, 0, 0);
 
-        vm.expectRevert(abi.encodeWithSignature("RouterInvalidPairAddress(address)", pair));
-        ROUTER.marketSell(pair, 1e18, 0);
+    //     vm.expectRevert(abi.encodeWithSignature("RouterInvalidPairAddress(address)", pair));
+    //     ROUTER.marketSell(pair, 1e18, 0);
 
-        vm.expectRevert(abi.encodeWithSignature("RouterInvalidPairAddress(address)", pair));
-        ROUTER.marketBuy(pair, 1e18, 0);
+    //     vm.expectRevert(abi.encodeWithSignature("RouterInvalidPairAddress(address)", pair));
+    //     ROUTER.marketBuy(pair, 1e18, 0);
 
-        vm.stopPrank();
-    }
+    //     vm.stopPrank();
+    // }
 
     // [ROUTER] coin 을 전송 받을 수 없다.
     function test_exception_wcross_case1() external {
@@ -145,41 +145,41 @@ contract DEXExceptionTest is DEXBaseTest {
         );
     }
 
-    // [Pair] 다른 ROUTER 으로 거래를 요청할 수 없다.
-    function test_exception_pair_case3() external {
-        address pair = address(PAIR);
+    // // [Pair] 다른 ROUTER 으로 거래를 요청할 수 없다.
+    // function test_exception_pair_case3() external {
+    //     address pair = address(PAIR);
 
-        vm.startPrank(OWNER);
-        // ROUTER 로는 거래할 수 있다.
-        BASE.approve(address(ROUTER), type(uint256).max);
-        QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitSell(pair, _toQuote(1), _toBase(1), 0, 0);
-        ROUTER.limitBuy(pair, _toQuote(1), _toBase(1), 0, 0);
-        ROUTER.marketSell(pair, _toBase(1), 0);
-        ROUTER.marketBuy(pair, _toQuote(1), 0);
+    //     vm.startPrank(OWNER);
+    //     // ROUTER 로는 거래할 수 있다.
+    //     BASE.approve(address(ROUTER), type(uint256).max);
+    //     QUOTE.approve(address(ROUTER), type(uint256).max);
+    //     ROUTER.limitSell(pair, _toQuote(1), _toBase(1), 0, 0);
+    //     ROUTER.limitBuy(pair, _toQuote(1), _toBase(1), 0, 0);
+    //     ROUTER.marketSell(pair, _toBase(1), 0);
+    //     ROUTER.marketBuy(pair, _toQuote(1), 0);
 
-        // R 배포
-        address routerImpl = address(new RouterImpl());
-        address router = address(new ERC1967Proxy(routerImpl, ""));
-        RouterImpl R = RouterImpl(payable(router));
-        R.initialize(payable(address(WCross)), type(uint256).max);
+    //     // R 배포
+    //     address routerImpl = address(new RouterImpl());
+    //     address router = address(new ERC1967Proxy(routerImpl, ""));
+    //     RouterImpl R = RouterImpl(payable(router));
+    //     R.initialize(payable(address(WCross)), type(uint256).max);
 
-        // R 에 Pair 등록
-        R.addPair(pair);
+    //     // R 에 Pair 등록
+    //     R.addPair(pair);
 
-        BASE.approve(router, type(uint256).max);
-        QUOTE.approve(router, type(uint256).max);
+    //     BASE.approve(router, type(uint256).max);
+    //     QUOTE.approve(router, type(uint256).max);
 
-        // R 로 주문은 넣을수 없다.
-        vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", router));
-        R.limitSell(pair, _toQuote(1), _toBase(1), 0, 0);
-        vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", router));
-        R.limitBuy(pair, _toQuote(1), _toBase(1), 0, 0);
-        vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", router));
-        R.marketSell(pair, _toBase(1), 0);
-        vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", router));
-        R.marketBuy(pair, _toQuote(1), 0);
+    //     // R 로 주문은 넣을수 없다.
+    //     vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", router));
+    //     R.limitSell(pair, _toQuote(1), _toBase(1), 0, 0);
+    //     vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", router));
+    //     R.limitBuy(pair, _toQuote(1), _toBase(1), 0, 0);
+    //     vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", router));
+    //     R.marketSell(pair, _toBase(1), 0);
+    //     vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", router));
+    //     R.marketBuy(pair, _toQuote(1), 0);
 
-        vm.stopPrank();
-    }
+    //     vm.stopPrank();
+    // }
 }

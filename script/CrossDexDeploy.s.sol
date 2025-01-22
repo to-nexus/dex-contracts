@@ -37,7 +37,7 @@ contract CrossDexDeployScript is Script {
 
         // get contracts from CROSS_DEX
         RouterImpl ROUTER = RouterImpl(CROSS_DEX.ROUTER());
-        WCROSS WCross = WCROSS(ROUTER.WCross());
+        WCROSS WCross = WCROSS(payable(address(ROUTER.WCross())));
         vm.stopBroadcast();
 
         console.log("CROSS_DEX: ", address(CROSS_DEX));

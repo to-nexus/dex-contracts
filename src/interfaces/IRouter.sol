@@ -7,5 +7,4 @@ interface IRouterInitializer {
 
 interface IRouter {
     function isPair(address pair) external view returns (bool);
-    function addPair(address pair) external;
 }

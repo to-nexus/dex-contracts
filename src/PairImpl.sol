@@ -22,6 +22,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     using DESCList for DESCList.U256;
     using ASCList for ASCList.U256;
 
+    error PairInvalidReserve(address);
     error PairInvalidInitializeData(bytes32);
     error PairInvalidRouter(address);
     error PairInvalidOrderType(OrderType);
@@ -59,6 +60,10 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     IERC20 public override BASE; // immutable
     IERC20 public override QUOTE; // immutable
     uint256 public override DENOMINATOR; // immutable
+
+    // 리저브 수량
+    uint256 public baseReserve;
+    uint256 public quoteReserve;
 
     // 거래단위
     uint256 public baseTickSize;
@@ -126,6 +131,10 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
         __Pausable_init();
     }
 
+    function getTokenConfig() external view returns (TokenConfig memory) {
+        return TokenConfig({QUOTE: QUOTE, BASE: BASE, DENOMINATOR: DENOMINATOR});
+    }
+
     function orderById(uint256 id) external view returns (Order memory) {
         return _allOrders[id];
     }
@@ -172,7 +181,10 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
             if (matchedBaseAmount != 0) {
                 uint256 measuredQuoteAmount = Math.mulDiv(order.price, matchedBaseAmount, DENOMINATOR);
                 uint256 diffQuoteAmount = measuredQuoteAmount - useQuoteAmount;
-                if (diffQuoteAmount != 0) QUOTE.safeTransfer(order.owner, diffQuoteAmount);
+                if (diffQuoteAmount != 0) {
+                    QUOTE.safeTransfer(order.owner, diffQuoteAmount);
+                    quoteReserve -= diffQuoteAmount;
+                }
             }
 
             // 남은 잔액에 따른 분기 처리
@@ -202,7 +214,10 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
             order.amount = spendAmount;
 
             order = _createSellOrder(orderId, order, maxMatchCount);
-            if (order.amount != 0) BASE.transfer(order.owner, order.amount);
+            if (order.amount != 0) {
+                BASE.safeTransfer(order.owner, order.amount);
+                baseReserve -= order.amount;
+            }
         } else {
             if (spendAmount < minTradeVolume) revert PairInsufficientTradeVolume(spendAmount, minTradeVolume);
             order.price = type(uint256).max; // 구매는 spendAmount 을 모두 소진할때까지 가격을 올린다.
@@ -210,7 +225,10 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
             uint256 useQuoteAmount;
             (order,, useQuoteAmount) = _createBuyOrder(orderId, order, spendAmount, maxMatchCount);
             uint256 remainQuoteAmount = spendAmount - useQuoteAmount;
-            if (remainQuoteAmount != 0) QUOTE.transfer(order.owner, remainQuoteAmount);
+            if (remainQuoteAmount != 0) {
+                QUOTE.safeTransfer(order.owner, remainQuoteAmount);
+                quoteReserve -= remainQuoteAmount;
+            }
         }
         emit OrderClosed(orderId, CloseType.MARKET, block.timestamp);
     }
@@ -229,10 +247,17 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
             // 컨트랙트에 보유하고 있던 토큰을 돌려준다.
             if (isSellOrder) {
                 _orders = _sellOrders[order.price];
-                BASE.safeTransfer(order.owner, order.amount);
+                if (order.amount != 0) {
+                    BASE.safeTransfer(order.owner, order.amount);
+                    baseReserve -= order.amount;
+                }
             } else {
                 _orders = _buyOrders[order.price];
-                QUOTE.safeTransfer(order.owner, Math.mulDiv(order.price, order.amount, DENOMINATOR));
+                uint256 returnQuoteAmount = Math.mulDiv(order.price, order.amount, DENOMINATOR);
+                if (returnQuoteAmount != 0) {
+                    QUOTE.safeTransfer(order.owner, returnQuoteAmount);
+                    quoteReserve -= returnQuoteAmount;
+                }
             }
 
             // 해당 데이터를 제거한다.
@@ -256,17 +281,21 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     {
         if (order._type != OrderType.SELL) revert PairInvalidOrderType(order._type);
 
-        // 1. 주문에 필요한 토큰을 가져온다.
-        BASE.safeTransferFrom(_msgSender(), address(this), order.amount);
+        // 1. 주문에 필요한 토큰이 입급되었는지 확인한다.
+        baseReserve += order.amount;
+        if (BASE.balanceOf(address(this)) < baseReserve) revert PairInvalidReserve(address(BASE));
         emit OrderCreated(order.owner, orderId, order._type, order.price, order.amount, block.timestamp);
 
         // 2. 즉시 거래가 가능한 매물이 있다면 거래를 시킨다.
         // SELL 주문일 경우는 BUY 목록에서 비싼것 부터 찾으며, 입력된 price 보다 높거나 같은 구매 거래만 성사 시킨다.
+        uint256 matchedBaseAmount;
         uint256 earnQuoteAmount;
-        (order, earnQuoteAmount) = _tradeSellOrder(orderId, order, maxMatchCount);
+        (order, matchedBaseAmount, earnQuoteAmount) = _tradeSellOrder(orderId, order, maxMatchCount);
 
         // 3. 즉시 거래된 수익은 판매자에게 전송한다.
         if (earnQuoteAmount != 0) {
+            baseReserve -= matchedBaseAmount;
+            quoteReserve -= earnQuoteAmount;
             if (takerFeePermil == 0) {
                 QUOTE.safeTransfer(order.owner, earnQuoteAmount);
             } else {
@@ -292,8 +321,9 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
         if (spendQuoteAmount != 0) quoteAmount = spendQuoteAmount;
         else quoteAmount = Math.mulDiv(order.price, order.amount, DENOMINATOR);
 
-        // 1. 주문에 필요한 토큰을 가져온다.
-        QUOTE.safeTransferFrom(_msgSender(), address(this), quoteAmount);
+        // 1. 주문에 필요한 토큰이 입금되었는지 확인한다.
+        quoteReserve += quoteAmount;
+        if (QUOTE.balanceOf(address(this)) < quoteReserve) revert PairInvalidReserve(address(QUOTE));
         emit OrderCreated(order.owner, orderId, order._type, order.price, order.amount, block.timestamp);
 
         // 2. 즉시 거래가 가능한 매물이 있다면 거래를 시킨다.
@@ -303,6 +333,9 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
 
         // 3. 즉시 채결된 BASE 토큰을 전송한다.
         if (matchedBaseAmount != 0) {
+            baseReserve -= matchedBaseAmount;
+            quoteReserve -= useQuoteAmount;
+
             if (takerFeePermil == 0) {
                 BASE.safeTransfer(order.owner, matchedBaseAmount);
             } else {
@@ -318,7 +351,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     // SELL 주문일 경우는 BUY 목록에서 비싼것 부터 찾으며, order.price 보다 높거나 같은 구매 거래만 성사 시킨다.
     function _tradeSellOrder(uint256 orderId, Order memory order, uint256 maxMatchCount)
         private
-        returns (Order memory cOrder, uint256 earnQuoteAmount)
+        returns (Order memory cOrder, uint256 matchedBaseAmount, uint256 earnQuoteAmount)
     {
         // (earnQuoteAmount) 판매로 인해 벌어들인 Quote 수량
         cOrder = _copyOrder(order);
@@ -345,8 +378,10 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
                     BASE.safeTransfer(feeCollector, fee);
                     BASE.safeTransfer(targetOwner, tradeAmount - fee);
                 }
-                earnQuoteAmount += Math.mulDiv(price, tradeAmount, DENOMINATOR);
 
+                // 정보 업데이트
+                matchedBaseAmount += tradeAmount;
+                earnQuoteAmount += Math.mulDiv(price, tradeAmount, DENOMINATOR);
                 if (cOrder.amount == 0 || maxMatchCount == 0) {
                     if (_orders.empty()) {
                         // while 이 끝나기 전이지만,
@@ -354,7 +389,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
                         // _orders 가 비어있을 수 있다.
                         if (!_buyPrices.remove(price)) revert PairUnknownPrices(OrderType.BUY, price);
                     }
-                    return (cOrder, earnQuoteAmount);
+                    return (cOrder, matchedBaseAmount, earnQuoteAmount);
                 }
                 unchecked {
                     --length;
@@ -365,7 +400,7 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
             // _buyPrices 에서 price 를 지운다.
             if (!_buyPrices.remove(price)) revert PairUnknownPrices(OrderType.BUY, price);
         }
-        return (cOrder, earnQuoteAmount);
+        return (cOrder, matchedBaseAmount, earnQuoteAmount);
     }
 
     // BUY 주문일 경우에는 SELL 목록에서 싼것부터 찾으며, 입력된 price 보다 낮거나 같은 판매 거래만 성사 시킨다.
@@ -513,6 +548,12 @@ contract PairImpl is IPair, UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     }
 
     function skim(IERC20 erc20, address to, uint256 amount) external onlyOwner whenPaused {
+        if (erc20 == BASE && BASE.balanceOf(address(this)) - amount < baseReserve) {
+            revert PairInvalidReserve(address(BASE));
+        } else if (erc20 == QUOTE && QUOTE.balanceOf(address(this)) - amount < quoteReserve) {
+            revert PairInvalidReserve(address(QUOTE));
+        }
+
         erc20.safeTransfer(to, amount);
         emit Skim(_msgSender(), address(erc20), to, amount);
     }
