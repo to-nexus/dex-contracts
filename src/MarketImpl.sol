@@ -22,6 +22,7 @@ contract MarketImpl is IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
 
     event PairCreated(address indexed pair, address indexed base, uint256 timestamp);
 
+    uint256 public deployed; // immutable
     ICrossDex public CROSS_DEX; // immutable
     address public QUOTE; // immutable
 
@@ -45,6 +46,7 @@ contract MarketImpl is IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
         if (_quote == address(0)) revert MarketInvalidInitializeData("quote");
         if (_pairImpl == address(0)) revert MarketInvalidInitializeData("pairImpl");
 
+        deployed = block.number;
         CROSS_DEX = ICrossDex(_msgSender());
         QUOTE = _quote;
 

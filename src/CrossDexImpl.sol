@@ -20,7 +20,7 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
     error CrossDexAlreadyCreatedMarketQuote(address);
     error CrossDexInvalidMarketAddress(address);
 
-    event CreatedMarket(address indexed quote, address indexed market, address indexed owner, address fee_collector);
+    event MarketCreated(address indexed quote, address indexed market, address indexed owner, address fee_collector);
 
     address payable public ROUTER;
 
@@ -82,7 +82,7 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
         _allMarkets.add(market);
         quoteToMarket[_quote] = market;
 
-        emit CreatedMarket(_quote, market, _owner, _fee_collector);
+        emit MarketCreated(_quote, market, _owner, _fee_collector);
         return market;
     }
 
