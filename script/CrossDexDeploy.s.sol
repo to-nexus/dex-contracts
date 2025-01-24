@@ -44,4 +44,51 @@ contract CrossDexDeployScript is Script {
         console.log("ROUTER: ", address(ROUTER));
         console.log("WCROSS: ", address(WCross));
     }
+
+    /*
+    forge script -vvv \
+    --rpc-url http://127.0.0.1:8545 \
+    --force \
+    --broadcast \
+    --private-key $PRIVATE_KEY \
+    --sig "createMarket(address,address,address,address)" \
+    ./script/CrossDexDeploy.s.sol:CrossDexDeployScript $CROSS_DEX $OWNER $FEE_COLLECTOR $QUOTE
+    */
+    function createMarket(address crossDex, address owner, address feeCollector, address quote) external {
+        vm.startBroadcast();
+        CrossDexImpl CROSS_DEX = CrossDexImpl(crossDex);
+
+        address market = CROSS_DEX.createMarket(owner, feeCollector, quote);
+        vm.stopBroadcast();
+
+        console.log("MARKET: ", market);
+    }
+
+    /*
+    forge script -vvv \
+    --rpc-url http://127.0.0.1:8545 \
+    --force \
+    --broadcast \
+    --private-key $PRIVATE_KEY \
+    --sig "createPair(address,address,uint256,uint256,uint256,uint256)" \
+    ./script/CrossDexDeploy.s.sol:CrossDexDeployScript $MARKET $BASE $QUOTE_TICK_SIZE $BASE_TICK_SIZE $MAKER_FEE_PERMIL $TAKER_FEE_PERMIL
+    */
+    function createPair(
+        address market,
+        address base,
+        uint256 quoteTickSize,
+        uint256 baseTickSize,
+        uint256 makerFeePermil,
+        uint256 takerFeePermil
+    ) external {
+        vm.startBroadcast();
+        MarketImpl MARKET = MarketImpl(market);
+
+        address pair = MARKET.createPair(base, quoteTickSize, baseTickSize, makerFeePermil, takerFeePermil);
+        vm.stopBroadcast();
+
+        console.log("MARKET: ", market);
+        console.log("BASE: ", base);
+        console.log("PAIR: ", pair);
+    }
 }
