@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 import {ERC1967Proxy} from "@openzeppelin-contracts-5.2.0/proxy/ERC1967/ERC1967Proxy.sol";
 import {UUPSUpgradeable} from "@openzeppelin-contracts-5.2.0/proxy/utils/UUPSUpgradeable.sol";
 import {IERC20Metadata} from "@openzeppelin-contracts-5.2.0/token/ERC20/extensions/IERC20Metadata.sol";
-import {EnumerableSet} from "@openzeppelin-contracts-5.2.0/utils/structs/EnumerableSet.sol";
+import {EnumerableMap} from "@openzeppelin-contracts-5.2.0/utils/structs/EnumerableMap.sol";
 
 import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/access/OwnableUpgradeable.sol";
 
@@ -15,27 +15,25 @@ import {IRouter, IRouterInitializer} from "./interfaces/IRouter.sol";
 import {WCROSS} from "./WCROSS.sol";
 
 contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
-    using EnumerableSet for EnumerableSet.AddressSet;
+    using EnumerableMap for EnumerableMap.AddressToAddressMap;
 
     error CrossDexAlreadyCreatedMarketQuote(address);
     error CrossDexInvalidMarketAddress(address);
 
     event MarketCreated(address indexed quote, address indexed market, address indexed owner, address fee_collector);
 
-    address payable public ROUTER;
+    address payable public ROUTER; // immutable
 
     address public marketImpl;
     address public pairImpl;
 
-    EnumerableSet.AddressSet private _allQuotes;
-    EnumerableSet.AddressSet private _allMarkets;
-    mapping(address quote => address) public quoteToMarket;
+    EnumerableMap.AddressToAddressMap private _allMarkets; // quote => market
     mapping(address pair => address) public override pairToMarket;
 
-    uint256[43] __gap;
+    uint256[45] __gap;
 
     modifier onlyMarket() {
-        if (!_allMarkets.contains(_msgSender())) revert CrossDexInvalidMarketAddress(_msgSender());
+        if (!isMarket(_msgSender())) revert CrossDexInvalidMarketAddress(_msgSender());
         _;
     }
 
@@ -60,12 +58,28 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
         __Ownable_init(_owner);
     }
 
-    function allQuotes() external view returns (address[] memory) {
-        return _allQuotes.values();
+    function allMarkets() external view returns (address[] memory quotes, address[] memory markets) {
+        uint256 length = _allMarkets.length();
+        quotes = new address[](length);
+        markets = new address[](length);
+        for (uint256 i = 0; i < length;) {
+            (quotes[i], markets[i]) = _allMarkets.at(i);
+            unchecked {
+                ++i;
+            }
+        }
     }
 
-    function allMarkets() external view returns (address[] memory) {
-        return _allMarkets.values();
+    function quoteToMarket(address quote) external view returns (address) {
+        return _allMarkets.get(quote);
+    }
+
+    function isMarket(address market) public view returns (bool) {
+        // 0x9c579839 = QUOTE()
+        (bool success, bytes memory data) = market.staticcall(abi.encodeWithSelector(0x9c579839));
+        if (!success) return false;
+        address quote = abi.decode(data, (address));
+        return _allMarkets.get(quote) == market;
     }
 
     function createMarket(address _owner, address _fee_collector, address _quote)
@@ -73,17 +87,14 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
         onlyOwner
         returns (address)
     {
-        if (!_allQuotes.add(_quote)) revert CrossDexAlreadyCreatedMarketQuote(_quote);
+        IMarketInitializer market = IMarketInitializer(address(new ERC1967Proxy(marketImpl, hex"")));
+        market.initialize(_owner, ROUTER, _fee_collector, _quote, pairImpl);
 
-        IMarketInitializer _market = IMarketInitializer(address(new ERC1967Proxy(marketImpl, hex"")));
-        _market.initialize(_owner, ROUTER, _fee_collector, _quote, pairImpl);
+        address _market = address(market);
+        if (!_allMarkets.set(_quote, _market)) revert CrossDexAlreadyCreatedMarketQuote(_quote);
 
-        address market = address(_market);
-        _allMarkets.add(market);
-        quoteToMarket[_quote] = market;
-
-        emit MarketCreated(_quote, market, _owner, _fee_collector);
-        return market;
+        emit MarketCreated(_quote, _market, _owner, _fee_collector);
+        return _market;
     }
 
     function pairCreated(address pair) external override onlyMarket {

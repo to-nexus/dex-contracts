@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 import {ERC1967Proxy} from "@openzeppelin-contracts-5.2.0/proxy/ERC1967/ERC1967Proxy.sol";
 import {UUPSUpgradeable} from "@openzeppelin-contracts-5.2.0/proxy/utils/UUPSUpgradeable.sol";
 import {IERC20Metadata} from "@openzeppelin-contracts-5.2.0/token/ERC20/extensions/IERC20Metadata.sol";
-import {EnumerableSet} from "@openzeppelin-contracts-5.2.0/utils/structs/EnumerableSet.sol";
+import {EnumerableMap} from "@openzeppelin-contracts-5.2.0/utils/structs/EnumerableMap.sol";
 
 import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/access/OwnableUpgradeable.sol";
 
@@ -13,7 +13,7 @@ import {ICrossDex} from "./interfaces/ICrossDex.sol";
 import {IMarketInitializer} from "./interfaces/IMarket.sol";
 
 contract MarketImpl is IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
-    using EnumerableSet for EnumerableSet.AddressSet;
+    using EnumerableMap for EnumerableMap.AddressToAddressMap;
 
     error MarketInvalidInitializeData(bytes32);
     error MarketInvalidBaseAddress(address);
@@ -30,8 +30,7 @@ contract MarketImpl is IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
     address public feeCollector;
     address public pairImpl;
 
-    EnumerableSet.AddressSet private _allBases;
-    mapping(address base => address) public baseToPair;
+    EnumerableMap.AddressToAddressMap private _allPairs; // base => pair
 
     uint256[43] private __gap;
 
@@ -58,15 +57,19 @@ contract MarketImpl is IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     function allPairs() external view returns (address[] memory bases, address[] memory pairs) {
-        bases = _allBases.values();
         uint256 length = bases.length;
+        bases = new address[](length);
         pairs = new address[](length);
         for (uint256 i = 0; i < length;) {
-            pairs[i] = baseToPair[bases[i]];
+            (bases[i], pairs[i]) = _allPairs.at(i);
             unchecked {
                 ++i;
             }
         }
+    }
+
+    function baseToPair(address base) external view returns (address) {
+        return _allPairs.get(base);
     }
 
     function createPair(
@@ -77,7 +80,6 @@ contract MarketImpl is IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
         uint256 takerFeePermil
     ) external onlyOwner returns (address pair) {
         if (base == address(0)) revert MarketInvalidBaseAddress(base);
-        if (!_allBases.add(base)) revert MarketAlreadyCreatedBaseAddress(base);
         uint256 baseDecimals = IERC20Metadata(base).decimals();
         if (baseDecimals == 0) revert MarketInvalidBaseAddress(base);
 
@@ -98,7 +100,7 @@ contract MarketImpl is IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
             )
         );
         if (pair == address(0)) revert MarketDeployPair();
-        baseToPair[base] = pair;
+        if (!_allPairs.set(base, pair)) revert MarketAlreadyCreatedBaseAddress(base);
 
         CROSS_DEX.pairCreated(pair);
         emit PairCreated(pair, base, block.timestamp);
