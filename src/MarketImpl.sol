@@ -57,7 +57,7 @@ contract MarketImpl is IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     function allPairs() external view returns (address[] memory bases, address[] memory pairs) {
-        uint256 length = bases.length;
+        uint256 length = _allPairs.length();
         bases = new address[](length);
         pairs = new address[](length);
         for (uint256 i = 0; i < length;) {
@@ -82,6 +82,7 @@ contract MarketImpl is IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
         if (base == address(0)) revert MarketInvalidBaseAddress(base);
         uint256 baseDecimals = IERC20Metadata(base).decimals();
         if (baseDecimals == 0) revert MarketInvalidBaseAddress(base);
+        if (_allPairs.contains(base)) revert MarketAlreadyCreatedBaseAddress(base);
 
         pair = address(
             new ERC1967Proxy(
