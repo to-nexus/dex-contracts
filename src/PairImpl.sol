@@ -166,7 +166,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
             if (order.amount == 0) {
                 emit OrderClosed(orderId, CloseType.ALL_MATCH, block.timestamp);
             } else {
-                order.feePermil = feePermil;
+                order.feePermil = feePermil; // sell 주문일 경우에는 maker 거래시 수수료를 청구한다.
                 _allOrders[orderId] = order;
                 ASCList.push(_sellPrices, order.price, searchPrice);
                 _sellOrders[order.price].push(orderId);
