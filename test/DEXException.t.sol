@@ -103,7 +103,7 @@ contract DEXExceptionTest is DEXBaseTest {
         vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", address(OWNER)));
         PAIR.limit(
             IPair.Order({
-                _type: IPair.OrderType.SELL,
+                side: IPair.OrderSide.SELL,
                 owner: address(OWNER),
                 feePermil: 0,
                 price: _toQuote(1),
@@ -117,7 +117,7 @@ contract DEXExceptionTest is DEXBaseTest {
         vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", address(OWNER)));
         PAIR.limit(
             IPair.Order({
-                _type: IPair.OrderType.BUY,
+                side: IPair.OrderSide.BUY,
                 owner: address(OWNER),
                 feePermil: 0,
                 price: _toQuote(1),
@@ -130,7 +130,7 @@ contract DEXExceptionTest is DEXBaseTest {
         // sell market
         vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", address(OWNER)));
         PAIR.market(
-            IPair.Order({_type: IPair.OrderType.SELL, owner: address(OWNER), feePermil: 0, price: 0, amount: 0}),
+            IPair.Order({side: IPair.OrderSide.SELL, owner: address(OWNER), feePermil: 0, price: 0, amount: 0}),
             _toBase(1),
             0
         );
@@ -138,7 +138,7 @@ contract DEXExceptionTest is DEXBaseTest {
         // buy market
         vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", address(OWNER)));
         PAIR.market(
-            IPair.Order({_type: IPair.OrderType.BUY, owner: address(OWNER), feePermil: 0, price: 0, amount: 0}),
+            IPair.Order({side: IPair.OrderSide.BUY, owner: address(OWNER), feePermil: 0, price: 0, amount: 0}),
             _toQuote(1),
             0
         );

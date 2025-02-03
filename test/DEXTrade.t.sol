@@ -22,7 +22,6 @@ contract DEXTradeTest is DEXBaseTest {
 
         IPair.Order memory callOrder = PAIR.orderById(orderId);
 
-        assertNotEq(uint8(0), uint8(callOrder._type));
         assertNotEq(address(0), callOrder.owner);
         assertNotEq(0, callOrder.price);
         assertNotEq(0, callOrder.amount);
@@ -45,7 +44,6 @@ contract DEXTradeTest is DEXBaseTest {
 
         IPair.Order memory callOrder = PAIR.orderById(orderId);
 
-        assertNotEq(uint8(0), uint8(callOrder._type));
         assertNotEq(address(0), callOrder.owner);
         assertNotEq(0, callOrder.price);
         assertNotEq(0, callOrder.amount);
@@ -82,8 +80,8 @@ contract DEXTradeTest is DEXBaseTest {
         // order 데이터가 삭제 되었는지 확인
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
-        assertEq(0, uint8(order1._type), "order1, not deleted");
-        assertEq(0, uint8(order2._type), "order2, not deleted");
+        assertEq(address(0), order1.owner, "order1, not deleted");
+        assertEq(address(0), order2.owner, "order2, not deleted");
         // PAIR 에는 잔액이 없는지 확인
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
@@ -122,8 +120,8 @@ contract DEXTradeTest is DEXBaseTest {
         // order 데이터가 삭제 되었는지 확인
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
-        assertEq(0, uint8(order1._type), "order1, not deleted");
-        assertEq(0, uint8(order2._type), "order2, not deleted");
+        assertEq(address(0), order1.owner, "order1, not deleted");
+        assertEq(address(0), order2.owner, "order2, not deleted");
         // PAIR 에는 잔액이 없는지 확인
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
@@ -163,8 +161,8 @@ contract DEXTradeTest is DEXBaseTest {
         // order 데이터가 삭제 되었는지 확인
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
-        assertNotEq(0, uint8(order1._type), "order1, deleted");
-        assertEq(0, uint8(order2._type), "order2, not deleted");
+        assertNotEq(address(0), order1.owner, "order1, deleted");
+        assertEq(address(0), order2.owner, "order2, not deleted");
         // PAIR 에는 BASE 토큰이 50 개 남아있는지 확인
         // QUOTE 는 없어야 한다.
         assertEq(BASE.balanceOf(address(PAIR)), _toBase(50), "BASE PAIR");
@@ -205,8 +203,8 @@ contract DEXTradeTest is DEXBaseTest {
         // order 데이터가 삭제 되었는지 확인
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
-        assertNotEq(0, uint8(order1._type), "order1, deleted");
-        assertEq(0, uint8(order2._type), "order2, not deleted");
+        assertNotEq(address(0), order1.owner, "order1, deleted");
+        assertEq(address(0), order2.owner, "order2, not deleted");
         // PAIR 50 QUOTE 가 남아 있어야 한다.
         assertEq(QUOTE.balanceOf(address(PAIR)), _toQuote(50), "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
@@ -246,8 +244,8 @@ contract DEXTradeTest is DEXBaseTest {
         // order 데이터가 삭제 되었는지 확인
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
-        assertEq(0, uint8(order1._type), "order1, not deleted");
-        assertNotEq(0, uint8(order2._type), "order2, deleted");
+        assertEq(address(0), order1.owner, "order1, not deleted");
+        assertNotEq(address(0), order2.owner, "order2, deleted");
         // PAIR 에는 QUOTE 토큰이 100 개 남아있는지 확인
         // BASE 는 없어야 한다.
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
@@ -288,8 +286,8 @@ contract DEXTradeTest is DEXBaseTest {
         // order 데이터가 삭제 되었는지 확인
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
-        assertEq(0, uint8(order1._type), "order1, not deleted");
-        assertNotEq(0, uint8(order2._type), "order2, deleted");
+        assertEq(address(0), order1.owner, "order1, not deleted");
+        assertNotEq(address(0), order2.owner, "order2, deleted");
         // PAIR 100 BASE 가 남아 있어야 한다.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), _toBase(100), "BASE PAIR");
@@ -340,9 +338,9 @@ contract DEXTradeTest is DEXBaseTest {
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
-        assertEq(0, uint8(order1._type), "order1, not deleted");
-        assertEq(0, uint8(order2._type), "order2, not deleted");
-        assertEq(0, uint8(order3._type), "order3, not deleted");
+        assertEq(address(0), order1.owner, "order1, not deleted");
+        assertEq(address(0), order2.owner, "order2, not deleted");
+        assertEq(address(0), order3.owner, "order3, not deleted");
         // PAIR 에는 잔액이 없는지 확인
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
@@ -396,9 +394,9 @@ contract DEXTradeTest is DEXBaseTest {
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
-        assertEq(0, uint8(order1._type), "order1, not deleted");
-        assertEq(0, uint8(order2._type), "order2, not deleted");
-        assertEq(0, uint8(order3._type), "order3, not deleted");
+        assertEq(address(0), order1.owner, "order1, not deleted");
+        assertEq(address(0), order2.owner, "order2, not deleted");
+        assertEq(address(0), order3.owner, "order3, not deleted");
         // PAIR 에는 잔액이 없는지 확인
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
@@ -452,9 +450,9 @@ contract DEXTradeTest is DEXBaseTest {
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
-        assertEq(0, uint8(order1._type), "order1, not deleted");
-        assertNotEq(0, uint8(order2._type), "order2, deleted");
-        assertEq(0, uint8(order3._type), "order3, not deleted");
+        assertEq(address(0), order1.owner, "order1, not deleted");
+        assertNotEq(address(0), order2.owner, "order2, deleted");
+        assertEq(address(0), order3.owner, "order3, not deleted");
         // PAIR 에는 50 개의 BASE 가 있어야 한다.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), _toBase(50), "BASE PAIR");
@@ -508,9 +506,9 @@ contract DEXTradeTest is DEXBaseTest {
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
-        assertEq(0, uint8(order1._type), "order1, not deleted");
-        assertNotEq(0, uint8(order2._type), "order2, deleted");
-        assertEq(0, uint8(order3._type), "order3, not deleted");
+        assertEq(address(0), order1.owner, "order1, not deleted");
+        assertNotEq(address(0), order2.owner, "order2, deleted");
+        assertEq(address(0), order3.owner, "order3, not deleted");
         // PAIR 에는 50 개의 QUOTE 가 있어야 한다.
         assertEq(QUOTE.balanceOf(address(PAIR)), _toQuote(50), "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
@@ -564,9 +562,9 @@ contract DEXTradeTest is DEXBaseTest {
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
-        assertEq(0, uint8(order1._type), "order1, not deleted");
-        assertEq(0, uint8(order2._type), "order2, not deleted");
-        assertNotEq(0, uint8(order3._type), "order3, deleted");
+        assertEq(address(0), order1.owner, "order1, not deleted");
+        assertEq(address(0), order2.owner, "order2, not deleted");
+        assertNotEq(address(0), order3.owner, "order3, deleted");
         // PAIR 에는 100 개의 QUOTE 가 있어야 한다.
         assertEq(QUOTE.balanceOf(address(PAIR)), _toQuote(100), "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
@@ -620,9 +618,9 @@ contract DEXTradeTest is DEXBaseTest {
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
-        assertEq(0, uint8(order1._type), "order1, not deleted");
-        assertEq(0, uint8(order2._type), "order2, not deleted");
-        assertNotEq(0, uint8(order3._type), "order3, deleted");
+        assertEq(address(0), order1.owner, "order1, not deleted");
+        assertEq(address(0), order2.owner, "order2, not deleted");
+        assertNotEq(address(0), order3.owner, "order3, deleted");
         // PAIR 에는 100 개의 BASE 가 있어야 한다.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), _toBase(100), "BASE PAIR");
@@ -675,9 +673,9 @@ contract DEXTradeTest is DEXBaseTest {
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
-        assertEq(0, uint8(order1._type), "order1, not deleted");
-        assertEq(0, uint8(order2._type), "order2, not deleted");
-        assertEq(0, uint8(order3._type), "order3, not deleted");
+        assertEq(address(0), order1.owner, "order1, not deleted");
+        assertEq(address(0), order2.owner, "order2, not deleted");
+        assertEq(address(0), order3.owner, "order3, not deleted");
         // PAIR 에는 잔액이 없는지 확인
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
@@ -729,9 +727,9 @@ contract DEXTradeTest is DEXBaseTest {
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
-        assertEq(0, uint8(order1._type), "order1, not deleted");
-        assertEq(0, uint8(order2._type), "order2, not deleted");
-        assertEq(0, uint8(order3._type), "order3, not deleted");
+        assertEq(address(0), order1.owner, "order1, not deleted");
+        assertEq(address(0), order2.owner, "order2, not deleted");
+        assertEq(address(0), order3.owner, "order3, not deleted");
         // PAIR 에는 잔액이 없는지 확인
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
@@ -783,9 +781,9 @@ contract DEXTradeTest is DEXBaseTest {
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
-        assertNotEq(0, uint8(order1._type), "order1, deleted");
-        assertEq(0, uint8(order2._type), "order2, deleted");
-        assertEq(0, uint8(order3._type), "order3, not deleted");
+        assertNotEq(address(0), order1.owner, "order1, deleted");
+        assertEq(address(0), order2.owner, "order2, deleted");
+        assertEq(address(0), order3.owner, "order3, not deleted");
         // PAIR 에는 50 개의 BASE 가 있어야 한다.
         assertEq(BASE.balanceOf(address(PAIR)), _toBase(50), "BASE PAIR");
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
@@ -836,9 +834,9 @@ contract DEXTradeTest is DEXBaseTest {
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
-        assertNotEq(0, uint8(order1._type), "order1, deleted");
-        assertEq(0, uint8(order2._type), "order2, deleted");
-        assertEq(0, uint8(order3._type), "order3, not deleted");
+        assertNotEq(address(0), order1.owner, "order1, deleted");
+        assertEq(address(0), order2.owner, "order2, deleted");
+        assertEq(address(0), order3.owner, "order3, not deleted");
         // PAIR 에는 50 개의 QUOTE 가 있어야 한다.
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
         assertEq(QUOTE.balanceOf(address(PAIR)), _toQuote(50), "QUOTE PAIR");
@@ -943,8 +941,8 @@ contract DEXTradeTest is DEXBaseTest {
         uint256 checkQuoteBalance = 0;
         for (uint256 i = 1; i <= latestOrderId; i++) {
             IPair.Order memory order = PAIR.orderById(i);
-            if (order._type == IPair.OrderType.SELL) checkBaseBalance += order.amount;
-            if (order._type == IPair.OrderType.BUY) {
+            if (order.side == IPair.OrderSide.SELL) checkBaseBalance += order.amount;
+            if (order.side == IPair.OrderSide.BUY) {
                 checkQuoteBalance += Math.mulDiv(order.price, order.amount, BASE_DECIMALS);
             }
         }
@@ -990,8 +988,8 @@ contract DEXTradeTest is DEXBaseTest {
         // order 데이터가 삭제 되었는지 확인
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(2);
-        assertEq(0, uint8(order1._type), "order1, not deleted");
-        assertEq(0, uint8(order2._type), "market data is must not init");
+        assertEq(address(0), order1.owner, "order1, not deleted");
+        assertEq(address(0), order2.owner, "market data is must not init");
         // PAIR 에는 잔액이 없는지 확인
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
@@ -1032,9 +1030,9 @@ contract DEXTradeTest is DEXBaseTest {
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(3);
-        assertEq(0, uint8(order1._type), "order1, not deleted");
-        assertEq(0, uint8(order2._type), "order2, not deleted");
-        assertEq(0, uint8(order3._type), "market data is must not init");
+        assertEq(address(0), order1.owner, "order1, not deleted");
+        assertEq(address(0), order2.owner, "order2, not deleted");
+        assertEq(address(0), order3.owner, "market data is must not init");
         // PAIR 에는 잔액이 없는지 확인
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
@@ -1073,8 +1071,8 @@ contract DEXTradeTest is DEXBaseTest {
         // order 데이터가 삭제 되었는지 확인
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(2);
-        assertNotEq(0, uint8(order1._type), "order1, deleted");
-        assertEq(0, uint8(order2._type), "market data is must not init");
+        assertNotEq(address(0), order1.owner, "order1, deleted");
+        assertEq(address(0), order2.owner, "market data is must not init");
         // PAIR 에는 잔액이 없는지 확인
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), _toBase(50), "BASE PAIR");
@@ -1116,9 +1114,9 @@ contract DEXTradeTest is DEXBaseTest {
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(3);
-        assertEq(0, uint8(order1._type), "order1, not deleted");
-        assertNotEq(0, uint8(order2._type), "order2, deleted");
-        assertEq(0, uint8(order3._type), "market data is must not init");
+        assertEq(address(0), order1.owner, "order1, not deleted");
+        assertNotEq(address(0), order2.owner, "order2, deleted");
+        assertEq(address(0), order3.owner, "market data is must not init");
         // PAIR 에는 잔액이 없는지 확인
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), _toBase(50), "BASE PAIR");
@@ -1157,8 +1155,8 @@ contract DEXTradeTest is DEXBaseTest {
         // order 데이터가 삭제 되었는지 확인
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(2);
-        assertEq(0, uint8(order1._type), "order1, deleted");
-        assertEq(0, uint8(order2._type), "market data is must not init");
+        assertEq(address(0), order1.owner, "order1, deleted");
+        assertEq(address(0), order2.owner, "market data is must not init");
         // PAIR 에는 잔액이 없는지 확인
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
@@ -1199,9 +1197,9 @@ contract DEXTradeTest is DEXBaseTest {
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(3);
-        assertEq(0, uint8(order1._type), "order1, not deleted");
-        assertEq(0, uint8(order2._type), "order2, not deleted");
-        assertEq(0, uint8(order3._type), "market data is must not init");
+        assertEq(address(0), order1.owner, "order1, not deleted");
+        assertEq(address(0), order2.owner, "order2, not deleted");
+        assertEq(address(0), order3.owner, "market data is must not init");
         // PAIR 에는 잔액이 없는지 확인
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
@@ -1286,8 +1284,8 @@ contract DEXTradeTest is DEXBaseTest {
         uint256 checkQuoteBalance = 0;
         for (uint256 i = 1; i <= latestOrderId; i++) {
             IPair.Order memory order = PAIR.orderById(i);
-            if (order._type == IPair.OrderType.SELL) checkBaseBalance += order.amount;
-            if (order._type == IPair.OrderType.BUY) {
+            if (order.side == IPair.OrderSide.SELL) checkBaseBalance += order.amount;
+            if (order.side == IPair.OrderSide.BUY) {
                 checkQuoteBalance += Math.mulDiv(order.amount, order.price, BASE_DECIMALS);
             }
         }
