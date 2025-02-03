@@ -51,9 +51,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
     );
     event RouterUpdated(address before, address current);
     event FeeCollectorUpdated(address before, address current);
-    event FeeUpdated(
-        uint256 beforeMakerFeePermil, uint256 newTakerFeePermil, uint256 beforeTakerFeePermil, uint256 newMakerFeePermil
-    );
+    event FeeUpdated(uint256 before, uint256 current);
     event Skim(address indexed caller, address indexed erc20, address indexed to, uint256 amount);
 
     address public MARKET; // immutable
@@ -73,8 +71,9 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
 
     // 수수료
     address public feeCollector;
-    uint32 public makerFeePermil; // 천(1000)분율
-    uint32 public takerFeePermil; // 천(1000)분율
+    uint32 public feePermil;
+    // uint32 public makerFeePermil; // 천(1000)분율
+    // uint32 public takerFeePermil; // 천(1000)분율
 
     // 주문
     uint256 private _orderIdCounter; // order id 생성기
@@ -103,8 +102,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         uint256 _quoteTickSize,
         uint256 _baseTickSize,
         address _feeCollector,
-        uint256 _makerFeePermil,
-        uint256 _takerFeePermil
+        uint256 _feePermil
     ) external initializer {
         if (router == address(0)) revert PairInvalidInitializeData("router");
         if (quote == address(0)) revert PairInvalidInitializeData("quote");
@@ -112,8 +110,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         if (_quoteTickSize == 0) revert PairInvalidInitializeData("quoteTickSize");
         if (_baseTickSize == 0) revert PairInvalidInitializeData("baseTickSize");
         if (_feeCollector == address(0)) revert PairInvalidInitializeData("feeCollector");
-        if (_makerFeePermil > 1000) revert PairInvalidInitializeData("makerFeePermil");
-        if (_takerFeePermil > 1000) revert PairInvalidInitializeData("takerFeePermil");
+        if (feePermil > 1000) revert PairInvalidInitializeData("feePermil");
 
         MARKET = _msgSender();
         ROUTER = router;
@@ -129,8 +126,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         minTradeVolume = Math.mulDiv(_quoteTickSize, _baseTickSize, DENOMINATOR);
 
         feeCollector = _feeCollector;
-        makerFeePermil = uint32(_makerFeePermil);
-        takerFeePermil = uint32(_takerFeePermil);
+        feePermil = uint32(_feePermil);
 
         __Pausable_init();
     }
@@ -170,7 +166,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
             if (order.amount == 0) {
                 emit OrderClosed(orderId, CloseType.ALL_MATCH, block.timestamp);
             } else {
-                order.feePermil = makerFeePermil;
+                order.feePermil = feePermil;
                 _allOrders[orderId] = order;
                 ASCList.push(_sellPrices, order.price, searchPrice);
                 _sellOrders[order.price].push(orderId);
@@ -195,7 +191,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
             if (order.amount == 0) {
                 emit OrderClosed(orderId, CloseType.ALL_MATCH, block.timestamp);
             } else {
-                order.feePermil = makerFeePermil;
+                order.feePermil = 0; // buy 주문은 수수료가 없다
                 _allOrders[orderId] = order;
                 DESCList.push(_buyPrices, order.price, searchPrice);
                 _buyOrders[order.price].push(orderId);
@@ -300,10 +296,10 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         if (earnQuoteAmount != 0) {
             baseReserve -= matchedBaseAmount;
             quoteReserve -= earnQuoteAmount;
-            if (takerFeePermil == 0) {
+            if (feePermil == 0) {
                 QUOTE.safeTransfer(order.owner, earnQuoteAmount);
             } else {
-                uint256 fee = Math.mulDiv(earnQuoteAmount, takerFeePermil, 1000);
+                uint256 fee = Math.mulDiv(earnQuoteAmount, feePermil, 1000);
                 QUOTE.safeTransfer(feeCollector, fee);
                 QUOTE.safeTransfer(order.owner, earnQuoteAmount - fee);
             }
@@ -340,13 +336,8 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
             baseReserve -= matchedBaseAmount;
             quoteReserve -= useQuoteAmount;
 
-            if (takerFeePermil == 0) {
-                BASE.safeTransfer(order.owner, matchedBaseAmount);
-            } else {
-                uint256 fee = Math.mulDiv(matchedBaseAmount, takerFeePermil, 1000);
-                BASE.safeTransfer(feeCollector, fee);
-                BASE.safeTransfer(order.owner, matchedBaseAmount - fee);
-            }
+            // 구매한 토큰은 수수료를 지불하지 않는다.
+            BASE.safeTransfer(order.owner, matchedBaseAmount);
         }
 
         return (tradedOrder, matchedBaseAmount, useQuoteAmount);
@@ -371,17 +362,11 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
                 Order storage target = _allOrders[targetId];
 
                 // 채결 수량 업데이트
-                (address targetOwner, uint256 tradeAmount, uint256 targetFeePermil) =
+                (address targetOwner, uint256 tradeAmount,) =
                     _matchOrderAmount(orderId, cOrder, targetId, target, price, _orders);
 
                 // 거래 성사
-                if (targetFeePermil == 0) {
-                    BASE.safeTransfer(targetOwner, tradeAmount);
-                } else {
-                    uint256 fee = Math.mulDiv(tradeAmount, targetFeePermil, 1000);
-                    BASE.safeTransfer(feeCollector, fee);
-                    BASE.safeTransfer(targetOwner, tradeAmount - fee);
-                }
+                BASE.safeTransfer(targetOwner, tradeAmount);
 
                 // 정보 업데이트
                 matchedBaseAmount += tradeAmount;
@@ -441,10 +426,11 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
                 // 거래 가치 계산
                 uint256 tradeQuoteAmount = Math.mulDiv(price, tradeAmount, DENOMINATOR);
 
-                // 거래 성사
+                // 거래 성사 (판매자가 판매를 등록한 시점의 수수료로 계산한다.)
                 if (targetFeePermil == 0) {
                     QUOTE.safeTransfer(targetOwner, tradeQuoteAmount);
                 } else {
+                    // 판매자는 수수료를 지불한다.
                     uint256 fee = Math.mulDiv(tradeQuoteAmount, targetFeePermil, 1000);
                     QUOTE.safeTransfer(feeCollector, fee);
                     QUOTE.safeTransfer(targetOwner, tradeQuoteAmount - fee);
@@ -488,7 +474,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         (uint256 sellId, uint256 buyId) = (order._type == OrderType.SELL ? (orderId, targetId) : (targetId, orderId));
         emit OrderMatched(sellId, buyId, price, tradeAmount, block.timestamp);
 
-        //target 의 수량이 모두 거래되면 데이터를 지운다.
+        // target 의 수량이 모두 거래되면 데이터를 지운다.
         if (tradeAmount == target.amount) {
             _removeOrder(targetId, CloseType.ALL_MATCH, _orders);
         } else {
@@ -542,13 +528,11 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         feeCollector = _feeCollector;
     }
 
-    function setFee(uint256 _makerFeePermil, uint256 _takerFeePermil) external onlyOwner {
-        if (_makerFeePermil > 1000) revert PairInvalidInitializeData("makerFeePermil");
-        if (_takerFeePermil > 1000) revert PairInvalidInitializeData("takerFeePermil");
-        emit FeeUpdated(makerFeePermil, _makerFeePermil, takerFeePermil, _takerFeePermil);
+    function setFee(uint256 _feePermil) external onlyOwner {
+        if (_feePermil > 1000) revert PairInvalidInitializeData("feePermil");
+        emit FeeUpdated(feePermil, _feePermil);
 
-        makerFeePermil = uint32(_makerFeePermil);
-        takerFeePermil = uint32(_takerFeePermil);
+        feePermil = uint32(_feePermil);
     }
 
     function skim(IERC20 erc20, address to, uint256 amount) external onlyOwner {

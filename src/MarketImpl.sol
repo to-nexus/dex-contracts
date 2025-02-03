@@ -72,13 +72,11 @@ contract MarketImpl is IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
         return _allPairs.get(base);
     }
 
-    function createPair(
-        address base,
-        uint256 quoteTickSize,
-        uint256 baseTickSize,
-        uint256 makerFeePermil,
-        uint256 takerFeePermil
-    ) external onlyOwner returns (address pair) {
+    function createPair(address base, uint256 quoteTickSize, uint256 baseTickSize, uint256 feePermil)
+        external
+        onlyOwner
+        returns (address pair)
+    {
         if (base == address(0)) revert MarketInvalidBaseAddress(base);
         uint256 baseDecimals = IERC20Metadata(base).decimals();
         if (baseDecimals == 0) revert MarketInvalidBaseAddress(base);
@@ -95,8 +93,7 @@ contract MarketImpl is IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
                     quoteTickSize,
                     baseTickSize,
                     feeCollector,
-                    makerFeePermil,
-                    takerFeePermil
+                    feePermil
                 )
             )
         );

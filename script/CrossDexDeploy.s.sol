@@ -70,21 +70,16 @@ contract CrossDexDeployScript is Script {
     --force \
     --broadcast \
     --private-key $PRIVATE_KEY \
-    --sig "createPair(address,address,uint256,uint256,uint256,uint256)" \
-    ./script/CrossDexDeploy.s.sol:CrossDexDeployScript $MARKET $BASE $QUOTE_TICK_SIZE $BASE_TICK_SIZE $MAKER_FEE_PERMIL $TAKER_FEE_PERMIL
+    --sig "createPair(address,address,uint256,uint256,uint256)" \
+    ./script/CrossDexDeploy.s.sol:CrossDexDeployScript $MARKET $BASE $QUOTE_TICK_SIZE $BASE_TICK_SIZE $FEE_PERMIL
     */
-    function createPair(
-        address market,
-        address base,
-        uint256 quoteTickSize,
-        uint256 baseTickSize,
-        uint256 makerFeePermil,
-        uint256 takerFeePermil
-    ) external {
+    function createPair(address market, address base, uint256 quoteTickSize, uint256 baseTickSize, uint256 feePermil)
+        external
+    {
         vm.startBroadcast();
         MarketImpl MARKET = MarketImpl(market);
 
-        address pair = MARKET.createPair(base, quoteTickSize, baseTickSize, makerFeePermil, takerFeePermil);
+        address pair = MARKET.createPair(base, quoteTickSize, baseTickSize, feePermil);
         vm.stopBroadcast();
 
         console.log("MARKET: ", market);

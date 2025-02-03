@@ -9,8 +9,7 @@ contract DEXExceptionTest is DEXBaseTest {
 
     function setUp() external {
         MAX_MATCH_COUNT = 5;
-        MAKER_FEE_PERMIL = 50;
-        TAKER_FEE_PERMIL = 10;
+        FEE_PERMIL = 50;
 
         _deploy(6, 18, 1e2, 1e4);
     }
@@ -53,7 +52,7 @@ contract DEXExceptionTest is DEXBaseTest {
         vm.prank(OWNER);
 
         vm.expectRevert(abi.encodeWithSignature("MarketAlreadyCreatedBaseAddress(address)", address(BASE)));
-        MARKET.createPair(address(BASE), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e4, MAKER_FEE_PERMIL, TAKER_FEE_PERMIL);
+        MARKET.createPair(address(BASE), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e4, FEE_PERMIL);
     }
 
     // [Pair] Tick Size 보다 낮은 단위로 거래할 수 없다.

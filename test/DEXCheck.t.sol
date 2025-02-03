@@ -5,8 +5,7 @@ import "./DEXBase.t.sol";
 
 contract DEXCheckTest is DEXBaseTest {
     function setUp() external {
-        MAKER_FEE_PERMIL = 50;
-        TAKER_FEE_PERMIL = 10;
+        FEE_PERMIL = 50;
 
         _deploy(18, 18, 1e2, 1e4);
     }
@@ -210,7 +209,7 @@ contract DEXCheckTest is DEXBaseTest {
         }
     }
 
-    // [AMOUNT] sell == buy
+    // [AMOUNT] sell == buy, seller == maker
     function test_check_fee_case1() external {
         address seller = address(0x1);
         address buyer = address(0x2);
@@ -237,19 +236,18 @@ contract DEXCheckTest is DEXBaseTest {
         ROUTER.limitBuy(address(PAIR), price, amount, 0, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
-        uint256 makerFee = Math.mulDiv(volume, MAKER_FEE_PERMIL, 1000);
-        uint256 takerFee = Math.mulDiv(amount, TAKER_FEE_PERMIL, 1000);
+        uint256 fee = Math.mulDiv(volume, FEE_PERMIL, 1000);
 
         // 수수료 확인
-        assertEq(makerFee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid maker fee");
-        assertEq(takerFee, BASE.balanceOf(FEE_COLLECTOR), "invalid taker fee");
+        assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid quote fee");
+        assertEq(0, BASE.balanceOf(FEE_COLLECTOR), "invalid base fee");
 
         // 잔액 확인
-        assertEq(volume - makerFee, QUOTE.balanceOf(seller));
-        assertEq(amount - takerFee, BASE.balanceOf(buyer));
+        assertEq(volume - fee, QUOTE.balanceOf(seller));
+        assertEq(amount, BASE.balanceOf(buyer));
     }
 
-    // [AMOUNT] sell < buy
+    // [AMOUNT] sell < buy, seller == maker
     function test_check_fee_case2() external {
         address seller = address(0x1);
         address buyer = address(0x2);
@@ -280,19 +278,18 @@ contract DEXCheckTest is DEXBaseTest {
         ROUTER.limitBuy(address(PAIR), price, buyAmount, 0, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
-        uint256 makerFee = Math.mulDiv(matchVolume, MAKER_FEE_PERMIL, 1000);
-        uint256 takerFee = Math.mulDiv(matchAmount, TAKER_FEE_PERMIL, 1000);
+        uint256 fee = Math.mulDiv(matchVolume, FEE_PERMIL, 1000);
 
         // 수수료 확인
-        assertEq(makerFee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid maker fee");
-        assertEq(takerFee, BASE.balanceOf(FEE_COLLECTOR), "invalid taker fee");
+        assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid fee");
+        assertEq(0, BASE.balanceOf(FEE_COLLECTOR), "invalid base fee");
 
         // 잔액 확인
-        assertEq(matchVolume - makerFee, QUOTE.balanceOf(seller));
-        assertEq(matchAmount - takerFee, BASE.balanceOf(buyer));
+        assertEq(matchVolume - fee, QUOTE.balanceOf(seller));
+        assertEq(matchAmount, BASE.balanceOf(buyer));
     }
 
-    // [AMOUNT] sell > buy
+    // [AMOUNT] sell > buy, seller == maker
     function test_check_fee_case3() external {
         address seller = address(0x1);
         address buyer = address(0x2);
@@ -323,19 +320,18 @@ contract DEXCheckTest is DEXBaseTest {
         ROUTER.limitBuy(address(PAIR), price, buyAmount, 0, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
-        uint256 makerFee = Math.mulDiv(matchVolume, MAKER_FEE_PERMIL, 1000);
-        uint256 takerFee = Math.mulDiv(matchAmount, TAKER_FEE_PERMIL, 1000);
+        uint256 fee = Math.mulDiv(matchVolume, FEE_PERMIL, 1000);
 
         // 수수료 확인
-        assertEq(makerFee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid maker fee");
-        assertEq(takerFee, BASE.balanceOf(FEE_COLLECTOR), "invalid taker fee");
+        assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid fee");
+        assertEq(0, BASE.balanceOf(FEE_COLLECTOR), "invalid base fee");
 
         // 잔액 확인
-        assertEq(matchVolume - makerFee, QUOTE.balanceOf(seller));
-        assertEq(matchAmount - takerFee, BASE.balanceOf(buyer));
+        assertEq(matchVolume - fee, QUOTE.balanceOf(seller));
+        assertEq(matchAmount, BASE.balanceOf(buyer));
     }
 
-    // [AMOUNT] buy == sell
+    // [AMOUNT] buy == sell, seller == taker
     function test_check_fee_case4() external {
         address seller = address(0x1);
         address buyer = address(0x2);
@@ -362,19 +358,18 @@ contract DEXCheckTest is DEXBaseTest {
         ROUTER.limitSell(address(PAIR), price, amount, 0, 0);
         assertEq(0, BASE.balanceOf(seller));
 
-        uint256 makerFee = Math.mulDiv(amount, MAKER_FEE_PERMIL, 1000);
-        uint256 takerFee = Math.mulDiv(volume, TAKER_FEE_PERMIL, 1000);
+        uint256 fee = Math.mulDiv(volume, FEE_PERMIL, 1000);
 
         // 수수료 확인
-        assertEq(makerFee, BASE.balanceOf(FEE_COLLECTOR), "invalid taker fee");
-        assertEq(takerFee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid maker fee");
+        assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid fee");
+        assertEq(0, BASE.balanceOf(FEE_COLLECTOR), "invalid base fee");
 
         // 잔액 확인
-        assertEq(volume - takerFee, QUOTE.balanceOf(seller));
-        assertEq(amount - makerFee, BASE.balanceOf(buyer));
+        assertEq(volume - fee, QUOTE.balanceOf(seller));
+        assertEq(amount, BASE.balanceOf(buyer));
     }
 
-    // [AMOUNT] buy < sell
+    // [AMOUNT] buy < sell, seller == taker
     function test_check_fee_case5() external {
         address seller = address(0x1);
         address buyer = address(0x2);
@@ -405,19 +400,18 @@ contract DEXCheckTest is DEXBaseTest {
         ROUTER.limitSell(address(PAIR), price, sellAmount, 0, 0);
         assertEq(0, BASE.balanceOf(seller));
 
-        uint256 makerFee = Math.mulDiv(matchAmount, MAKER_FEE_PERMIL, 1000);
-        uint256 takerFee = Math.mulDiv(matchVolume, TAKER_FEE_PERMIL, 1000);
+        uint256 fee = Math.mulDiv(matchVolume, FEE_PERMIL, 1000);
 
         // 수수료 확인
-        assertEq(makerFee, BASE.balanceOf(FEE_COLLECTOR), "invalid maker fee");
-        assertEq(takerFee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid taker fee");
+        assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid fee");
+        assertEq(0, BASE.balanceOf(FEE_COLLECTOR), "invalid base fee");
 
         // 잔액 확인
-        assertEq(matchVolume - takerFee, QUOTE.balanceOf(seller));
-        assertEq(matchAmount - makerFee, BASE.balanceOf(buyer));
+        assertEq(matchVolume - fee, QUOTE.balanceOf(seller));
+        assertEq(matchAmount, BASE.balanceOf(buyer));
     }
 
-    // [AMOUNT] buy > sell
+    // [AMOUNT] buy > sell, seller == taker
     function test_check_fee_case6() external {
         address seller = address(0x1);
         address buyer = address(0x2);
@@ -448,16 +442,15 @@ contract DEXCheckTest is DEXBaseTest {
         ROUTER.limitSell(address(PAIR), price, sellAmount, 0, 0);
         assertEq(0, BASE.balanceOf(seller));
 
-        uint256 makerFee = Math.mulDiv(matchAmount, MAKER_FEE_PERMIL, 1000);
-        uint256 takerFee = Math.mulDiv(matchVolume, TAKER_FEE_PERMIL, 1000);
+        uint256 fee = Math.mulDiv(matchVolume, FEE_PERMIL, 1000);
 
         // 수수료 확인
-        assertEq(makerFee, BASE.balanceOf(FEE_COLLECTOR), "invalid maker fee");
-        assertEq(takerFee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid taker fee");
+        assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid fee");
+        assertEq(0, BASE.balanceOf(FEE_COLLECTOR), "invalid base fee");
 
         // 잔액 확인
-        assertEq(matchVolume - takerFee, QUOTE.balanceOf(seller));
-        assertEq(matchAmount - makerFee, BASE.balanceOf(buyer));
+        assertEq(matchVolume - fee, QUOTE.balanceOf(seller));
+        assertEq(matchAmount, BASE.balanceOf(buyer));
     }
 
     function test_check_gas_case1() external {
