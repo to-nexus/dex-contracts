@@ -144,6 +144,20 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         buyPrices = _buyPrices.values();
     }
 
+    function ordersByPrices(OrderSide side, uint256[] memory prices) external view returns (uint256[][] memory) {
+        mapping(uint256 price => List.U256) storage orders = side == OrderSide.SELL ? _sellOrders : _buyOrders;
+        uint256 length = prices.length;
+
+        uint256[][] memory orderIds = new uint256[][](length);
+        for (uint256 i = 0; i < length;) {
+            orderIds[i] = orders[prices[i]].values();
+            unchecked {
+                ++i;
+            }
+        }
+        return orderIds;
+    }
+
     function limit(Order memory order, uint256 searchPrice, uint256 maxMatchCount)
         external
         override

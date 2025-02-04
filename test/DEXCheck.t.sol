@@ -753,4 +753,56 @@ contract DEXCheckTest is DEXBaseTest {
 
         vm.stopPrank();
     }
+
+    function test_check_ordersByPrices() external {
+        vm.startPrank(OWNER);
+        BASE.approve(address(ROUTER), type(uint256).max);
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+
+        ROUTER.limitSell(address(PAIR), 12 ether, 1 ether, 0, 0);
+        ROUTER.limitSell(address(PAIR), 12 ether, 1 ether, 0, 0);
+        ROUTER.limitSell(address(PAIR), 12 ether, 1 ether, 0, 0);
+
+        ROUTER.limitSell(address(PAIR), 11 ether, 1 ether, 0, 0);
+        ROUTER.limitSell(address(PAIR), 11 ether, 1 ether, 0, 0);
+        ROUTER.limitSell(address(PAIR), 11 ether, 1 ether, 0, 0);
+
+        ROUTER.limitSell(address(PAIR), 10 ether, 1 ether, 0, 0);
+        ROUTER.limitSell(address(PAIR), 10 ether, 1 ether, 0, 0);
+        ROUTER.limitSell(address(PAIR), 10 ether, 1 ether, 0, 0);
+
+        ROUTER.limitBuy(address(PAIR), 9 ether, 1 ether, 0, 0);
+        ROUTER.limitBuy(address(PAIR), 9 ether, 1 ether, 0, 0);
+        ROUTER.limitBuy(address(PAIR), 9 ether, 1 ether, 0, 0);
+
+        ROUTER.limitBuy(address(PAIR), 8 ether, 1 ether, 0, 0);
+        ROUTER.limitBuy(address(PAIR), 8 ether, 1 ether, 0, 0);
+        ROUTER.limitBuy(address(PAIR), 8 ether, 1 ether, 0, 0);
+
+        ROUTER.limitBuy(address(PAIR), 7 ether, 1 ether, 0, 0);
+        ROUTER.limitBuy(address(PAIR), 7 ether, 1 ether, 0, 0);
+        ROUTER.limitBuy(address(PAIR), 7 ether, 1 ether, 0, 0);
+        ROUTER.limitBuy(address(PAIR), 7 ether, 1 ether, 0, 0);
+        vm.stopPrank();
+
+        (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+        uint256[][] memory sellOrders = PAIR.ordersByPrices(IPair.OrderSide.SELL, sellPrices);
+        uint256[][] memory buyOrders = PAIR.ordersByPrices(IPair.OrderSide.BUY, buyPrices);
+
+        uint256 l1 = sellOrders.length;
+        for (uint256 i = 0; i < l1; i++) {
+            uint256 l2 = sellOrders[i].length;
+            for (uint256 j = 0; j < l2; j++) {
+                console.log(sellOrders[i][j]);
+            }
+        }
+
+        l1 = buyOrders.length;
+        for (uint256 i = 0; i < l1; i++) {
+            uint256 l2 = buyOrders[i].length;
+            for (uint256 j = 0; j < l2; j++) {
+                console.log(buyOrders[i][j]);
+            }
+        }
+    }
 }
