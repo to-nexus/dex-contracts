@@ -209,6 +209,173 @@ contract DEXCheckTest is DEXBaseTest {
         }
     }
 
+    // PAIR 가 PAUSE 상태에서는 컨트랙트 오너 가 주문을 강제 취소할 수 있다.
+    function test_check_emergency_cancel_case1() external {
+        address seller = address(0x1);
+        address buyer = address(0x2);
+
+        uint256 price1 = _toQuote(3);
+        uint256 price2 = _toQuote(2);
+        uint256 amount = _toBase(700);
+        uint256 volume = Math.mulDiv(price2, amount, BASE_DECIMALS);
+
+        vm.prank(OWNER);
+        BASE.transfer(seller, amount);
+        vm.prank(OWNER);
+        QUOTE.transfer(buyer, volume);
+
+        uint256[] memory _orderIds = new uint256[](2);
+        {
+            // cancel sell
+            vm.startPrank(seller);
+            BASE.approve(address(ROUTER), type(uint256).max);
+            uint256 sellOrderId = ROUTER.limitSell(address(PAIR), price1, amount, 0, 0);
+            assertEq(0, BASE.balanceOf(seller));
+            _orderIds[0] = sellOrderId;
+        }
+        {
+            // cancel buy
+            vm.startPrank(buyer);
+            QUOTE.approve(address(ROUTER), type(uint256).max);
+            uint256 buyOrderId = ROUTER.limitBuy(address(PAIR), price2, amount, 0, 0);
+            assertEq(0, QUOTE.balanceOf(buyer));
+            _orderIds[1] = buyOrderId;
+        }
+        vm.roll(block.number + 1);
+
+        (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+        assertEq(1, sellPrices.length);
+        assertEq(1, buyPrices.length);
+
+        vm.startPrank(OWNER);
+        PAIR.setPause(true);
+        PAIR.emergencyCancel(_orderIds);
+
+        // 주문 정보가 제거 되었는지 확인
+        for (uint256 i = 0; i < 2; i++) {
+            IPair.Order memory order = PAIR.orderById(_orderIds[i]);
+            assertEq(address(0), order.owner);
+        }
+        // reserve 확인
+        assertEq(0, PAIR.baseReserve());
+        assertEq(0, PAIR.quoteReserve());
+        // ticks 확인
+        (sellPrices, buyPrices) = PAIR.ticks();
+        assertEq(0, sellPrices.length);
+        assertEq(0, buyPrices.length);
+        // 잔액 확인 (PAIR)
+        assertEq(0, BASE.balanceOf(address(PAIR)));
+        assertEq(0, QUOTE.balanceOf(address(PAIR)));
+        // 잔액 확인 (USER)
+        assertEq(amount, BASE.balanceOf(seller));
+        assertEq(volume, QUOTE.balanceOf(buyer));
+    }
+
+    // PAIR 가 PAUSE 상태가 아니라면 컨트랙트 오너여도 주문을 강제 취소할 수 없다.
+    function test_check_emergency_cancel_case2() external {
+        address seller = address(0x1);
+        address buyer = address(0x2);
+
+        uint256 price1 = _toQuote(3);
+        uint256 price2 = _toQuote(2);
+        uint256 amount = _toBase(700);
+        uint256 volume = Math.mulDiv(price2, amount, BASE_DECIMALS);
+
+        vm.prank(OWNER);
+        BASE.transfer(seller, amount);
+        vm.prank(OWNER);
+        QUOTE.transfer(buyer, volume);
+
+        uint256[] memory _orderIds = new uint256[](2);
+        {
+            // cancel sell
+            vm.startPrank(seller);
+            BASE.approve(address(ROUTER), type(uint256).max);
+            uint256 sellOrderId = ROUTER.limitSell(address(PAIR), price1, amount, 0, 0);
+            assertEq(0, BASE.balanceOf(seller));
+            _orderIds[0] = sellOrderId;
+        }
+        {
+            // cancel buy
+            vm.startPrank(buyer);
+            QUOTE.approve(address(ROUTER), type(uint256).max);
+            uint256 buyOrderId = ROUTER.limitBuy(address(PAIR), price2, amount, 0, 0);
+            assertEq(0, QUOTE.balanceOf(buyer));
+            _orderIds[1] = buyOrderId;
+        }
+        vm.roll(block.number + 1);
+
+        (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+        assertEq(1, sellPrices.length);
+        assertEq(1, buyPrices.length);
+
+        vm.startPrank(OWNER);
+        vm.expectRevert(abi.encodeWithSignature("ExpectedPause()"));
+        PAIR.emergencyCancel(_orderIds);
+    }
+
+    // PAIR 가 PAUSE 상태에서 주문자는 cancel 을 통해서 주문을 취소할 수 있다.
+    function test_check_emergency_cancel_case3() external {
+        address user = address(0x1);
+
+        uint256 price1 = _toQuote(3);
+        uint256 price2 = _toQuote(2);
+        uint256 amount = _toBase(700);
+        uint256 volume = Math.mulDiv(price2, amount, BASE_DECIMALS);
+
+        vm.prank(OWNER);
+        BASE.transfer(user, amount);
+        vm.prank(OWNER);
+        QUOTE.transfer(user, volume);
+
+        uint256[] memory _orderIds = new uint256[](2);
+        vm.startPrank(user);
+        {
+            // sell
+            BASE.approve(address(ROUTER), type(uint256).max);
+            uint256 sellOrderId = ROUTER.limitSell(address(PAIR), price1, amount, 0, 0);
+            assertEq(0, BASE.balanceOf(user));
+            _orderIds[0] = sellOrderId;
+        }
+        {
+            // buy
+            QUOTE.approve(address(ROUTER), type(uint256).max);
+            uint256 buyOrderId = ROUTER.limitBuy(address(PAIR), price2, amount, 0, 0);
+            assertEq(0, QUOTE.balanceOf(user));
+            _orderIds[1] = buyOrderId;
+        }
+        vm.stopPrank();
+        vm.roll(block.number + 1);
+
+        (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+        assertEq(1, sellPrices.length);
+        assertEq(1, buyPrices.length);
+
+        vm.prank(OWNER);
+        PAIR.setPause(true);
+        vm.prank(user);
+        ROUTER.cancel(address(PAIR), _orderIds);
+
+        // 주문 정보가 제거 되었는지 확인
+        for (uint256 i = 0; i < 2; i++) {
+            IPair.Order memory order = PAIR.orderById(_orderIds[i]);
+            assertEq(address(0), order.owner);
+        }
+        // reserve 확인
+        assertEq(0, PAIR.baseReserve());
+        assertEq(0, PAIR.quoteReserve());
+        // ticks 확인
+        (sellPrices, buyPrices) = PAIR.ticks();
+        assertEq(0, sellPrices.length);
+        assertEq(0, buyPrices.length);
+        // 잔액 확인 (PAIR)
+        assertEq(0, BASE.balanceOf(address(PAIR)));
+        assertEq(0, QUOTE.balanceOf(address(PAIR)));
+        // 잔액 확인 (USER)
+        assertEq(amount, BASE.balanceOf(user));
+        assertEq(volume, QUOTE.balanceOf(user));
+    }
+
     // [AMOUNT] sell == buy, seller == maker
     function test_check_fee_case1() external {
         address seller = address(0x1);

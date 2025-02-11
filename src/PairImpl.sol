@@ -95,6 +95,10 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         _;
     }
 
+    constructor() {
+        _disableInitializers();
+    }
+
     function initialize(
         address router,
         address quote,
@@ -202,7 +206,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
                 _buyOrders[order.price].push(orderId);
             }
 
-            // BUY일 경우에는 보다 싼 조건으로 구매를 이미 했을 수 있기 때문에,
+            // BUY 일 경우에는 보다 싼 조건으로 구매를 이미 했을 수 있기 때문에,
             // 이미 가져온 QUOTE 에서 잔액이 남을 수 있다.
             _returnRemainQuote(order.owner, mustRemainBaseAmount);
         }
@@ -244,34 +248,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
             if (order.owner == address(0)) continue;
             if (order.owner != caller) revert PairNotOwner(orderId, caller);
 
-            List.U256 storage _orders;
-            bool isSellOrder = order.side == OrderSide.SELL;
-
-            // 컨트랙트에 보유하고 있던 토큰을 돌려준다.
-            if (isSellOrder) {
-                _orders = _sellOrders[order.price];
-                if (order.amount != 0) {
-                    BASE.safeTransfer(order.owner, order.amount);
-                    baseReserve -= order.amount;
-                }
-            } else {
-                _orders = _buyOrders[order.price];
-                uint256 returnQuoteAmount = Math.mulDiv(order.price, order.amount, DENOMINATOR);
-                if (returnQuoteAmount != 0) {
-                    QUOTE.safeTransfer(order.owner, returnQuoteAmount);
-                    quoteReserve -= returnQuoteAmount;
-                }
-            }
-
-            // 해당 데이터를 제거한다.
-            _removeOrder(orderId, CloseType.CANCEL, _orders);
-
-            // 만약 해당 가격의 마지막 정보였다면 price 가격을 제거한다.
-            if (_orders.empty()) {
-                if (isSellOrder) _sellPrices.remove(order.price);
-                else _buyPrices.remove(order.price);
-            }
-
+            _cancelOrder(orderId, order, CloseType.CANCEL);
             unchecked {
                 ++i;
             }
@@ -501,6 +478,36 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         });
     }
 
+    function _cancelOrder(uint256 orderId, Order memory order, CloseType _type) private {
+        List.U256 storage _orders;
+        bool isSellOrder = order.side == OrderSide.SELL;
+
+        // 컨트랙트에 보유하고 있던 토큰을 돌려준다.
+        if (isSellOrder) {
+            _orders = _sellOrders[order.price];
+            if (order.amount != 0) {
+                BASE.safeTransfer(order.owner, order.amount);
+                baseReserve -= order.amount;
+            }
+        } else {
+            _orders = _buyOrders[order.price];
+            uint256 returnQuoteAmount = Math.mulDiv(order.price, order.amount, DENOMINATOR);
+            if (returnQuoteAmount != 0) {
+                QUOTE.safeTransfer(order.owner, returnQuoteAmount);
+                quoteReserve -= returnQuoteAmount;
+            }
+        }
+
+        // 해당 데이터를 제거한다.
+        _removeOrder(orderId, _type, _orders);
+
+        // 만약 해당 가격의 마지막 정보였다면 price 가격을 제거한다.
+        if (_orders.empty()) {
+            if (isSellOrder) _sellPrices.remove(order.price);
+            else _buyPrices.remove(order.price);
+        }
+    }
+
     function _removeOrder(uint256 orderId, CloseType closeType, List.U256 storage _orders) private {
         if (!_orders.remove(orderId)) revert PairInvalidOrderId(orderId);
         delete _allOrders[orderId];
@@ -554,6 +561,20 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
 
         erc20.safeTransfer(to, amount);
         emit Skim(_msgSender(), address(erc20), to, amount);
+    }
+
+    function emergencyCancel(uint256[] memory orderIds) external whenPaused onlyOwner {
+        uint256 length = orderIds.length;
+        for (uint256 i = 0; i < length;) {
+            uint256 orderId = orderIds[i];
+            Order memory order = _allOrders[orderId];
+            if (order.owner == address(0)) continue;
+
+            _cancelOrder(orderId, order, CloseType.EMERGENCY);
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     function setPause(bool pause) external onlyOwner {

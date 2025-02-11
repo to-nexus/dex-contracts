@@ -12,7 +12,8 @@ interface IPair {
     enum CloseType {
         ALL_MATCH,
         MARKET,
-        CANCEL
+        CANCEL,
+        EMERGENCY
     }
 
     struct Order {

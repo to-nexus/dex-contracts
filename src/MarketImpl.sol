@@ -34,6 +34,10 @@ contract MarketImpl is IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
 
     uint256[43] private __gap;
 
+    constructor() {
+        _disableInitializers();
+    }
+
     function initialize(address _owner, address _router, address _feeCollector, address _quote, address _pairImpl)
         external
         override
