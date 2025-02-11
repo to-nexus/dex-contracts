@@ -1,0 +1,850 @@
+// Code generated - DO NOT EDIT.
+// This file is a generated binding and any manual changes will be lost.
+
+package binding
+
+import (
+	"errors"
+	"math/big"
+	"strings"
+
+	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/event"
+)
+
+// Reference imports to suppress errors if they are not otherwise used.
+var (
+	_ = errors.New
+	_ = big.NewInt
+	_ = strings.NewReader
+	_ = ethereum.NotFound
+	_ = bind.Bind
+	_ = common.Big1
+	_ = types.BloomLookup
+	_ = event.NewSubscription
+	_ = abi.ConvertType
+)
+
+// WCROSSMetaData contains all meta data concerning the WCROSS contract.
+var WCROSSMetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"},{\"inputs\":[],\"name\":\"ROUTER\",\"outputs\":[{\"internalType\":\"addresspayable\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"spender\",\"type\":\"address\"}],\"name\":\"allowance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"spender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"decimals\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"}],\"name\":\"mintTo\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"symbol\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"totalSupply\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"transfer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"spender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"spender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"allowance\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"needed\",\"type\":\"uint256\"}],\"name\":\"ERC20InsufficientAllowance\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"balance\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"needed\",\"type\":\"uint256\"}],\"name\":\"ERC20InsufficientBalance\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"approver\",\"type\":\"address\"}],\"name\":\"ERC20InvalidApprover\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"receiver\",\"type\":\"address\"}],\"name\":\"ERC20InvalidReceiver\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"ERC20InvalidSender\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"spender\",\"type\":\"address\"}],\"name\":\"ERC20InvalidSpender\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"FailedCall\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"balance\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"needed\",\"type\":\"uint256\"}],\"name\":\"InsufficientBalance\",\"type\":\"error\"}]",
+	Sigs: map[string]string{
+		"32fe7b26": "ROUTER()",
+		"dd62ed3e": "allowance(address,address)",
+		"095ea7b3": "approve(address,uint256)",
+		"70a08231": "balanceOf(address)",
+		"313ce567": "decimals()",
+		"755edd17": "mintTo(address)",
+		"06fdde03": "name()",
+		"95d89b41": "symbol()",
+		"18160ddd": "totalSupply()",
+		"a9059cbb": "transfer(address,uint256)",
+		"23b872dd": "transferFrom(address,address,uint256)",
+	},
+	Bin: "0x60a060405234801561000f575f5ffd5b506040518060400160405280601681526020017f43726f737344455820577261707065642043726f73730000000000000000000081525060405180604001604052806007815260200166636443524f535360c81b81525081600390816100759190610136565b5060046100828282610136565b5061008d9150503390565b6001600160a01b03166080526101f0565b634e487b7160e01b5f52604160045260245ffd5b600181811c908216806100c657607f821691505b6020821081036100e457634e487b7160e01b5f52602260045260245ffd5b50919050565b601f82111561013157805f5260205f20601f840160051c8101602085101561010f5750805b601f840160051c820191505b8181101561012e575f815560010161011b565b50505b505050565b81516001600160401b0381111561014f5761014f61009e565b6101638161015d84546100b2565b846100ea565b6020601f821160018114610195575f831561017e5750848201515b5f19600385901b1c1916600184901b17845561012e565b5f84815260208120601f198516915b828110156101c457878501518255602094850194600190920191016101a4565b50848210156101e157868401515f19600387901b60f8161c191681555b50505050600190811b01905550565b608051610a176102165f395f8181610174015281816103ba01526104120152610a175ff3fe60806040526004361061009d575f3560e01c806332fe7b261161006257806332fe7b261461016357806370a08231146101ae578063755edd17146101e257806395d89b41146101f5578063a9059cbb14610209578063dd62ed3e14610228575f5ffd5b806306fdde03146100b2578063095ea7b3146100dc57806318160ddd1461010b57806323b872dd14610129578063313ce56714610148575f5ffd5b366100ae576100ac333461026c565b005b5f5ffd5b3480156100bd575f5ffd5b506100c66102a9565b6040516100d39190610868565b60405180910390f35b3480156100e7575f5ffd5b506100fb6100f63660046108b8565b610339565b60405190151581526020016100d3565b348015610116575f5ffd5b506002545b6040519081526020016100d3565b348015610134575f5ffd5b506100fb6101433660046108e0565b610352565b348015610153575f5ffd5b50604051601281526020016100d3565b34801561016e575f5ffd5b506101967f000000000000000000000000000000000000000000000000000000000000000081565b6040516001600160a01b0390911681526020016100d3565b3480156101b9575f5ffd5b5061011b6101c836600461091a565b6001600160a01b03165f9081526020819052604090205490565b6100ac6101f036600461091a565b610375565b348015610200575f5ffd5b506100c6610382565b348015610214575f5ffd5b506100fb6102233660046108b8565b610391565b348015610233575f5ffd5b5061011b61024236600461093a565b6001600160a01b039182165f90815260016020908152604080832093909416825291909152205490565b6001600160a01b03821661029a5760405163ec442f0560e01b81525f60048201526024015b60405180910390fd5b6102a55f838361039e565b5050565b6060600380546102b89061096b565b80601f01602080910402602001604051908101604052809291908181526020018280546102e49061096b565b801561032f5780601f106103065761010080835404028352916020019161032f565b820191905f5260205f20905b81548152906001019060200180831161031257829003601f168201915b5050505050905090565b5f336103468185856104a1565b60019150505b92915050565b5f3361035f8582856104ae565b61036a85858561052a565b506001949350505050565b61037f813461026c565b50565b6060600480546102b89061096b565b5f3361034681858561052a565b6103a9838383610587565b6001600160a01b0382161561049c577f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316826001600160a01b0316148061047b575060405163e5e31b1360e01b81526001600160a01b0383811660048301527f0000000000000000000000000000000000000000000000000000000000000000169063e5e31b1390602401602060405180830381865afa158015610457573d5f5f3e3d5ffd5b505050506040513d601f19601f8201168201806040525081019061047b91906109a3565b61049c5761048982826106ad565b61049c6001600160a01b038316826106e1565b505050565b61049c838383600161076d565b6001600160a01b038381165f908152600160209081526040808320938616835292905220545f19811015610524578181101561051657604051637dc7a0d960e11b81526001600160a01b03841660048201526024810182905260448101839052606401610291565b61052484848484035f61076d565b50505050565b6001600160a01b03831661055357604051634b637e8f60e11b81525f6004820152602401610291565b6001600160a01b03821661057c5760405163ec442f0560e01b81525f6004820152602401610291565b61049c83838361039e565b6001600160a01b0383166105b1578060025f8282546105a691906109c2565b909155506106219050565b6001600160a01b0383165f90815260208190526040902054818110156106035760405163391434e360e21b81526001600160a01b03851660048201526024810182905260448101839052606401610291565b6001600160a01b0384165f9081526020819052604090209082900390555b6001600160a01b03821661063d5760028054829003905561065b565b6001600160a01b0382165f9081526020819052604090208054820190555b816001600160a01b0316836001600160a01b03167fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef836040516106a091815260200190565b60405180910390a3505050565b6001600160a01b0382166106d657604051634b637e8f60e11b81525f6004820152602401610291565b6102a5825f8361039e565b8047101561070b5760405163cf47918160e01b815247600482015260248101829052604401610291565b5f5f836001600160a01b0316836040515f6040518083038185875af1925050503d805f8114610755576040519150601f19603f3d011682016040523d82523d5f602084013e61075a565b606091505b509150915081610524576105248161083f565b6001600160a01b0384166107965760405163e602df0560e01b81525f6004820152602401610291565b6001600160a01b0383166107bf57604051634a1406b160e11b81525f6004820152602401610291565b6001600160a01b038085165f908152600160209081526040808320938716835292905220829055801561052457826001600160a01b0316846001600160a01b03167f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b9258460405161083191815260200190565b60405180910390a350505050565b80511561084f5780518082602001fd5b60405163d6bda27560e01b815260040160405180910390fd5b602081525f82518060208401528060208501604085015e5f604082850101526040601f19601f83011684010191505092915050565b80356001600160a01b03811681146108b3575f5ffd5b919050565b5f5f604083850312156108c9575f5ffd5b6108d28361089d565b946020939093013593505050565b5f5f5f606084860312156108f2575f5ffd5b6108fb8461089d565b92506109096020850161089d565b929592945050506040919091013590565b5f6020828403121561092a575f5ffd5b6109338261089d565b9392505050565b5f5f6040838503121561094b575f5ffd5b6109548361089d565b91506109626020840161089d565b90509250929050565b600181811c9082168061097f57607f821691505b60208210810361099d57634e487b7160e01b5f52602260045260245ffd5b50919050565b5f602082840312156109b3575f5ffd5b81518015158114610933575f5ffd5b8082018082111561034c57634e487b7160e01b5f52601160045260245ffdfea264697066735822122073bcef6bf2768756a5c355f6a7f748703b5ee064a0e9414e5762222cd42e0e3f64736f6c634300081c0033",
+}
+
+// WCROSSABI is the input ABI used to generate the binding from.
+// Deprecated: Use WCROSSMetaData.ABI instead.
+var WCROSSABI = WCROSSMetaData.ABI
+
+// Deprecated: Use WCROSSMetaData.Sigs instead.
+// WCROSSFuncSigs maps the 4-byte function signature to its string representation.
+var WCROSSFuncSigs = WCROSSMetaData.Sigs
+
+// WCROSSBin is the compiled bytecode used for deploying new contracts.
+// Deprecated: Use WCROSSMetaData.Bin instead.
+var WCROSSBin = WCROSSMetaData.Bin
+
+// DeployWCROSS deploys a new Ethereum contract, binding an instance of WCROSS to it.
+func DeployWCROSS(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *WCROSS, error) {
+	parsed, err := WCROSSMetaData.GetAbi()
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	if parsed == nil {
+		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(WCROSSBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &WCROSS{WCROSSCaller: WCROSSCaller{contract: contract}, WCROSSTransactor: WCROSSTransactor{contract: contract}, WCROSSFilterer: WCROSSFilterer{contract: contract}}, nil
+}
+
+// WCROSS is an auto generated Go binding around an Ethereum contract.
+type WCROSS struct {
+	WCROSSCaller     // Read-only binding to the contract
+	WCROSSTransactor // Write-only binding to the contract
+	WCROSSFilterer   // Log filterer for contract events
+}
+
+// WCROSSCaller is an auto generated read-only Go binding around an Ethereum contract.
+type WCROSSCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// WCROSSTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type WCROSSTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// WCROSSFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type WCROSSFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// WCROSSSession is an auto generated Go binding around an Ethereum contract,
+// with pre-set call and transact options.
+type WCROSSSession struct {
+	Contract     *WCROSS           // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// WCROSSCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// with pre-set call options.
+type WCROSSCallerSession struct {
+	Contract *WCROSSCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts // Call options to use throughout this session
+}
+
+// WCROSSTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// with pre-set transact options.
+type WCROSSTransactorSession struct {
+	Contract     *WCROSSTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// WCROSSRaw is an auto generated low-level Go binding around an Ethereum contract.
+type WCROSSRaw struct {
+	Contract *WCROSS // Generic contract binding to access the raw methods on
+}
+
+// WCROSSCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type WCROSSCallerRaw struct {
+	Contract *WCROSSCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// WCROSSTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type WCROSSTransactorRaw struct {
+	Contract *WCROSSTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewWCROSS creates a new instance of WCROSS, bound to a specific deployed contract.
+func NewWCROSS(address common.Address, backend bind.ContractBackend) (*WCROSS, error) {
+	contract, err := bindWCROSS(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &WCROSS{WCROSSCaller: WCROSSCaller{contract: contract}, WCROSSTransactor: WCROSSTransactor{contract: contract}, WCROSSFilterer: WCROSSFilterer{contract: contract}}, nil
+}
+
+// NewWCROSSCaller creates a new read-only instance of WCROSS, bound to a specific deployed contract.
+func NewWCROSSCaller(address common.Address, caller bind.ContractCaller) (*WCROSSCaller, error) {
+	contract, err := bindWCROSS(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &WCROSSCaller{contract: contract}, nil
+}
+
+// NewWCROSSTransactor creates a new write-only instance of WCROSS, bound to a specific deployed contract.
+func NewWCROSSTransactor(address common.Address, transactor bind.ContractTransactor) (*WCROSSTransactor, error) {
+	contract, err := bindWCROSS(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &WCROSSTransactor{contract: contract}, nil
+}
+
+// NewWCROSSFilterer creates a new log filterer instance of WCROSS, bound to a specific deployed contract.
+func NewWCROSSFilterer(address common.Address, filterer bind.ContractFilterer) (*WCROSSFilterer, error) {
+	contract, err := bindWCROSS(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &WCROSSFilterer{contract: contract}, nil
+}
+
+// bindWCROSS binds a generic wrapper to an already deployed contract.
+func bindWCROSS(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := WCROSSMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_WCROSS *WCROSSRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _WCROSS.Contract.WCROSSCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_WCROSS *WCROSSRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _WCROSS.Contract.WCROSSTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_WCROSS *WCROSSRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _WCROSS.Contract.WCROSSTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_WCROSS *WCROSSCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _WCROSS.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_WCROSS *WCROSSTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _WCROSS.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_WCROSS *WCROSSTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _WCROSS.Contract.contract.Transact(opts, method, params...)
+}
+
+// ROUTER is a free data retrieval call binding the contract method 0x32fe7b26.
+//
+// Solidity: function ROUTER() view returns(address)
+func (_WCROSS *WCROSSCaller) ROUTER(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _WCROSS.contract.Call(opts, &out, "ROUTER")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// ROUTER is a free data retrieval call binding the contract method 0x32fe7b26.
+//
+// Solidity: function ROUTER() view returns(address)
+func (_WCROSS *WCROSSSession) ROUTER() (common.Address, error) {
+	return _WCROSS.Contract.ROUTER(&_WCROSS.CallOpts)
+}
+
+// ROUTER is a free data retrieval call binding the contract method 0x32fe7b26.
+//
+// Solidity: function ROUTER() view returns(address)
+func (_WCROSS *WCROSSCallerSession) ROUTER() (common.Address, error) {
+	return _WCROSS.Contract.ROUTER(&_WCROSS.CallOpts)
+}
+
+// Allowance is a free data retrieval call binding the contract method 0xdd62ed3e.
+//
+// Solidity: function allowance(address owner, address spender) view returns(uint256)
+func (_WCROSS *WCROSSCaller) Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error) {
+	var out []interface{}
+	err := _WCROSS.contract.Call(opts, &out, "allowance", owner, spender)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// Allowance is a free data retrieval call binding the contract method 0xdd62ed3e.
+//
+// Solidity: function allowance(address owner, address spender) view returns(uint256)
+func (_WCROSS *WCROSSSession) Allowance(owner common.Address, spender common.Address) (*big.Int, error) {
+	return _WCROSS.Contract.Allowance(&_WCROSS.CallOpts, owner, spender)
+}
+
+// Allowance is a free data retrieval call binding the contract method 0xdd62ed3e.
+//
+// Solidity: function allowance(address owner, address spender) view returns(uint256)
+func (_WCROSS *WCROSSCallerSession) Allowance(owner common.Address, spender common.Address) (*big.Int, error) {
+	return _WCROSS.Contract.Allowance(&_WCROSS.CallOpts, owner, spender)
+}
+
+// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
+//
+// Solidity: function balanceOf(address account) view returns(uint256)
+func (_WCROSS *WCROSSCaller) BalanceOf(opts *bind.CallOpts, account common.Address) (*big.Int, error) {
+	var out []interface{}
+	err := _WCROSS.contract.Call(opts, &out, "balanceOf", account)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
+//
+// Solidity: function balanceOf(address account) view returns(uint256)
+func (_WCROSS *WCROSSSession) BalanceOf(account common.Address) (*big.Int, error) {
+	return _WCROSS.Contract.BalanceOf(&_WCROSS.CallOpts, account)
+}
+
+// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
+//
+// Solidity: function balanceOf(address account) view returns(uint256)
+func (_WCROSS *WCROSSCallerSession) BalanceOf(account common.Address) (*big.Int, error) {
+	return _WCROSS.Contract.BalanceOf(&_WCROSS.CallOpts, account)
+}
+
+// Decimals is a free data retrieval call binding the contract method 0x313ce567.
+//
+// Solidity: function decimals() view returns(uint8)
+func (_WCROSS *WCROSSCaller) Decimals(opts *bind.CallOpts) (uint8, error) {
+	var out []interface{}
+	err := _WCROSS.contract.Call(opts, &out, "decimals")
+
+	if err != nil {
+		return *new(uint8), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
+
+	return out0, err
+
+}
+
+// Decimals is a free data retrieval call binding the contract method 0x313ce567.
+//
+// Solidity: function decimals() view returns(uint8)
+func (_WCROSS *WCROSSSession) Decimals() (uint8, error) {
+	return _WCROSS.Contract.Decimals(&_WCROSS.CallOpts)
+}
+
+// Decimals is a free data retrieval call binding the contract method 0x313ce567.
+//
+// Solidity: function decimals() view returns(uint8)
+func (_WCROSS *WCROSSCallerSession) Decimals() (uint8, error) {
+	return _WCROSS.Contract.Decimals(&_WCROSS.CallOpts)
+}
+
+// Name is a free data retrieval call binding the contract method 0x06fdde03.
+//
+// Solidity: function name() view returns(string)
+func (_WCROSS *WCROSSCaller) Name(opts *bind.CallOpts) (string, error) {
+	var out []interface{}
+	err := _WCROSS.contract.Call(opts, &out, "name")
+
+	if err != nil {
+		return *new(string), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(string)).(*string)
+
+	return out0, err
+
+}
+
+// Name is a free data retrieval call binding the contract method 0x06fdde03.
+//
+// Solidity: function name() view returns(string)
+func (_WCROSS *WCROSSSession) Name() (string, error) {
+	return _WCROSS.Contract.Name(&_WCROSS.CallOpts)
+}
+
+// Name is a free data retrieval call binding the contract method 0x06fdde03.
+//
+// Solidity: function name() view returns(string)
+func (_WCROSS *WCROSSCallerSession) Name() (string, error) {
+	return _WCROSS.Contract.Name(&_WCROSS.CallOpts)
+}
+
+// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
+//
+// Solidity: function symbol() view returns(string)
+func (_WCROSS *WCROSSCaller) Symbol(opts *bind.CallOpts) (string, error) {
+	var out []interface{}
+	err := _WCROSS.contract.Call(opts, &out, "symbol")
+
+	if err != nil {
+		return *new(string), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(string)).(*string)
+
+	return out0, err
+
+}
+
+// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
+//
+// Solidity: function symbol() view returns(string)
+func (_WCROSS *WCROSSSession) Symbol() (string, error) {
+	return _WCROSS.Contract.Symbol(&_WCROSS.CallOpts)
+}
+
+// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
+//
+// Solidity: function symbol() view returns(string)
+func (_WCROSS *WCROSSCallerSession) Symbol() (string, error) {
+	return _WCROSS.Contract.Symbol(&_WCROSS.CallOpts)
+}
+
+// TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
+//
+// Solidity: function totalSupply() view returns(uint256)
+func (_WCROSS *WCROSSCaller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _WCROSS.contract.Call(opts, &out, "totalSupply")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
+//
+// Solidity: function totalSupply() view returns(uint256)
+func (_WCROSS *WCROSSSession) TotalSupply() (*big.Int, error) {
+	return _WCROSS.Contract.TotalSupply(&_WCROSS.CallOpts)
+}
+
+// TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
+//
+// Solidity: function totalSupply() view returns(uint256)
+func (_WCROSS *WCROSSCallerSession) TotalSupply() (*big.Int, error) {
+	return _WCROSS.Contract.TotalSupply(&_WCROSS.CallOpts)
+}
+
+// Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
+//
+// Solidity: function approve(address spender, uint256 value) returns(bool)
+func (_WCROSS *WCROSSTransactor) Approve(opts *bind.TransactOpts, spender common.Address, value *big.Int) (*types.Transaction, error) {
+	return _WCROSS.contract.Transact(opts, "approve", spender, value)
+}
+
+// Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
+//
+// Solidity: function approve(address spender, uint256 value) returns(bool)
+func (_WCROSS *WCROSSSession) Approve(spender common.Address, value *big.Int) (*types.Transaction, error) {
+	return _WCROSS.Contract.Approve(&_WCROSS.TransactOpts, spender, value)
+}
+
+// Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
+//
+// Solidity: function approve(address spender, uint256 value) returns(bool)
+func (_WCROSS *WCROSSTransactorSession) Approve(spender common.Address, value *big.Int) (*types.Transaction, error) {
+	return _WCROSS.Contract.Approve(&_WCROSS.TransactOpts, spender, value)
+}
+
+// MintTo is a paid mutator transaction binding the contract method 0x755edd17.
+//
+// Solidity: function mintTo(address to) payable returns()
+func (_WCROSS *WCROSSTransactor) MintTo(opts *bind.TransactOpts, to common.Address) (*types.Transaction, error) {
+	return _WCROSS.contract.Transact(opts, "mintTo", to)
+}
+
+// MintTo is a paid mutator transaction binding the contract method 0x755edd17.
+//
+// Solidity: function mintTo(address to) payable returns()
+func (_WCROSS *WCROSSSession) MintTo(to common.Address) (*types.Transaction, error) {
+	return _WCROSS.Contract.MintTo(&_WCROSS.TransactOpts, to)
+}
+
+// MintTo is a paid mutator transaction binding the contract method 0x755edd17.
+//
+// Solidity: function mintTo(address to) payable returns()
+func (_WCROSS *WCROSSTransactorSession) MintTo(to common.Address) (*types.Transaction, error) {
+	return _WCROSS.Contract.MintTo(&_WCROSS.TransactOpts, to)
+}
+
+// Transfer is a paid mutator transaction binding the contract method 0xa9059cbb.
+//
+// Solidity: function transfer(address to, uint256 value) returns(bool)
+func (_WCROSS *WCROSSTransactor) Transfer(opts *bind.TransactOpts, to common.Address, value *big.Int) (*types.Transaction, error) {
+	return _WCROSS.contract.Transact(opts, "transfer", to, value)
+}
+
+// Transfer is a paid mutator transaction binding the contract method 0xa9059cbb.
+//
+// Solidity: function transfer(address to, uint256 value) returns(bool)
+func (_WCROSS *WCROSSSession) Transfer(to common.Address, value *big.Int) (*types.Transaction, error) {
+	return _WCROSS.Contract.Transfer(&_WCROSS.TransactOpts, to, value)
+}
+
+// Transfer is a paid mutator transaction binding the contract method 0xa9059cbb.
+//
+// Solidity: function transfer(address to, uint256 value) returns(bool)
+func (_WCROSS *WCROSSTransactorSession) Transfer(to common.Address, value *big.Int) (*types.Transaction, error) {
+	return _WCROSS.Contract.Transfer(&_WCROSS.TransactOpts, to, value)
+}
+
+// TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
+//
+// Solidity: function transferFrom(address from, address to, uint256 value) returns(bool)
+func (_WCROSS *WCROSSTransactor) TransferFrom(opts *bind.TransactOpts, from common.Address, to common.Address, value *big.Int) (*types.Transaction, error) {
+	return _WCROSS.contract.Transact(opts, "transferFrom", from, to, value)
+}
+
+// TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
+//
+// Solidity: function transferFrom(address from, address to, uint256 value) returns(bool)
+func (_WCROSS *WCROSSSession) TransferFrom(from common.Address, to common.Address, value *big.Int) (*types.Transaction, error) {
+	return _WCROSS.Contract.TransferFrom(&_WCROSS.TransactOpts, from, to, value)
+}
+
+// TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
+//
+// Solidity: function transferFrom(address from, address to, uint256 value) returns(bool)
+func (_WCROSS *WCROSSTransactorSession) TransferFrom(from common.Address, to common.Address, value *big.Int) (*types.Transaction, error) {
+	return _WCROSS.Contract.TransferFrom(&_WCROSS.TransactOpts, from, to, value)
+}
+
+// Receive is a paid mutator transaction binding the contract receive function.
+//
+// Solidity: receive() payable returns()
+func (_WCROSS *WCROSSTransactor) Receive(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _WCROSS.contract.RawTransact(opts, nil) // calldata is disallowed for receive function
+}
+
+// Receive is a paid mutator transaction binding the contract receive function.
+//
+// Solidity: receive() payable returns()
+func (_WCROSS *WCROSSSession) Receive() (*types.Transaction, error) {
+	return _WCROSS.Contract.Receive(&_WCROSS.TransactOpts)
+}
+
+// Receive is a paid mutator transaction binding the contract receive function.
+//
+// Solidity: receive() payable returns()
+func (_WCROSS *WCROSSTransactorSession) Receive() (*types.Transaction, error) {
+	return _WCROSS.Contract.Receive(&_WCROSS.TransactOpts)
+}
+
+// WCROSSApprovalIterator is returned from FilterApproval and is used to iterate over the raw logs and unpacked data for Approval events raised by the WCROSS contract.
+type WCROSSApprovalIterator struct {
+	Event *WCROSSApproval // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *WCROSSApprovalIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(WCROSSApproval)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(WCROSSApproval)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *WCROSSApprovalIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *WCROSSApprovalIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// WCROSSApproval represents a Approval event raised by the WCROSS contract.
+type WCROSSApproval struct {
+	Owner   common.Address
+	Spender common.Address
+	Value   *big.Int
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterApproval is a free log retrieval operation binding the contract event 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925.
+//
+// Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
+func (_WCROSS *WCROSSFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, spender []common.Address) (*WCROSSApprovalIterator, error) {
+
+	var ownerRule []interface{}
+	for _, ownerItem := range owner {
+		ownerRule = append(ownerRule, ownerItem)
+	}
+	var spenderRule []interface{}
+	for _, spenderItem := range spender {
+		spenderRule = append(spenderRule, spenderItem)
+	}
+
+	logs, sub, err := _WCROSS.contract.FilterLogs(opts, "Approval", ownerRule, spenderRule)
+	if err != nil {
+		return nil, err
+	}
+	return &WCROSSApprovalIterator{contract: _WCROSS.contract, event: "Approval", logs: logs, sub: sub}, nil
+}
+
+// WatchApproval is a free log subscription operation binding the contract event 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925.
+//
+// Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
+func (_WCROSS *WCROSSFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *WCROSSApproval, owner []common.Address, spender []common.Address) (event.Subscription, error) {
+
+	var ownerRule []interface{}
+	for _, ownerItem := range owner {
+		ownerRule = append(ownerRule, ownerItem)
+	}
+	var spenderRule []interface{}
+	for _, spenderItem := range spender {
+		spenderRule = append(spenderRule, spenderItem)
+	}
+
+	logs, sub, err := _WCROSS.contract.WatchLogs(opts, "Approval", ownerRule, spenderRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(WCROSSApproval)
+				if err := _WCROSS.contract.UnpackLog(event, "Approval", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseApproval is a log parse operation binding the contract event 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925.
+//
+// Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
+func (_WCROSS *WCROSSFilterer) ParseApproval(log types.Log) (*WCROSSApproval, error) {
+	event := new(WCROSSApproval)
+	if err := _WCROSS.contract.UnpackLog(event, "Approval", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// WCROSSTransferIterator is returned from FilterTransfer and is used to iterate over the raw logs and unpacked data for Transfer events raised by the WCROSS contract.
+type WCROSSTransferIterator struct {
+	Event *WCROSSTransfer // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *WCROSSTransferIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(WCROSSTransfer)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(WCROSSTransfer)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *WCROSSTransferIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *WCROSSTransferIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// WCROSSTransfer represents a Transfer event raised by the WCROSS contract.
+type WCROSSTransfer struct {
+	From  common.Address
+	To    common.Address
+	Value *big.Int
+	Raw   types.Log // Blockchain specific contextual infos
+}
+
+// FilterTransfer is a free log retrieval operation binding the contract event 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef.
+//
+// Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
+func (_WCROSS *WCROSSFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address) (*WCROSSTransferIterator, error) {
+
+	var fromRule []interface{}
+	for _, fromItem := range from {
+		fromRule = append(fromRule, fromItem)
+	}
+	var toRule []interface{}
+	for _, toItem := range to {
+		toRule = append(toRule, toItem)
+	}
+
+	logs, sub, err := _WCROSS.contract.FilterLogs(opts, "Transfer", fromRule, toRule)
+	if err != nil {
+		return nil, err
+	}
+	return &WCROSSTransferIterator{contract: _WCROSS.contract, event: "Transfer", logs: logs, sub: sub}, nil
+}
+
+// WatchTransfer is a free log subscription operation binding the contract event 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef.
+//
+// Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
+func (_WCROSS *WCROSSFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *WCROSSTransfer, from []common.Address, to []common.Address) (event.Subscription, error) {
+
+	var fromRule []interface{}
+	for _, fromItem := range from {
+		fromRule = append(fromRule, fromItem)
+	}
+	var toRule []interface{}
+	for _, toItem := range to {
+		toRule = append(toRule, toItem)
+	}
+
+	logs, sub, err := _WCROSS.contract.WatchLogs(opts, "Transfer", fromRule, toRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(WCROSSTransfer)
+				if err := _WCROSS.contract.UnpackLog(event, "Transfer", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseTransfer is a log parse operation binding the contract event 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef.
+//
+// Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
+func (_WCROSS *WCROSSFilterer) ParseTransfer(log types.Log) (*WCROSSTransfer, error) {
+	event := new(WCROSSTransfer)
+	if err := _WCROSS.contract.UnpackLog(event, "Transfer", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}

@@ -32,6 +32,11 @@ jobs:
           forge fmt --check
         id: fmt
 
+      - name: Run Forge Dependencies
+        run: |
+          forge soldeer install
+        id: dependencies
+
       - name: Run Forge build
         run: |
           forge build --sizes
