@@ -81,18 +81,18 @@ contract DEXTradeTest is DEXBaseTest {
             ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertEq(address(0), order2.owner, "order2, not deleted");
-        // PAIR 에는 잔액이 없는지 확인
+        // Verify that the PAIR has no remaining balance.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(100), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user2), 0, "QUOTE user2");
         assertEq(BASE.balanceOf(user2), _toBase(100), "BASE user2");
     }
@@ -123,24 +123,24 @@ contract DEXTradeTest is DEXBaseTest {
             ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertEq(address(0), order2.owner, "order2, not deleted");
-        // PAIR 에는 잔액이 없는지 확인
+        // Verify that the PAIR has no remaining balance.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user1), 0, "QUOTE user1");
         assertEq(BASE.balanceOf(user1), _toBase(100), "BASE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user2), 0, "BASE user2");
         assertEq(QUOTE.balanceOf(user2), _toQuote(100), "QUOTE user2");
     }
 
     function test_trade_limit_sell_less_limit_buy() external {
-        // 100개를 판매하고, 50개를 구매한다.
+        // SELL 100, BUY 50
         address user1 = address(0x1);
         address user2 = address(0x2);
         vm.label(user1, "user1");
@@ -166,25 +166,25 @@ contract DEXTradeTest is DEXBaseTest {
             ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(50), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         assertNotEq(address(0), order1.owner, "order1, deleted");
         assertEq(address(0), order2.owner, "order2, not deleted");
-        // PAIR 에는 BASE 토큰이 50 개 남아있는지 확인
-        // QUOTE 는 없어야 한다.
+        // Verify that the PAIR has 50 BASE tokens remaining.
+        // QUOTE should have a balance of zero.
         assertEq(BASE.balanceOf(address(PAIR)), _toBase(50), "BASE PAIR");
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(50), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user2), 0, "QUOTE user2");
         assertEq(BASE.balanceOf(user2), _toBase(50), "BASE user2");
     }
 
     function test_trade_limit_buy_less_limit_sell() external {
-        // 100개 구매를 요청하고 50개를 판매한다.
+        // BUY: 100, SELL: 50
         address user1 = address(0x1);
         address user2 = address(0x2);
         vm.label(user1, "user1");
@@ -210,7 +210,7 @@ contract DEXTradeTest is DEXBaseTest {
             ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(50), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         assertNotEq(address(0), order1.owner, "order1, deleted");
@@ -218,16 +218,16 @@ contract DEXTradeTest is DEXBaseTest {
         // PAIR 50 QUOTE 가 남아 있어야 한다.
         assertEq(QUOTE.balanceOf(address(PAIR)), _toQuote(50), "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user1), 0, "QUOTE user1");
         assertEq(BASE.balanceOf(user1), _toBase(50), "BASE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user2), 0, "BASE user2");
         assertEq(QUOTE.balanceOf(user2), _toQuote(50), "QUOTE user2");
     }
 
     function test_trade_limit_sell_over_limit_buy() external {
-        // 100개를 판매하고, 200개를 구매한다.
+        // SELL: 100, BUY: 200
         address user1 = address(0x1);
         address user2 = address(0x2);
         vm.label(user1, "user1");
@@ -253,25 +253,25 @@ contract DEXTradeTest is DEXBaseTest {
             ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(200), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertNotEq(address(0), order2.owner, "order2, deleted");
-        // PAIR 에는 QUOTE 토큰이 100 개 남아있는지 확인
-        // BASE 는 없어야 한다.
+        // Verify that the PAIR has 100 QUOTE tokens remaining.
+        // BASE should have a balance of zero.
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
         assertEq(QUOTE.balanceOf(address(PAIR)), _toQuote(100), "QUOTE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(100), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
-        assertEq(QUOTE.balanceOf(user2), 0, "QUOTE user2"); // 컨트랙트에 남아있다.
+        // [user2] Verify that the exchange transaction was successfully executed.
+        assertEq(QUOTE.balanceOf(user2), 0, "QUOTE user2"); // Remains in the contract.
         assertEq(BASE.balanceOf(user2), _toBase(100), "BASE user2");
     }
 
     function test_trade_limit_buy_over_limit_sell() external {
-        // 100개 구매를 요청하고 200개를 판매한다.
+        // BUY: 100, SELL: 200
         address user1 = address(0x1);
         address user2 = address(0x2);
         vm.label(user1, "user1");
@@ -297,24 +297,24 @@ contract DEXTradeTest is DEXBaseTest {
             ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(200), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertNotEq(address(0), order2.owner, "order2, deleted");
-        // PAIR 100 BASE 가 남아 있어야 한다.
+        // PAIR should have 100 BASE remaining.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), _toBase(100), "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user1), 0, "QUOTE user1");
         assertEq(BASE.balanceOf(user1), _toBase(100), "BASE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
-        assertEq(BASE.balanceOf(user2), 0, "BASE user2"); // 100 개는 PAIR 에서 보유
-        assertEq(QUOTE.balanceOf(user2), _toQuote(100), "QUOTE user2"); // 100개를 판 만큼의 수익이 들어와 있어야 한다.
+        // [user2] Verify that the exchange transaction was successfully executed.
+        assertEq(BASE.balanceOf(user2), 0, "BASE user2"); // 100 BASE are held by the PAIR.
+        assertEq(QUOTE.balanceOf(user2), _toQuote(100), "QUOTE user2");
     }
 
     function test_trade_multi_limit_sell_limit_buy_all_match() external {
-        // 동일 가격으로 2명의 유저가 판매하고 한 유저가 구매한다.
+        // Two users sell at the same price, and one user buys.
         address user1 = address(0x1);
         address user2 = address(0x2);
         address user3 = address(0x3);
@@ -351,29 +351,29 @@ contract DEXTradeTest is DEXBaseTest {
             ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(200), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertEq(address(0), order2.owner, "order2, not deleted");
         assertEq(address(0), order3.owner, "order3, not deleted");
-        // PAIR 에는 잔액이 없는지 확인
+        // Verify that the PAIR has no remaining balance.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(100), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user2), 0, "BASE user2");
         assertEq(QUOTE.balanceOf(user2), _toQuote(100), "QUOTE user2");
-        // [user3] 거래 잔액이 잘 전송 되었는지 확인
+        // [user3] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user3), 0, "QUOTE user3");
         assertEq(BASE.balanceOf(user3), _toBase(200), "BASE user3");
     }
 
     function test_trade_multi_limit_buy_limit_sell_all_match() external {
-        // 동일 가격으로 2명의 유저가 구매하고 한 유저가 판매한다.
+        // Two users buy at the same price, and one user sells.
         address user1 = address(0x1);
         address user2 = address(0x2);
         address user3 = address(0x3);
@@ -410,29 +410,29 @@ contract DEXTradeTest is DEXBaseTest {
             ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(200), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertEq(address(0), order2.owner, "order2, not deleted");
         assertEq(address(0), order3.owner, "order3, not deleted");
-        // PAIR 에는 잔액이 없는지 확인
+        // Verify that the PAIR has no remaining balance.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user1), 0, "QUOTE user1");
         assertEq(BASE.balanceOf(user1), _toBase(100), "BASE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user2), 0, "QUOTE user2");
         assertEq(BASE.balanceOf(user2), _toBase(100), "BASE user2");
-        // [user3] 거래 잔액이 잘 전송 되었는지 확인
+        // [user3] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user3), _toQuote(200), "QUOTE user3");
         assertEq(BASE.balanceOf(user3), 0, "BASE user3");
     }
 
     function test_trade_multi_limit_sell_less_limit_buy() external {
-        // 동일 가격으로 2명의 유저가 판매하고 한 유저가 구매한다.
+        // Two users sell at the same price, and one user buys.
         address user1 = address(0x1);
         address user2 = address(0x2);
         address user3 = address(0x3);
@@ -469,29 +469,29 @@ contract DEXTradeTest is DEXBaseTest {
             ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(150), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertNotEq(address(0), order2.owner, "order2, deleted");
         assertEq(address(0), order3.owner, "order3, not deleted");
-        // PAIR 에는 50 개의 BASE 가 있어야 한다.
+        // Verify that the PAIR has 50 BASE tokens remaining.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), _toBase(50), "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(100), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user2), 0, "BASE user2");
         assertEq(QUOTE.balanceOf(user2), _toQuote(50), "QUOTE user2");
-        // [user3] 거래 잔액이 잘 전송 되었는지 확인
+        // [user3] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user3), 0, "QUOTE user3");
         assertEq(BASE.balanceOf(user3), _toBase(150), "BASE user3");
     }
 
     function test_trade_multi_limit_buy_less_limit_sell() external {
-        // 동일 가격으로 2명의 유저가 판매하고 한 유저가 구매한다.
+        // Two users sell at the same price, and one user buys.
         address user1 = address(0x1);
         address user2 = address(0x2);
         address user3 = address(0x3);
@@ -528,29 +528,29 @@ contract DEXTradeTest is DEXBaseTest {
             ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(150), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertNotEq(address(0), order2.owner, "order2, deleted");
         assertEq(address(0), order3.owner, "order3, not deleted");
-        // PAIR 에는 50 개의 QUOTE 가 있어야 한다.
+        // Verify that the PAIR has 50 QUOTE tokens remaining.
         assertEq(QUOTE.balanceOf(address(PAIR)), _toQuote(50), "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user1), 0, "QUOTE user1");
         assertEq(BASE.balanceOf(user1), _toBase(100), "BASE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user2), 0, "QUOTE user2");
         assertEq(BASE.balanceOf(user2), _toBase(50), "BASE user2");
-        // [user3] 거래 잔액이 잘 전송 되었는지 확인
+        // [user3] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user3), _toQuote(150), "QUOTE user3");
         assertEq(BASE.balanceOf(user3), 0, "BASE user3");
     }
 
     function test_trade_multi_limit_sell_over_limit_buy() external {
-        // 동일 가격으로 2명의 유저가 판매하고 한 유저가 구매한다.
+        // Two users sell at the same price, and one user buys.
         address user1 = address(0x1);
         address user2 = address(0x2);
         address user3 = address(0x3);
@@ -587,29 +587,29 @@ contract DEXTradeTest is DEXBaseTest {
             ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(300), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertEq(address(0), order2.owner, "order2, not deleted");
         assertNotEq(address(0), order3.owner, "order3, deleted");
-        // PAIR 에는 100 개의 QUOTE 가 있어야 한다.
+        // Verify that the PAIR has 100 QUOTE tokens remaining.
         assertEq(QUOTE.balanceOf(address(PAIR)), _toQuote(100), "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(100), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user2), 0, "BASE user2");
         assertEq(QUOTE.balanceOf(user2), _toQuote(100), "QUOTE user2");
-        // [user3] 거래 잔액이 잘 전송 되었는지 확인
+        // [user3] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user3), 0, "QUOTE user3");
         assertEq(BASE.balanceOf(user3), _toBase(200), "BASE user3");
     }
 
     function test_trade_multi_limit_buy_over_limit_sell() external {
-        // 동일 가격으로 2명의 유저가 판매하고 한 유저가 구매한다.
+        // Two users sell at the same price, and one user buys.
         address user1 = address(0x1);
         address user2 = address(0x2);
         address user3 = address(0x3);
@@ -646,7 +646,7 @@ contract DEXTradeTest is DEXBaseTest {
             ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(300), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
@@ -656,19 +656,19 @@ contract DEXTradeTest is DEXBaseTest {
         // PAIR 에는 100 개의 BASE 가 있어야 한다.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), _toBase(100), "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user1), 0, "QUOTE user1");
         assertEq(BASE.balanceOf(user1), _toBase(100), "BASE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user2), 0, "QUOTE user2");
         assertEq(BASE.balanceOf(user2), _toBase(100), "BASE user2");
-        // [user3] 거래 잔액이 잘 전송 되었는지 확인
+        // [user3] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user3), _toQuote(200), "QUOTE user3");
         assertEq(BASE.balanceOf(user3), 0, "BASE user3");
     }
 
     function test_trade_limit_sell_multi_limit_buy_all_match() external {
-        // 동일 가격으로 1명의 유저가 판매하고 2명의 유저가 구매한다.
+        // One user sells at the same price, and two users buy.
         address user1 = address(0x1);
         address user2 = address(0x2);
         address user3 = address(0x3);
@@ -704,29 +704,29 @@ contract DEXTradeTest is DEXBaseTest {
             ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertEq(address(0), order2.owner, "order2, not deleted");
         assertEq(address(0), order3.owner, "order3, not deleted");
-        // PAIR 에는 잔액이 없는지 확인
+        // Verify that the PAIR has no remaining balance.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(200), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user2), _toBase(100), "BASE user2");
         assertEq(QUOTE.balanceOf(user2), 0, "QUOTE user2");
-        // [user3] 거래 잔액이 잘 전송 되었는지 확인
+        // [user3] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user3), _toBase(100), "BASE user3");
         assertEq(QUOTE.balanceOf(user3), 0, "QUOTE user3");
     }
 
     function test_trade_limit_buy_multi_limit_sell_all_match() external {
-        // 동일 가격으로 1명의 유저가 구매하고 2명의 유저가 판매한다.
+        // One user buys at the same price, and two users sell.
         address user1 = address(0x1);
         address user2 = address(0x2);
         address user3 = address(0x3);
@@ -761,29 +761,29 @@ contract DEXTradeTest is DEXBaseTest {
             ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertEq(address(0), order2.owner, "order2, not deleted");
         assertEq(address(0), order3.owner, "order3, not deleted");
-        // PAIR 에는 잔액이 없는지 확인
+        // Verify that the PAIR has no remaining balance.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), _toBase(200), "BASE user1");
         assertEq(QUOTE.balanceOf(user1), 0, "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user2), 0, "BASE user2");
         assertEq(QUOTE.balanceOf(user2), _toQuote(100), "QUOTE user2");
-        // [user3] 거래 잔액이 잘 전송 되었는지 확인
+        // [user3] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user3), 0, "BASE user3");
         assertEq(QUOTE.balanceOf(user3), _toQuote(100), "QUOTE user3");
     }
 
     function test_trade_limit_sell_less_multi_limit_buy() external {
-        // 동일 가격으로 1명의 유저가 판매하고 두명의 유저가 구매한다.
+        // One user sells at the same price, and two users buy.
         address user1 = address(0x1);
         address user2 = address(0x2);
         address user3 = address(0x3);
@@ -818,29 +818,29 @@ contract DEXTradeTest is DEXBaseTest {
             ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(50), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertNotEq(address(0), order1.owner, "order1, deleted");
         assertEq(address(0), order2.owner, "order2, deleted");
         assertEq(address(0), order3.owner, "order3, not deleted");
-        // PAIR 에는 50 개의 BASE 가 있어야 한다.
+        // Verify that the PAIR has 50 BASE tokens remaining.
         assertEq(BASE.balanceOf(address(PAIR)), _toBase(50), "BASE PAIR");
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(150), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user2), _toBase(100), "BASE user2");
         assertEq(QUOTE.balanceOf(user2), 0, "QUOTE user2");
-        // [user3] 거래 잔액이 잘 전송 되었는지 확인
+        // [user3] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user3), _toBase(50), "BASE user3");
         assertEq(QUOTE.balanceOf(user3), 0, "QUOTE user3");
     }
 
     function test_trade_limit_buy_less_multi_limit_sell() external {
-        // 동일 가격으로 1명의 유저가 구매하고 두명의 유저가 판매한다.
+        // One user buys at the same price, and two users sell.
         address user1 = address(0x1);
         address user2 = address(0x2);
         address user3 = address(0x3);
@@ -874,23 +874,23 @@ contract DEXTradeTest is DEXBaseTest {
             ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(50), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertNotEq(address(0), order1.owner, "order1, deleted");
         assertEq(address(0), order2.owner, "order2, deleted");
         assertEq(address(0), order3.owner, "order3, not deleted");
-        // PAIR 에는 50 개의 QUOTE 가 있어야 한다.
+        // Verify that the PAIR has 50 QUOTE tokens remaining.
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
         assertEq(QUOTE.balanceOf(address(PAIR)), _toQuote(50), "QUOTE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), _toBase(150), "BASE user1");
         assertEq(QUOTE.balanceOf(user1), 0, "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user2), 0, "BASE user2");
         assertEq(QUOTE.balanceOf(user2), _toQuote(100), "QUOTE user2");
-        // [user3] 거래 잔액이 잘 전송 되었는지 확인
+        // [user3] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user3), 0, "BASE user3");
         assertEq(QUOTE.balanceOf(user3), _toQuote(50), "QUOTE user3");
     }
@@ -1059,18 +1059,18 @@ contract DEXTradeTest is DEXBaseTest {
         ROUTER.marketBuy(address(PAIR), _toQuote(100), 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(2);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertEq(address(0), order2.owner, "market data is must not init");
-        // PAIR 에는 잔액이 없는지 확인
+        // Verify that the PAIR has no remaining balance.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(100), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user2), 0, "QUOTE user2");
         assertEq(BASE.balanceOf(user2), _toBase(100), "BASE user2");
     }
@@ -1102,20 +1102,20 @@ contract DEXTradeTest is DEXBaseTest {
         ROUTER.marketBuy(address(PAIR), _toQuote(300), 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(3);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertEq(address(0), order2.owner, "order2, not deleted");
         assertEq(address(0), order3.owner, "market data is must not init");
-        // PAIR 에는 잔액이 없는지 확인
+        // Verify that the PAIR has no remaining balance.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(300), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user2), 0, "QUOTE user2");
         assertEq(BASE.balanceOf(user2), _toBase(200), "BASE user2");
     }
@@ -1145,18 +1145,18 @@ contract DEXTradeTest is DEXBaseTest {
         ROUTER.marketBuy(address(PAIR), _toQuote(50), 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(2);
         assertNotEq(address(0), order1.owner, "order1, deleted");
         assertEq(address(0), order2.owner, "market data is must not init");
-        // PAIR 에는 잔액이 없는지 확인
+        // Verify that the PAIR has no remaining balance.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), _toBase(50), "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(50), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user2), 0, "QUOTE user2");
         assertEq(BASE.balanceOf(user2), _toBase(50), "BASE user2");
     }
@@ -1189,20 +1189,20 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(3);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertNotEq(address(0), order2.owner, "order2, deleted");
         assertEq(address(0), order3.owner, "market data is must not init");
-        // PAIR 에는 잔액이 없는지 확인
+        // Verify that the PAIR has no remaining balance.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), _toBase(50), "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(200), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user2), 0, "QUOTE user2");
         assertEq(BASE.balanceOf(user2), _toBase(150), "BASE user2");
     }
@@ -1232,18 +1232,18 @@ contract DEXTradeTest is DEXBaseTest {
         ROUTER.marketBuy(address(PAIR), _toQuote(200), 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(2);
         assertEq(address(0), order1.owner, "order1, deleted");
         assertEq(address(0), order2.owner, "market data is must not init");
-        // PAIR 에는 잔액이 없는지 확인
+        // Verify that the PAIR has no remaining balance.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(100), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user2), _toQuote(100), "QUOTE user2");
         assertEq(BASE.balanceOf(user2), _toBase(100), "BASE user2");
     }
@@ -1275,20 +1275,20 @@ contract DEXTradeTest is DEXBaseTest {
         ROUTER.marketBuy(address(PAIR), _toQuote(400), 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(3);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertEq(address(0), order2.owner, "order2, not deleted");
         assertEq(address(0), order3.owner, "market data is must not init");
-        // PAIR 에는 잔액이 없는지 확인
+        // Verify that the PAIR has no remaining balance.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(300), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user2), _toQuote(100), "QUOTE user2");
         assertEq(BASE.balanceOf(user2), _toBase(200), "BASE user2");
     }

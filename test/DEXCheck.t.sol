@@ -10,7 +10,7 @@ contract DEXCheckTest is DEXBaseTest {
         _deploy(18, 18, 1e2, 1e4);
     }
 
-    // 주문을 취소하면 데이터가 삭제 되고, 토큰을 돌려준다.
+    // When an order is canceled, the data is deleted and the tokens are refunded.
     function test_check_cancel_case1() external {
         address seller = address(0x1);
         address buyer = address(0x2);
@@ -72,7 +72,7 @@ contract DEXCheckTest is DEXBaseTest {
         }
     }
 
-    // 거래가 일부분 이루어진 주문또한 취소하면 데이터가 삭제 되고, 남은 토큰을 돌려준다.
+    // If a partially filled order is canceled, the data is deleted, and the remaining tokens are refunded.
     function test_check_cancel_case2() external {
         address seller = address(0x1);
         address buyer = address(0x2);
@@ -143,7 +143,7 @@ contract DEXCheckTest is DEXBaseTest {
         }
     }
 
-    // 거래 취소는 해당 주문의 OWNER 만 가능하다.
+    // Order cancellation is only allowed by the OWNER of the order.
     function test_check_cancel_case3() external {
         address seller = address(0x1);
         address buyer = address(0x2);
@@ -215,7 +215,7 @@ contract DEXCheckTest is DEXBaseTest {
         }
     }
 
-    // PAIR 가 PAUSE 상태에서는 컨트랙트 오너 가 주문을 강제 취소할 수 있다.
+    // When the PAIR is in a PAUSE state, the contract owner can forcibly cancel orders.
     function test_check_emergency_cancel_case1() external {
         address seller = address(0x1);
         address buyer = address(0x2);
@@ -259,27 +259,27 @@ contract DEXCheckTest is DEXBaseTest {
         PAIR.setPause(true);
         PAIR.emergencyCancel(_orderIds);
 
-        // 주문 정보가 제거 되었는지 확인
+        // Check if the order information has been removed.
         for (uint256 i = 0; i < 2; i++) {
             IPair.Order memory order = PAIR.orderById(_orderIds[i]);
             assertEq(address(0), order.owner);
         }
-        // reserve 확인
+        // check reserve
         assertEq(0, PAIR.baseReserve());
         assertEq(0, PAIR.quoteReserve());
-        // ticks 확인
+        // check ticks
         (sellPrices, buyPrices) = PAIR.ticks();
         assertEq(0, sellPrices.length);
         assertEq(0, buyPrices.length);
-        // 잔액 확인 (PAIR)
+        // check balance (PAIR)
         assertEq(0, BASE.balanceOf(address(PAIR)));
         assertEq(0, QUOTE.balanceOf(address(PAIR)));
-        // 잔액 확인 (USER)
+        // check balance (USER)
         assertEq(amount, BASE.balanceOf(seller));
         assertEq(volume, QUOTE.balanceOf(buyer));
     }
 
-    // PAIR 가 PAUSE 상태가 아니라면 컨트랙트 오너여도 주문을 강제 취소할 수 없다.
+    // If the PAIR is not in a PAUSE state, even the contract owner cannot forcibly cancel orders.
     function test_check_emergency_cancel_case2() external {
         address seller = address(0x1);
         address buyer = address(0x2);
@@ -324,7 +324,7 @@ contract DEXCheckTest is DEXBaseTest {
         PAIR.emergencyCancel(_orderIds);
     }
 
-    // PAIR 가 PAUSE 상태에서 주문자는 cancel 을 통해서 주문을 취소할 수 있다.
+    // When the PAIR is in a PAUSE state, the order owner can cancel the order using 'cancel'.
     function test_check_emergency_cancel_case3() external {
         address user = address(0x1);
 
@@ -368,22 +368,22 @@ contract DEXCheckTest is DEXBaseTest {
         vm.prank(user);
         ROUTER.cancel(address(PAIR), _orderIds);
 
-        // 주문 정보가 제거 되었는지 확인
+        // Check if the order information has been removed.
         for (uint256 i = 0; i < 2; i++) {
             IPair.Order memory order = PAIR.orderById(_orderIds[i]);
             assertEq(address(0), order.owner);
         }
-        // reserve 확인
+        // check reserve
         assertEq(0, PAIR.baseReserve());
         assertEq(0, PAIR.quoteReserve());
-        // ticks 확인
+        // check ticks
         (sellPrices, buyPrices) = PAIR.ticks();
         assertEq(0, sellPrices.length);
         assertEq(0, buyPrices.length);
-        // 잔액 확인 (PAIR)
+        // check balance (PAIR)
         assertEq(0, BASE.balanceOf(address(PAIR)));
         assertEq(0, QUOTE.balanceOf(address(PAIR)));
-        // 잔액 확인 (USER)
+        // check balance (USER)
         assertEq(amount, BASE.balanceOf(user));
         assertEq(volume, QUOTE.balanceOf(user));
     }
@@ -417,11 +417,11 @@ contract DEXCheckTest is DEXBaseTest {
 
         uint256 fee = Math.mulDiv(volume, FEE_PERMIL, 1000);
 
-        // 수수료 확인
+        // check fee
         assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid quote fee");
         assertEq(0, BASE.balanceOf(FEE_COLLECTOR), "invalid base fee");
 
-        // 잔액 확인
+        // check balance
         assertEq(volume - fee, QUOTE.balanceOf(seller));
         assertEq(amount, BASE.balanceOf(buyer));
     }
@@ -459,11 +459,11 @@ contract DEXCheckTest is DEXBaseTest {
 
         uint256 fee = Math.mulDiv(matchVolume, FEE_PERMIL, 1000);
 
-        // 수수료 확인
+        // check fee
         assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid fee");
         assertEq(0, BASE.balanceOf(FEE_COLLECTOR), "invalid base fee");
 
-        // 잔액 확인
+        // check balance
         assertEq(matchVolume - fee, QUOTE.balanceOf(seller));
         assertEq(matchAmount, BASE.balanceOf(buyer));
     }
@@ -501,11 +501,11 @@ contract DEXCheckTest is DEXBaseTest {
 
         uint256 fee = Math.mulDiv(matchVolume, FEE_PERMIL, 1000);
 
-        // 수수료 확인
+        // check fee
         assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid fee");
         assertEq(0, BASE.balanceOf(FEE_COLLECTOR), "invalid base fee");
 
-        // 잔액 확인
+        // check balance
         assertEq(matchVolume - fee, QUOTE.balanceOf(seller));
         assertEq(matchAmount, BASE.balanceOf(buyer));
     }
@@ -539,11 +539,11 @@ contract DEXCheckTest is DEXBaseTest {
 
         uint256 fee = Math.mulDiv(volume, FEE_PERMIL, 1000);
 
-        // 수수료 확인
+        // check fee
         assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid fee");
         assertEq(0, BASE.balanceOf(FEE_COLLECTOR), "invalid base fee");
 
-        // 잔액 확인
+        // check balance
         assertEq(volume - fee, QUOTE.balanceOf(seller));
         assertEq(amount, BASE.balanceOf(buyer));
     }
@@ -581,11 +581,11 @@ contract DEXCheckTest is DEXBaseTest {
 
         uint256 fee = Math.mulDiv(matchVolume, FEE_PERMIL, 1000);
 
-        // 수수료 확인
+        // check fee
         assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid fee");
         assertEq(0, BASE.balanceOf(FEE_COLLECTOR), "invalid base fee");
 
-        // 잔액 확인
+        // check balance
         assertEq(matchVolume - fee, QUOTE.balanceOf(seller));
         assertEq(matchAmount, BASE.balanceOf(buyer));
     }
@@ -623,11 +623,11 @@ contract DEXCheckTest is DEXBaseTest {
 
         uint256 fee = Math.mulDiv(matchVolume, FEE_PERMIL, 1000);
 
-        // 수수료 확인
+        // check fee
         assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid fee");
         assertEq(0, BASE.balanceOf(FEE_COLLECTOR), "invalid base fee");
 
-        // 잔액 확인
+        // check balance
         assertEq(matchVolume - fee, QUOTE.balanceOf(seller));
         assertEq(matchAmount, BASE.balanceOf(buyer));
     }
@@ -658,7 +658,7 @@ contract DEXCheckTest is DEXBaseTest {
         QUOTE.approve(address(ROUTER), type(uint256).max);
 
         ROUTER.marketBuy(address(PAIR), volume, 0);
-        assertEq(0, QUOTE.balanceOf(buyer)); // 정확이 매칭 되었는지 확인
+        assertEq(0, QUOTE.balanceOf(buyer)); // Verify if the match was exact.
 
         (sellPrices, buyPrices) = PAIR.ticks();
         assertEq(0, sellPrices.length);
@@ -698,7 +698,7 @@ contract DEXCheckTest is DEXBaseTest {
         QUOTE.approve(address(ROUTER), type(uint256).max);
 
         ROUTER.marketBuy(address(PAIR), volume, 0);
-        assertEq(0, QUOTE.balanceOf(buyer)); // 정확이 매칭 되었는지 확인
+        assertEq(0, QUOTE.balanceOf(buyer)); // Verify if the match was exact.
 
         (sellPrices, buyPrices) = PAIR.ticks();
         assertEq(0, sellPrices.length);
@@ -739,7 +739,7 @@ contract DEXCheckTest is DEXBaseTest {
         QUOTE.approve(address(ROUTER), type(uint256).max);
 
         ROUTER.marketBuy(address(PAIR), volume, 0);
-        assertEq(0, QUOTE.balanceOf(buyer)); // 정확이 매칭 되었는지 확인
+        assertEq(0, QUOTE.balanceOf(buyer)); // Verify if the match was exact.
 
         (sellPrices, buyPrices) = PAIR.ticks();
         assertEq(0, sellPrices.length);
@@ -772,7 +772,7 @@ contract DEXCheckTest is DEXBaseTest {
         BASE.approve(address(ROUTER), type(uint256).max);
 
         ROUTER.marketSell(address(PAIR), amount, 0);
-        assertEq(0, BASE.balanceOf(seller)); // 정확이 매칭 되었는지 확인
+        assertEq(0, BASE.balanceOf(seller)); // Verify if the match was exact.
 
         (sellPrices, buyPrices) = PAIR.ticks();
         assertEq(0, sellPrices.length);
@@ -813,7 +813,7 @@ contract DEXCheckTest is DEXBaseTest {
         BASE.approve(address(ROUTER), type(uint256).max);
 
         ROUTER.marketSell(address(PAIR), amount * 2, 0);
-        assertEq(0, BASE.balanceOf(seller)); // 정확이 매칭 되었는지 확인
+        assertEq(0, BASE.balanceOf(seller)); // Verify if the match was exact.
 
         (sellPrices, buyPrices) = PAIR.ticks();
         assertEq(0, sellPrices.length);
@@ -856,7 +856,7 @@ contract DEXCheckTest is DEXBaseTest {
         BASE.approve(address(ROUTER), type(uint256).max);
 
         ROUTER.marketSell(address(PAIR), amount * 2, 0);
-        assertEq(0, BASE.balanceOf(seller)); // 정확이 매칭 되었는지 확인
+        assertEq(0, BASE.balanceOf(seller)); // Verify if the match was exact.
 
         (sellPrices, buyPrices) = PAIR.ticks();
         assertEq(0, sellPrices.length);

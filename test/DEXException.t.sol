@@ -14,7 +14,7 @@ contract DEXExceptionTest is DEXBaseTest {
         _deploy(6, 18, 1e2, 1e4);
     }
 
-    // [ROUTER] coin 을 전송 받을 수 없다.
+    // [ROUTER] Cannot receive coins.
     function test_exception_wcross_case1() external {
         vm.startPrank(OWNER);
         vm.deal(OWNER, 1);
@@ -22,7 +22,7 @@ contract DEXExceptionTest is DEXBaseTest {
         payable(address(ROUTER)).sendValue(1);
     }
 
-    // [MARKET] 등록된 BASE 토큰은 중복해서 등록할 수 없다.
+    // [MARKET] A registered BASE token cannot be registered again.
     function test_exception_market_case1() external {
         vm.prank(OWNER);
 
@@ -30,7 +30,7 @@ contract DEXExceptionTest is DEXBaseTest {
         MARKET.createPair(address(BASE), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e4, FEE_PERMIL);
     }
 
-    // [MARKET] QUOTE 와 같은 주소로 BASE를 등록할 수 없다.
+    // [MARKET] BASE cannot be registered with the same address as QUOTE.
     function test_exception_market_case2() external {
         vm.prank(OWNER);
 
@@ -38,7 +38,7 @@ contract DEXExceptionTest is DEXBaseTest {
         MARKET.createPair(address(QUOTE), QUOTE_DECIMALS / 1e2, QUOTE_DECIMALS / 1e4, FEE_PERMIL);
     }
 
-    // [Pair] Tick Size 보다 낮은 단위로 거래할 수 없다.
+    // [Pair] Trades cannot be executed in units smaller than the Tick Size.
     function test_exception_pair_case1() external {
         (uint256 quoteTickSize, uint256 baseTickSize) = (PAIR.quoteTickSize(), PAIR.baseTickSize());
 
@@ -48,35 +48,35 @@ contract DEXExceptionTest is DEXBaseTest {
         vm.startPrank(OWNER);
         BASE.approve(address(ROUTER), type(uint256).max);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        // [limit] 성공 확인
+        // [limit] check success.
         address pair = address(PAIR);
         ROUTER.limitSell(pair, quoteTickSize * 2, baseTickSize, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         ROUTER.limitBuy(pair, quoteTickSize, baseTickSize, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
 
-        // [limit] 실패 확인
+        // [limit] check fail.
         vm.expectRevert(abi.encodeWithSignature("PairInvalidPrice(uint256)", invalidPrice));
         ROUTER.limitSell(pair, invalidPrice, baseTickSize, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
 
-        // [limit] 실패 확인
+        // [limit] check fail.
         vm.expectRevert(abi.encodeWithSignature("PairInvalidAmount(uint256)", invalidAmount));
         ROUTER.limitSell(pair, quoteTickSize, invalidAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
 
-        // [market] 성공 확인
+        // [market] check success.
         uint256 denominator = PAIR.DENOMINATOR();
         uint256 volume = Math.mulDiv(quoteTickSize, baseTickSize, denominator);
         ROUTER.marketSell(pair, baseTickSize, 0);
         ROUTER.marketBuy(pair, volume, 0);
 
-        // [market] 실패 확인
+        // [market] check fail.
         vm.expectRevert(abi.encodeWithSignature("PairInvalidAmount(uint256)", invalidAmount));
         ROUTER.marketSell(pair, invalidAmount, 0);
 
-        // [market] 실패 확인
+        // [market] check fail.
         vm.expectRevert(abi.encodeWithSignature("PairInsufficientTradeVolume(uint256,uint256)", volume - 1, volume));
         ROUTER.marketBuy(pair, volume - 1, 0);
     }
 
-    // [Pair] 사용자는 직접 Pair 으로 거래를 요청할 수 없다.
+    // [Pair] Users cannot directly request trades through the Pair.
     function test_exception_pair_case2() external {
         vm.startPrank(OWNER);
         BASE.approve(address(PAIR), type(uint256).max);

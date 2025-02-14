@@ -181,7 +181,7 @@ contract DexWrapBaseTest is DEXBaseTest {
         vm.assertEq(0, WCross.balanceOf(address(PAIR)));
     }
 
-    // EOA 는 토큰 형태로 WETH를 가질 수 없다.
+    // An EOA cannot hold WCROSS in token form.
     function test_wrap_check() external wrapBase {
         vm.startPrank(OWNER);
         vm.deal(OWNER, 100);
@@ -193,7 +193,7 @@ contract DexWrapBaseTest is DEXBaseTest {
         assertEq(beforeBalance, OWNER.balance);
     }
 
-    // msg.value 가 맞지 않으면 에러를 리턴한다.
+    // Returns an error if msg.value is incorrect.
     function test_wrap_exception_case1() external wrapBase {
         address seller = address(0x1);
         vm.label(seller, "seller");
@@ -211,7 +211,7 @@ contract DexWrapBaseTest is DEXBaseTest {
         ROUTER.marketSell{value: amount + 1}(address(PAIR), amount, 0);
     }
 
-    // msg.value 가 맞지 않으면 에러를 리턴한다.
+    // Returns an error if msg.value is incorrect.
     function test_wrap_exception_case2() external wrapQuote {
         address buyer = address(0x1);
         vm.label(buyer, "buyer");
