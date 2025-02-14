@@ -1387,4 +1387,176 @@ contract DEXTradeTest is DEXBaseTest {
         assertEq(usedBaseAmount, checkBaseBalance);
         assertEq(usedQuoteAmount, checkQuoteBalance);
     }
+
+    function test_trade_ioc_case1() external {
+        // No order information is created because the order was placed via IOC.
+        // (Remaining balance is returned.)
+
+        address seller1 = address(0x1);
+        address seller2 = address(0x2);
+        address seller3 = address(0x3);
+        address buyer = address(0x4);
+
+        uint256 price1 = _toQuote(1);
+        uint256 price2 = _toQuote(2);
+        uint256 price3 = _toQuote(3);
+
+        uint256 amount = _toBase(10);
+
+        vm.startPrank(OWNER);
+        BASE.transfer(seller1, amount);
+        BASE.transfer(seller2, amount);
+        BASE.transfer(seller3, amount);
+        QUOTE.transfer(buyer, _toTradeVolume(price2, amount * 2));
+        vm.stopPrank();
+
+        {
+            // sell orders
+            vm.startPrank(seller1);
+            BASE.approve(address(ROUTER), type(uint256).max);
+            ROUTER.limitSell(address(PAIR), price1, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+            vm.startPrank(seller2);
+            BASE.approve(address(ROUTER), type(uint256).max);
+            ROUTER.limitSell(address(PAIR), price2, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+            vm.startPrank(seller3);
+            BASE.approve(address(ROUTER), type(uint256).max);
+            ROUTER.limitSell(address(PAIR), price3, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+            vm.stopPrank();
+        }
+
+        (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+        assertEq(3, sellPrices.length);
+        assertEq(0, buyPrices.length);
+        {
+            // buy order
+            vm.startPrank(buyer);
+            QUOTE.approve(address(ROUTER), type(uint256).max);
+            ROUTER.limitBuy(address(PAIR), price2, amount * 2, IPair.LimitConstraints.IMMEDIATE_OR_CANCEL, 0, 0);
+        }
+        // check ticks
+        (sellPrices, buyPrices) = PAIR.ticks();
+        assertEq(1, sellPrices.length);
+        assertEq(0, buyPrices.length); // no new ticks
+        // check return remaining balance
+        assertEq(_toQuote(10), QUOTE.balanceOf(buyer));
+        // check buy base balance
+        assertEq(_toBase(20), BASE.balanceOf(buyer));
+    }
+
+    function test_trade_ioc_case2() external {
+        // No order information is created because the order was placed via IOC.
+        // (Remaining balance is returned.)
+
+        address buyer1 = address(0x1);
+        address buyer2 = address(0x2);
+        address buyer3 = address(0x3);
+        address seller = address(0x4);
+
+        uint256 price1 = _toQuote(1);
+        uint256 price2 = _toQuote(2);
+        uint256 price3 = _toQuote(3);
+
+        uint256 amount = _toBase(10);
+
+        vm.startPrank(OWNER);
+        QUOTE.transfer(buyer1, _toTradeVolume(price1, amount));
+        QUOTE.transfer(buyer2, _toTradeVolume(price2, amount));
+        QUOTE.transfer(buyer3, _toTradeVolume(price3, amount));
+        BASE.transfer(seller, _toBase(30));
+        vm.stopPrank();
+
+        {
+            // buy orders
+            vm.startPrank(buyer1);
+            QUOTE.approve(address(ROUTER), type(uint256).max);
+            ROUTER.limitBuy(address(PAIR), price1, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+            vm.startPrank(buyer2);
+            QUOTE.approve(address(ROUTER), type(uint256).max);
+            ROUTER.limitBuy(address(PAIR), price2, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+            vm.startPrank(buyer3);
+            QUOTE.approve(address(ROUTER), type(uint256).max);
+            ROUTER.limitBuy(address(PAIR), price3, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+            vm.stopPrank();
+        }
+
+        (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+        assertEq(0, sellPrices.length);
+        assertEq(3, buyPrices.length);
+        {
+            // sell order
+            vm.startPrank(seller);
+            BASE.approve(address(ROUTER), type(uint256).max);
+            ROUTER.limitSell(address(PAIR), price2, amount * 3, IPair.LimitConstraints.IMMEDIATE_OR_CANCEL, 0, 0);
+        }
+        // check ticks
+        (sellPrices, buyPrices) = PAIR.ticks();
+        assertEq(0, sellPrices.length); // no new ticks
+        assertEq(1, buyPrices.length);
+        // check return remaining balance
+        assertEq(_toBase(10), BASE.balanceOf(seller));
+        // check sell quote balance
+        assertEq(_toQuote((3 * 10) + (2 * 10)), QUOTE.balanceOf(seller));
+    }
+
+    function test_trade_fok_case1() external {
+        address seller = address(0x1);
+        address buyer = address(0x2);
+
+        uint256 price = _toQuote(1);
+        uint256 amount = _toBase(10);
+
+        vm.startPrank(OWNER);
+        BASE.transfer(seller, amount);
+        QUOTE.transfer(buyer, _toTradeVolume(price, amount * 2));
+        vm.stopPrank();
+        {
+            // sell
+            vm.startPrank(seller);
+            BASE.approve(address(ROUTER), type(uint256).max);
+            ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+            vm.stopPrank();
+        }
+        {
+            // buy more
+            vm.startPrank(buyer);
+            QUOTE.approve(address(ROUTER), type(uint256).max);
+            vm.expectRevert(abi.encodeWithSignature("PairFillOrKill(address)", buyer));
+            ROUTER.limitBuy(address(PAIR), price, amount * 2, IPair.LimitConstraints.FILL_OR_KILL, 0, 0);
+        }
+
+        (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+        assertEq(1, sellPrices.length);
+        assertEq(0, buyPrices.length);
+    }
+
+    function test_trade_fok_case2() external {
+        address seller = address(0x1);
+        address buyer = address(0x2);
+
+        uint256 price = _toQuote(1);
+        uint256 amount = _toBase(10);
+
+        vm.startPrank(OWNER);
+        BASE.transfer(seller, amount * 2);
+        QUOTE.transfer(buyer, _toTradeVolume(price, amount));
+        vm.stopPrank();
+        {
+            // buy
+            vm.startPrank(buyer);
+            QUOTE.approve(address(ROUTER), type(uint256).max);
+            ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        }
+        {
+            // sell  more
+            vm.startPrank(seller);
+            BASE.approve(address(ROUTER), type(uint256).max);
+            vm.expectRevert(abi.encodeWithSignature("PairFillOrKill(address)", seller));
+            ROUTER.limitSell(address(PAIR), price, amount * 2, IPair.LimitConstraints.FILL_OR_KILL, 0, 0);
+            vm.stopPrank();
+        }
+
+        (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+        assertEq(0, sellPrices.length);
+        assertEq(1, buyPrices.length);
+    }
 }

@@ -88,4 +88,8 @@ contract DEXBaseTest is Test {
     function _toQuote(uint256 x) internal view returns (uint256) {
         return x * QUOTE_DECIMALS;
     }
+
+    function _toTradeVolume(uint256 price, uint256 amount) internal view returns (uint256) {
+        return Math.mulDiv(price, amount, BASE_DECIMALS);
+    }
 }
