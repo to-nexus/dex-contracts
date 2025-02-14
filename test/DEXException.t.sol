@@ -50,16 +50,16 @@ contract DEXExceptionTest is DEXBaseTest {
         QUOTE.approve(address(ROUTER), type(uint256).max);
         // [limit] 성공 확인
         address pair = address(PAIR);
-        ROUTER.limitSell(pair, quoteTickSize * 2, baseTickSize, 0, 0);
-        ROUTER.limitBuy(pair, quoteTickSize, baseTickSize, 0, 0);
+        ROUTER.limitSell(pair, quoteTickSize * 2, baseTickSize, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitBuy(pair, quoteTickSize, baseTickSize, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
 
         // [limit] 실패 확인
         vm.expectRevert(abi.encodeWithSignature("PairInvalidPrice(uint256)", invalidPrice));
-        ROUTER.limitSell(pair, invalidPrice, baseTickSize, 0, 0);
+        ROUTER.limitSell(pair, invalidPrice, baseTickSize, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
 
         // [limit] 실패 확인
         vm.expectRevert(abi.encodeWithSignature("PairInvalidAmount(uint256)", invalidAmount));
-        ROUTER.limitSell(pair, quoteTickSize, invalidAmount, 0, 0);
+        ROUTER.limitSell(pair, quoteTickSize, invalidAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
 
         // [market] 성공 확인
         uint256 denominator = PAIR.DENOMINATOR();
@@ -92,6 +92,7 @@ contract DEXExceptionTest is DEXBaseTest {
                 price: _toQuote(1),
                 amount: _toBase(1)
             }),
+            IPair.LimitConstraints.GOOD_TILL_CANCEL,
             0,
             0
         );
@@ -106,6 +107,7 @@ contract DEXExceptionTest is DEXBaseTest {
                 price: _toQuote(1),
                 amount: _toBase(1)
             }),
+            IPair.LimitConstraints.GOOD_TILL_CANCEL,
             0,
             0
         );
@@ -126,42 +128,4 @@ contract DEXExceptionTest is DEXBaseTest {
             0
         );
     }
-
-    // // [Pair] 다른 ROUTER 으로 거래를 요청할 수 없다.
-    // function test_exception_pair_case3() external {
-    //     address pair = address(PAIR);
-
-    //     vm.startPrank(OWNER);
-    //     // ROUTER 로는 거래할 수 있다.
-    //     BASE.approve(address(ROUTER), type(uint256).max);
-    //     QUOTE.approve(address(ROUTER), type(uint256).max);
-    //     ROUTER.limitSell(pair, _toQuote(1), _toBase(1), 0, 0);
-    //     ROUTER.limitBuy(pair, _toQuote(1), _toBase(1), 0, 0);
-    //     ROUTER.marketSell(pair, _toBase(1), 0);
-    //     ROUTER.marketBuy(pair, _toQuote(1), 0);
-
-    //     // R 배포
-    //     address routerImpl = address(new RouterImpl());
-    //     address router = address(new ERC1967Proxy(routerImpl, ""));
-    //     RouterImpl R = RouterImpl(payable(router));
-    //     R.initialize(payable(address(WCross)), type(uint256).max);
-
-    //     // R 에 Pair 등록
-    //     R.addPair(pair);
-
-    //     BASE.approve(router, type(uint256).max);
-    //     QUOTE.approve(router, type(uint256).max);
-
-    //     // R 로 주문은 넣을수 없다.
-    //     vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", router));
-    //     R.limitSell(pair, _toQuote(1), _toBase(1), 0, 0);
-    //     vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", router));
-    //     R.limitBuy(pair, _toQuote(1), _toBase(1), 0, 0);
-    //     vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", router));
-    //     R.marketSell(pair, _toBase(1), 0);
-    //     vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", router));
-    //     R.marketBuy(pair, _toQuote(1), 0);
-
-    //     vm.stopPrank();
-    // }
 }

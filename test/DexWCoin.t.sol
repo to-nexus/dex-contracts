@@ -21,7 +21,7 @@ contract DexWrapBaseTest is DEXBaseTest {
 
         vm.deal(seller, amount);
         vm.prank(seller);
-        ROUTER.limitSell{value: amount}(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitSell{value: amount}(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
 
         vm.assertEq(0, payable(seller).balance);
         vm.assertEq(0, payable(buyer).balance);
@@ -66,7 +66,7 @@ contract DexWrapBaseTest is DEXBaseTest {
         QUOTE.transfer(buyer, volume);
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitBuy(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         vm.assertEq(0, payable(seller).balance);
@@ -108,7 +108,7 @@ contract DexWrapBaseTest is DEXBaseTest {
         BASE.transfer(seller, amount);
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitSell(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         vm.assertEq(0, payable(seller).balance);
@@ -150,7 +150,7 @@ contract DexWrapBaseTest is DEXBaseTest {
         uint256 volume = Math.mulDiv(price, amount, BASE_DECIMALS);
         vm.deal(buyer, volume);
         vm.prank(buyer);
-        ROUTER.limitBuy{value: volume}(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitBuy{value: volume}(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
 
         vm.assertEq(0, payable(seller).balance);
         vm.assertEq(0, payable(buyer).balance);
@@ -204,7 +204,7 @@ contract DexWrapBaseTest is DEXBaseTest {
         vm.deal(seller, amount + 1);
         vm.prank(seller);
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidValue()"));
-        ROUTER.limitSell{value: amount + 1}(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitSell{value: amount + 1}(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
 
         vm.prank(seller);
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidValue()"));
@@ -223,7 +223,7 @@ contract DexWrapBaseTest is DEXBaseTest {
         vm.deal(buyer, volume + 1);
         vm.prank(buyer);
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidValue()"));
-        ROUTER.limitBuy{value: volume + 1}(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitBuy{value: volume + 1}(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
 
         vm.prank(buyer);
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidValue()"));
