@@ -863,6 +863,60 @@ contract DEXCheckTest is DEXBaseTest {
         assertEq(0, buyPrices.length);
     }
 
+    function test_check_gas_case7() external {
+        address seller = address(0x1);
+        address buyer = address(0x2);
+
+        uint256 price = _toQuote(1);
+        uint256 amount = _toBase(1);
+        uint256 loopCount = 50;
+
+        vm.prank(OWNER);
+        BASE.transfer(seller, amount * loopCount);
+        vm.prank(OWNER);
+        QUOTE.transfer(buyer, price * loopCount);
+
+        vm.startPrank(seller);
+        BASE.approve(address(ROUTER), type(uint256).max);
+        for (uint256 i = 0; i < loopCount; i++) {
+            ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        }
+        vm.startPrank(buyer);
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        ROUTER.marketBuy(address(PAIR), price * loopCount, 0);
+
+        (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+        assertEq(0, sellPrices.length);
+        assertEq(0, buyPrices.length);
+    }
+
+    function test_check_gas_case8() external {
+        address seller = address(0x1);
+        address buyer = address(0x2);
+
+        uint256 price = _toQuote(1);
+        uint256 amount = _toBase(1);
+        uint256 loopCount = 50;
+
+        vm.prank(OWNER);
+        BASE.transfer(seller, amount * loopCount);
+        vm.prank(OWNER);
+        QUOTE.transfer(buyer, price * loopCount);
+
+        vm.startPrank(buyer);
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        for (uint256 i = 0; i < loopCount; i++) {
+            ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        }
+        vm.startPrank(seller);
+        BASE.approve(address(ROUTER), type(uint256).max);
+        ROUTER.marketSell(address(PAIR), amount * loopCount, 0);
+
+        (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+        assertEq(0, sellPrices.length);
+        assertEq(0, buyPrices.length);
+    }
+
     function test_check_skim_case1() external {
         address seller = address(0x1);
 
