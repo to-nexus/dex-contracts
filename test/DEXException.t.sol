@@ -14,31 +14,6 @@ contract DEXExceptionTest is DEXBaseTest {
         _deploy(6, 18, 1e2, 1e4);
     }
 
-    // // [ROUTER] 제거된 Pair 는 거래 할 수 없다.
-    // function test_exception_router_case1() external {
-    //     vm.startPrank(OWNER);
-    //     address pair = address(PAIR);
-    //     ROUTER.removePair(pair); // 등록된 PAIR 제거
-
-    //     BASE.approve(address(ROUTER), type(uint256).max);
-    //     QUOTE.approve(address(ROUTER), type(uint256).max);
-
-    //     // 거래 및 실패 확인
-    //     vm.expectRevert(abi.encodeWithSignature("RouterInvalidPairAddress(address)", pair));
-    //     ROUTER.limitSell(pair, 1e18, 1e18, 0, 0);
-
-    //     vm.expectRevert(abi.encodeWithSignature("RouterInvalidPairAddress(address)", pair));
-    //     ROUTER.limitBuy(pair, 1e18, 1e18, 0, 0);
-
-    //     vm.expectRevert(abi.encodeWithSignature("RouterInvalidPairAddress(address)", pair));
-    //     ROUTER.marketSell(pair, 1e18, 0);
-
-    //     vm.expectRevert(abi.encodeWithSignature("RouterInvalidPairAddress(address)", pair));
-    //     ROUTER.marketBuy(pair, 1e18, 0);
-
-    //     vm.stopPrank();
-    // }
-
     // [ROUTER] coin 을 전송 받을 수 없다.
     function test_exception_wcross_case1() external {
         vm.startPrank(OWNER);
@@ -53,6 +28,14 @@ contract DEXExceptionTest is DEXBaseTest {
 
         vm.expectRevert(abi.encodeWithSignature("MarketAlreadyCreatedBaseAddress(address)", address(BASE)));
         MARKET.createPair(address(BASE), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e4, FEE_PERMIL);
+    }
+
+    // [MARKET] QUOTE 와 같은 주소로 BASE를 등록할 수 없다.
+    function test_exception_market_case2() external {
+        vm.prank(OWNER);
+
+        vm.expectRevert(abi.encodeWithSignature("MarketInvalidBaseAddress(address)", address(QUOTE)));
+        MARKET.createPair(address(QUOTE), QUOTE_DECIMALS / 1e2, QUOTE_DECIMALS / 1e4, FEE_PERMIL);
     }
 
     // [Pair] Tick Size 보다 낮은 단위로 거래할 수 없다.
