@@ -191,8 +191,8 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         uint256 mustRemainQuoteAmount;
         (bool isSellOrder) = order.side == OrderSide.SELL;
         (order, mustRemainQuoteAmount) = isSellOrder
-            ? _createSellOrder(orderId, order, maxMatchCount)
-            : _createBuyOrder(orderId, order, 0, maxMatchCount);
+            ? _executeSellOrder(orderId, order, maxMatchCount)
+            : _executeBuyOrder(orderId, order, 0, maxMatchCount);
 
         if (order.amount == 0) {
             emit OrderClosed(orderId, CloseType.ALL_MATCH, block.timestamp);
@@ -240,14 +240,14 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
             order.amount = spendAmount;
 
             // Return the remaining balance.
-            (order, mustRemainQuoteAmount) = _createSellOrder(orderId, order, maxMatchCount);
+            (order, mustRemainQuoteAmount) = _executeSellOrder(orderId, order, maxMatchCount);
             if (order.amount != 0) BASE.safeTransfer(order.owner, order.amount);
         } else {
             if (spendAmount < minTradeVolume) revert PairInsufficientTradeVolume(spendAmount, minTradeVolume);
             order.price = type(uint256).max; // For buying, the price is increased until the entire spendAmount is exhausted.
 
             // Return the remaining balance.
-            (order, mustRemainQuoteAmount) = _createBuyOrder(orderId, order, spendAmount, maxMatchCount);
+            (order, mustRemainQuoteAmount) = _executeBuyOrder(orderId, order, spendAmount, maxMatchCount);
             _returnRemainQuote(order.owner, mustRemainQuoteAmount);
         }
 
@@ -276,7 +276,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
     //  #      #   #  #  #  #  #    #   #   #      #    #
     //  #      #    # #   ##   #    #   #   ######  ####
 
-    function _createSellOrder(uint256 orderId, Order memory order, uint256 maxMatchCount)
+    function _executeSellOrder(uint256 orderId, Order memory order, uint256 maxMatchCount)
         private
         returns (Order memory, uint256)
     {
@@ -290,7 +290,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         //    For a SELL order, search from the most expensive price in the BUY list
         //    and only match with buy orders that have a price equal to or higher than the input price.
         uint256 earnQuoteAmount;
-        (order, earnQuoteAmount) = _tradeSellOrder(orderId, order, maxMatchCount);
+        (order, earnQuoteAmount) = _matchSellOrder(orderId, order, maxMatchCount);
 
         // 3. Immediately transfer the proceeds from the trade to the seller.
         if (earnQuoteAmount != 0) {
@@ -307,7 +307,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         return (order, 0);
     }
 
-    function _createBuyOrder(
+    function _executeBuyOrder(
         uint256 orderId,
         Order memory order,
         uint256 spendQuoteAmount, // Set this value if it is a Market Order.
@@ -329,7 +329,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         //    For a BUY order, search from the cheapest price in the SELL list
         //    and only match with sell orders that have a price equal to or lower than the input price.
         (Order memory tradedOrder, uint256 buyBaseAmount) =
-            _tradeBuyOrder(orderId, order, spendQuoteAmount, maxMatchCount);
+            _matchBuyOrder(orderId, order, spendQuoteAmount, maxMatchCount);
 
         // 3. Transfer the immediately settled BASE tokens.
         if (buyBaseAmount != 0) {
@@ -343,7 +343,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
 
     // For a SELL order, search from the most expensive price in the BUY list
     // and only execute trades where order.price is equal to or lower than the buy order price.
-    function _tradeSellOrder(uint256 orderId, Order memory order, uint256 maxMatchCount)
+    function _matchSellOrder(uint256 orderId, Order memory order, uint256 maxMatchCount)
         private
         returns (Order memory cOrder, uint256 earnQuoteAmount)
     {
@@ -392,7 +392,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
 
     // For a BUY order, search from the cheapest price in the SELL list
     // and only execute trades where the sell order price is equal to or lower than the input price.
-    function _tradeBuyOrder(
+    function _matchBuyOrder(
         uint256 orderId,
         Order memory order,
         uint256 quoteAmount, // Quote amount to be used for Market trades.
