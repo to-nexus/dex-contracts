@@ -21,7 +21,7 @@ contract DexWrapBaseTest is DEXBaseTest {
 
         vm.deal(seller, amount);
         vm.prank(seller);
-        ROUTER.limitSell{value: amount}(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitSell{value: amount}(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
 
         vm.assertEq(0, payable(seller).balance);
         vm.assertEq(0, payable(buyer).balance);
@@ -66,7 +66,7 @@ contract DexWrapBaseTest is DEXBaseTest {
         QUOTE.transfer(buyer, volume);
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitBuy(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         vm.assertEq(0, payable(seller).balance);
@@ -108,7 +108,7 @@ contract DexWrapBaseTest is DEXBaseTest {
         BASE.transfer(seller, amount);
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitSell(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         vm.assertEq(0, payable(seller).balance);
@@ -150,7 +150,7 @@ contract DexWrapBaseTest is DEXBaseTest {
         uint256 volume = Math.mulDiv(price, amount, BASE_DECIMALS);
         vm.deal(buyer, volume);
         vm.prank(buyer);
-        ROUTER.limitBuy{value: volume}(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitBuy{value: volume}(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
 
         vm.assertEq(0, payable(seller).balance);
         vm.assertEq(0, payable(buyer).balance);
@@ -181,7 +181,7 @@ contract DexWrapBaseTest is DEXBaseTest {
         vm.assertEq(0, WCross.balanceOf(address(PAIR)));
     }
 
-    // EOA 는 토큰 형태로 WETH를 가질 수 없다.
+    // An EOA cannot hold WCROSS in token form.
     function test_wrap_check() external wrapBase {
         vm.startPrank(OWNER);
         vm.deal(OWNER, 100);
@@ -193,7 +193,7 @@ contract DexWrapBaseTest is DEXBaseTest {
         assertEq(beforeBalance, OWNER.balance);
     }
 
-    // msg.value 가 맞지 않으면 에러를 리턴한다.
+    // Returns an error if msg.value is incorrect.
     function test_wrap_exception_case1() external wrapBase {
         address seller = address(0x1);
         vm.label(seller, "seller");
@@ -204,14 +204,14 @@ contract DexWrapBaseTest is DEXBaseTest {
         vm.deal(seller, amount + 1);
         vm.prank(seller);
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidValue()"));
-        ROUTER.limitSell{value: amount + 1}(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitSell{value: amount + 1}(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
 
         vm.prank(seller);
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidValue()"));
         ROUTER.marketSell{value: amount + 1}(address(PAIR), amount, 0);
     }
 
-    // msg.value 가 맞지 않으면 에러를 리턴한다.
+    // Returns an error if msg.value is incorrect.
     function test_wrap_exception_case2() external wrapQuote {
         address buyer = address(0x1);
         vm.label(buyer, "buyer");
@@ -223,7 +223,7 @@ contract DexWrapBaseTest is DEXBaseTest {
         vm.deal(buyer, volume + 1);
         vm.prank(buyer);
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidValue()"));
-        ROUTER.limitBuy{value: volume + 1}(address(PAIR), price, amount, 0, 0);
+        ROUTER.limitBuy{value: volume + 1}(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
 
         vm.prank(buyer);
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidValue()"));

@@ -25,9 +25,9 @@ contract WCROSS is ERC20 {
 
     function _update(address from, address to, uint256 value) internal override {
         super._update(from, to, value);
-        // burn 이 아닌경우 Router 또는 Pair가 아닌 경우에만 burn 후 transfer
+        // [If it is not a burn case] If to is not the Pair, perform burn and then transfer.
         if (to != address(0)) {
-            if (!(to == ROUTER || IRouter(ROUTER).isPair(to))) {
+            if (!IRouter(ROUTER).isPair(to)) {
                 _burn(to, value);
                 payable(to).sendValue(value);
             }

@@ -81,7 +81,7 @@ contract MarketImpl is IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
         onlyOwner
         returns (address pair)
     {
-        if (base == address(0)) revert MarketInvalidBaseAddress(base);
+        if (base == address(0) || base == address(QUOTE)) revert MarketInvalidBaseAddress(base);
         uint256 baseDecimals = IERC20Metadata(base).decimals();
         if (baseDecimals == 0) revert MarketInvalidBaseAddress(base);
         if (_allPairs.contains(base)) revert MarketAlreadyCreatedBaseAddress(base);

@@ -17,7 +17,8 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         IPair.Order memory callOrder = PAIR.orderById(orderId);
@@ -39,7 +40,8 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId = ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId =
+            ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         IPair.Order memory callOrder = PAIR.orderById(orderId);
@@ -65,7 +67,8 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user1);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId1 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId1 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
 
         vm.stopPrank();
 
@@ -74,21 +77,22 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user2);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId2 = ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId2 =
+            ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertEq(address(0), order2.owner, "order2, not deleted");
-        // PAIR 에는 잔액이 없는지 확인
+        // Verify that the PAIR has no remaining balance.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(100), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user2), 0, "QUOTE user2");
         assertEq(BASE.balanceOf(user2), _toBase(100), "BASE user2");
     }
@@ -106,7 +110,8 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user1);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId1 = ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId1 =
+            ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
@@ -114,27 +119,28 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user2);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId2 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId2 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertEq(address(0), order2.owner, "order2, not deleted");
-        // PAIR 에는 잔액이 없는지 확인
+        // Verify that the PAIR has no remaining balance.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user1), 0, "QUOTE user1");
         assertEq(BASE.balanceOf(user1), _toBase(100), "BASE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user2), 0, "BASE user2");
         assertEq(QUOTE.balanceOf(user2), _toQuote(100), "QUOTE user2");
     }
 
     function test_trade_limit_sell_less_limit_buy() external {
-        // 100개를 판매하고, 50개를 구매한다.
+        // SELL 100, BUY 50
         address user1 = address(0x1);
         address user2 = address(0x2);
         vm.label(user1, "user1");
@@ -147,7 +153,8 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user1);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId1 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId1 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
@@ -155,28 +162,29 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user2);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId2 = ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(50), 0, 0);
+        uint256 orderId2 =
+            ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(50), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         assertNotEq(address(0), order1.owner, "order1, deleted");
         assertEq(address(0), order2.owner, "order2, not deleted");
-        // PAIR 에는 BASE 토큰이 50 개 남아있는지 확인
-        // QUOTE 는 없어야 한다.
+        // Verify that the PAIR has 50 BASE tokens remaining.
+        // QUOTE should have a balance of zero.
         assertEq(BASE.balanceOf(address(PAIR)), _toBase(50), "BASE PAIR");
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(50), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user2), 0, "QUOTE user2");
         assertEq(BASE.balanceOf(user2), _toBase(50), "BASE user2");
     }
 
     function test_trade_limit_buy_less_limit_sell() external {
-        // 100개 구매를 요청하고 50개를 판매한다.
+        // BUY: 100, SELL: 50
         address user1 = address(0x1);
         address user2 = address(0x2);
         vm.label(user1, "user1");
@@ -189,7 +197,8 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user1);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId1 = ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId1 =
+            ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
@@ -197,10 +206,11 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user2);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId2 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(50), 0, 0);
+        uint256 orderId2 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(50), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         assertNotEq(address(0), order1.owner, "order1, deleted");
@@ -208,16 +218,16 @@ contract DEXTradeTest is DEXBaseTest {
         // PAIR 50 QUOTE 가 남아 있어야 한다.
         assertEq(QUOTE.balanceOf(address(PAIR)), _toQuote(50), "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user1), 0, "QUOTE user1");
         assertEq(BASE.balanceOf(user1), _toBase(50), "BASE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user2), 0, "BASE user2");
         assertEq(QUOTE.balanceOf(user2), _toQuote(50), "QUOTE user2");
     }
 
     function test_trade_limit_sell_over_limit_buy() external {
-        // 100개를 판매하고, 200개를 구매한다.
+        // SELL: 100, BUY: 200
         address user1 = address(0x1);
         address user2 = address(0x2);
         vm.label(user1, "user1");
@@ -230,7 +240,8 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user1);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId1 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId1 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
@@ -238,28 +249,29 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user2);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId2 = ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(200), 0, 0);
+        uint256 orderId2 =
+            ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(200), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertNotEq(address(0), order2.owner, "order2, deleted");
-        // PAIR 에는 QUOTE 토큰이 100 개 남아있는지 확인
-        // BASE 는 없어야 한다.
+        // Verify that the PAIR has 100 QUOTE tokens remaining.
+        // BASE should have a balance of zero.
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
         assertEq(QUOTE.balanceOf(address(PAIR)), _toQuote(100), "QUOTE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(100), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
-        assertEq(QUOTE.balanceOf(user2), 0, "QUOTE user2"); // 컨트랙트에 남아있다.
+        // [user2] Verify that the exchange transaction was successfully executed.
+        assertEq(QUOTE.balanceOf(user2), 0, "QUOTE user2"); // Remains in the contract.
         assertEq(BASE.balanceOf(user2), _toBase(100), "BASE user2");
     }
 
     function test_trade_limit_buy_over_limit_sell() external {
-        // 100개 구매를 요청하고 200개를 판매한다.
+        // BUY: 100, SELL: 200
         address user1 = address(0x1);
         address user2 = address(0x2);
         vm.label(user1, "user1");
@@ -272,7 +284,8 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user1);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId1 = ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId1 =
+            ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
@@ -280,27 +293,28 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user2);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId2 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(200), 0, 0);
+        uint256 orderId2 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(200), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertNotEq(address(0), order2.owner, "order2, deleted");
-        // PAIR 100 BASE 가 남아 있어야 한다.
+        // PAIR should have 100 BASE remaining.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), _toBase(100), "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user1), 0, "QUOTE user1");
         assertEq(BASE.balanceOf(user1), _toBase(100), "BASE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
-        assertEq(BASE.balanceOf(user2), 0, "BASE user2"); // 100 개는 PAIR 에서 보유
-        assertEq(QUOTE.balanceOf(user2), _toQuote(100), "QUOTE user2"); // 100개를 판 만큼의 수익이 들어와 있어야 한다.
+        // [user2] Verify that the exchange transaction was successfully executed.
+        assertEq(BASE.balanceOf(user2), 0, "BASE user2"); // 100 BASE are held by the PAIR.
+        assertEq(QUOTE.balanceOf(user2), _toQuote(100), "QUOTE user2");
     }
 
     function test_trade_multi_limit_sell_limit_buy_all_match() external {
-        // 동일 가격으로 2명의 유저가 판매하고 한 유저가 구매한다.
+        // Two users sell at the same price, and one user buys.
         address user1 = address(0x1);
         address user2 = address(0x2);
         address user3 = address(0x3);
@@ -316,12 +330,14 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user1);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId1 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId1 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         vm.startPrank(user2);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId2 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId2 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
@@ -331,32 +347,33 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user3);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId3 = ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(200), 0, 0);
+        uint256 orderId3 =
+            ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(200), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertEq(address(0), order2.owner, "order2, not deleted");
         assertEq(address(0), order3.owner, "order3, not deleted");
-        // PAIR 에는 잔액이 없는지 확인
+        // Verify that the PAIR has no remaining balance.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(100), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user2), 0, "BASE user2");
         assertEq(QUOTE.balanceOf(user2), _toQuote(100), "QUOTE user2");
-        // [user3] 거래 잔액이 잘 전송 되었는지 확인
+        // [user3] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user3), 0, "QUOTE user3");
         assertEq(BASE.balanceOf(user3), _toBase(200), "BASE user3");
     }
 
     function test_trade_multi_limit_buy_limit_sell_all_match() external {
-        // 동일 가격으로 2명의 유저가 구매하고 한 유저가 판매한다.
+        // Two users buy at the same price, and one user sells.
         address user1 = address(0x1);
         address user2 = address(0x2);
         address user3 = address(0x3);
@@ -372,12 +389,14 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user1);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId1 = ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId1 =
+            ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         vm.startPrank(user2);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId2 = ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId2 =
+            ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
@@ -387,32 +406,33 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user3);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId3 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(200), 0, 0);
+        uint256 orderId3 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(200), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertEq(address(0), order2.owner, "order2, not deleted");
         assertEq(address(0), order3.owner, "order3, not deleted");
-        // PAIR 에는 잔액이 없는지 확인
+        // Verify that the PAIR has no remaining balance.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user1), 0, "QUOTE user1");
         assertEq(BASE.balanceOf(user1), _toBase(100), "BASE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user2), 0, "QUOTE user2");
         assertEq(BASE.balanceOf(user2), _toBase(100), "BASE user2");
-        // [user3] 거래 잔액이 잘 전송 되었는지 확인
+        // [user3] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user3), _toQuote(200), "QUOTE user3");
         assertEq(BASE.balanceOf(user3), 0, "BASE user3");
     }
 
     function test_trade_multi_limit_sell_less_limit_buy() external {
-        // 동일 가격으로 2명의 유저가 판매하고 한 유저가 구매한다.
+        // Two users sell at the same price, and one user buys.
         address user1 = address(0x1);
         address user2 = address(0x2);
         address user3 = address(0x3);
@@ -428,12 +448,14 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user1);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId1 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId1 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         vm.startPrank(user2);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId2 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId2 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
@@ -443,32 +465,33 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user3);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId3 = ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(150), 0, 0);
+        uint256 orderId3 =
+            ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(150), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertNotEq(address(0), order2.owner, "order2, deleted");
         assertEq(address(0), order3.owner, "order3, not deleted");
-        // PAIR 에는 50 개의 BASE 가 있어야 한다.
+        // Verify that the PAIR has 50 BASE tokens remaining.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), _toBase(50), "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(100), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user2), 0, "BASE user2");
         assertEq(QUOTE.balanceOf(user2), _toQuote(50), "QUOTE user2");
-        // [user3] 거래 잔액이 잘 전송 되었는지 확인
+        // [user3] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user3), 0, "QUOTE user3");
         assertEq(BASE.balanceOf(user3), _toBase(150), "BASE user3");
     }
 
     function test_trade_multi_limit_buy_less_limit_sell() external {
-        // 동일 가격으로 2명의 유저가 판매하고 한 유저가 구매한다.
+        // Two users sell at the same price, and one user buys.
         address user1 = address(0x1);
         address user2 = address(0x2);
         address user3 = address(0x3);
@@ -484,12 +507,14 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user1);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId1 = ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId1 =
+            ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         vm.startPrank(user2);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId2 = ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId2 =
+            ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
@@ -499,32 +524,33 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user3);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId3 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(150), 0, 0);
+        uint256 orderId3 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(150), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertNotEq(address(0), order2.owner, "order2, deleted");
         assertEq(address(0), order3.owner, "order3, not deleted");
-        // PAIR 에는 50 개의 QUOTE 가 있어야 한다.
+        // Verify that the PAIR has 50 QUOTE tokens remaining.
         assertEq(QUOTE.balanceOf(address(PAIR)), _toQuote(50), "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user1), 0, "QUOTE user1");
         assertEq(BASE.balanceOf(user1), _toBase(100), "BASE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user2), 0, "QUOTE user2");
         assertEq(BASE.balanceOf(user2), _toBase(50), "BASE user2");
-        // [user3] 거래 잔액이 잘 전송 되었는지 확인
+        // [user3] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user3), _toQuote(150), "QUOTE user3");
         assertEq(BASE.balanceOf(user3), 0, "BASE user3");
     }
 
     function test_trade_multi_limit_sell_over_limit_buy() external {
-        // 동일 가격으로 2명의 유저가 판매하고 한 유저가 구매한다.
+        // Two users sell at the same price, and one user buys.
         address user1 = address(0x1);
         address user2 = address(0x2);
         address user3 = address(0x3);
@@ -540,12 +566,14 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user1);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId1 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId1 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         vm.startPrank(user2);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId2 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId2 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
@@ -555,32 +583,33 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user3);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId3 = ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(300), 0, 0);
+        uint256 orderId3 =
+            ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(300), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertEq(address(0), order2.owner, "order2, not deleted");
         assertNotEq(address(0), order3.owner, "order3, deleted");
-        // PAIR 에는 100 개의 QUOTE 가 있어야 한다.
+        // Verify that the PAIR has 100 QUOTE tokens remaining.
         assertEq(QUOTE.balanceOf(address(PAIR)), _toQuote(100), "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(100), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user2), 0, "BASE user2");
         assertEq(QUOTE.balanceOf(user2), _toQuote(100), "QUOTE user2");
-        // [user3] 거래 잔액이 잘 전송 되었는지 확인
+        // [user3] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user3), 0, "QUOTE user3");
         assertEq(BASE.balanceOf(user3), _toBase(200), "BASE user3");
     }
 
     function test_trade_multi_limit_buy_over_limit_sell() external {
-        // 동일 가격으로 2명의 유저가 판매하고 한 유저가 구매한다.
+        // Two users sell at the same price, and one user buys.
         address user1 = address(0x1);
         address user2 = address(0x2);
         address user3 = address(0x3);
@@ -596,12 +625,14 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user1);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId1 = ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId1 =
+            ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         vm.startPrank(user2);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId2 = ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId2 =
+            ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
@@ -611,10 +642,11 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user3);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId3 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(300), 0, 0);
+        uint256 orderId3 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(300), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
@@ -624,19 +656,19 @@ contract DEXTradeTest is DEXBaseTest {
         // PAIR 에는 100 개의 BASE 가 있어야 한다.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), _toBase(100), "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user1), 0, "QUOTE user1");
         assertEq(BASE.balanceOf(user1), _toBase(100), "BASE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user2), 0, "QUOTE user2");
         assertEq(BASE.balanceOf(user2), _toBase(100), "BASE user2");
-        // [user3] 거래 잔액이 잘 전송 되었는지 확인
+        // [user3] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user3), _toQuote(200), "QUOTE user3");
         assertEq(BASE.balanceOf(user3), 0, "BASE user3");
     }
 
     function test_trade_limit_sell_multi_limit_buy_all_match() external {
-        // 동일 가격으로 1명의 유저가 판매하고 2명의 유저가 구매한다.
+        // One user sells at the same price, and two users buy.
         address user1 = address(0x1);
         address user2 = address(0x2);
         address user3 = address(0x3);
@@ -652,7 +684,8 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user1);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId1 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(200), 0, 0);
+        uint256 orderId1 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(200), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
 
         vm.stopPrank();
 
@@ -661,37 +694,39 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user2);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId2 = ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId2 =
+            ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         vm.startPrank(user3);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId3 = ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId3 =
+            ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertEq(address(0), order2.owner, "order2, not deleted");
         assertEq(address(0), order3.owner, "order3, not deleted");
-        // PAIR 에는 잔액이 없는지 확인
+        // Verify that the PAIR has no remaining balance.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(200), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user2), _toBase(100), "BASE user2");
         assertEq(QUOTE.balanceOf(user2), 0, "QUOTE user2");
-        // [user3] 거래 잔액이 잘 전송 되었는지 확인
+        // [user3] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user3), _toBase(100), "BASE user3");
         assertEq(QUOTE.balanceOf(user3), 0, "QUOTE user3");
     }
 
     function test_trade_limit_buy_multi_limit_sell_all_match() external {
-        // 동일 가격으로 1명의 유저가 구매하고 2명의 유저가 판매한다.
+        // One user buys at the same price, and two users sell.
         address user1 = address(0x1);
         address user2 = address(0x2);
         address user3 = address(0x3);
@@ -707,7 +742,8 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user1);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId1 = ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(200), 0, 0);
+        uint256 orderId1 =
+            ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(200), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
@@ -715,37 +751,39 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user2);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId2 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId2 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         vm.startPrank(user3);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId3 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId3 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertEq(address(0), order2.owner, "order2, not deleted");
         assertEq(address(0), order3.owner, "order3, not deleted");
-        // PAIR 에는 잔액이 없는지 확인
+        // Verify that the PAIR has no remaining balance.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), _toBase(200), "BASE user1");
         assertEq(QUOTE.balanceOf(user1), 0, "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user2), 0, "BASE user2");
         assertEq(QUOTE.balanceOf(user2), _toQuote(100), "QUOTE user2");
-        // [user3] 거래 잔액이 잘 전송 되었는지 확인
+        // [user3] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user3), 0, "BASE user3");
         assertEq(QUOTE.balanceOf(user3), _toQuote(100), "QUOTE user3");
     }
 
     function test_trade_limit_sell_less_multi_limit_buy() external {
-        // 동일 가격으로 1명의 유저가 판매하고 두명의 유저가 구매한다.
+        // One user sells at the same price, and two users buy.
         address user1 = address(0x1);
         address user2 = address(0x2);
         address user3 = address(0x3);
@@ -761,7 +799,8 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user1);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId1 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(200), 0, 0);
+        uint256 orderId1 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(200), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
@@ -769,37 +808,39 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user2);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId2 = ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId2 =
+            ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         vm.startPrank(user3);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId3 = ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(50), 0, 0);
+        uint256 orderId3 =
+            ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(50), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertNotEq(address(0), order1.owner, "order1, deleted");
         assertEq(address(0), order2.owner, "order2, deleted");
         assertEq(address(0), order3.owner, "order3, not deleted");
-        // PAIR 에는 50 개의 BASE 가 있어야 한다.
+        // Verify that the PAIR has 50 BASE tokens remaining.
         assertEq(BASE.balanceOf(address(PAIR)), _toBase(50), "BASE PAIR");
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(150), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user2), _toBase(100), "BASE user2");
         assertEq(QUOTE.balanceOf(user2), 0, "QUOTE user2");
-        // [user3] 거래 잔액이 잘 전송 되었는지 확인
+        // [user3] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user3), _toBase(50), "BASE user3");
         assertEq(QUOTE.balanceOf(user3), 0, "QUOTE user3");
     }
 
     function test_trade_limit_buy_less_multi_limit_sell() external {
-        // 동일 가격으로 1명의 유저가 구매하고 두명의 유저가 판매한다.
+        // One user buys at the same price, and two users sell.
         address user1 = address(0x1);
         address user2 = address(0x2);
         address user3 = address(0x3);
@@ -815,38 +856,41 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user1);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId1 = ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(200), 0, 0);
+        uint256 orderId1 =
+            ROUTER.limitBuy(address(PAIR), _toQuote(1), _toBase(200), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
         assertEq(QUOTE.balanceOf(user1), 0, "before QUOTE user1");
 
         vm.startPrank(user2);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId2 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId2 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         vm.startPrank(user3);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId3 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(50), 0, 0);
+        uint256 orderId3 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(50), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(orderId3);
         assertNotEq(address(0), order1.owner, "order1, deleted");
         assertEq(address(0), order2.owner, "order2, deleted");
         assertEq(address(0), order3.owner, "order3, not deleted");
-        // PAIR 에는 50 개의 QUOTE 가 있어야 한다.
+        // Verify that the PAIR has 50 QUOTE tokens remaining.
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
         assertEq(QUOTE.balanceOf(address(PAIR)), _toQuote(50), "QUOTE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), _toBase(150), "BASE user1");
         assertEq(QUOTE.balanceOf(user1), 0, "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user2), 0, "BASE user2");
         assertEq(QUOTE.balanceOf(user2), _toQuote(100), "QUOTE user2");
-        // [user3] 거래 잔액이 잘 전송 되었는지 확인
+        // [user3] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user3), 0, "BASE user3");
         assertEq(QUOTE.balanceOf(user3), _toQuote(50), "QUOTE user3");
     }
@@ -856,21 +900,21 @@ contract DEXTradeTest is DEXBaseTest {
         BASE.approve(address(ROUTER), type(uint256).max);
         QUOTE.approve(address(ROUTER), type(uint256).max);
 
-        ROUTER.limitSell(address(PAIR), 1.5 ether, 200 ether, 0, 0);
-        ROUTER.limitSell(address(PAIR), 1.4 ether, 200 ether, 0, 0);
-        ROUTER.limitSell(address(PAIR), 1 ether, 200 ether, 0, 0);
-        ROUTER.limitSell(address(PAIR), 1.3 ether, 200 ether, 0, 0);
-        ROUTER.limitSell(address(PAIR), 1.1 ether, 200 ether, 0, 0);
-        ROUTER.limitSell(address(PAIR), 1.2 ether, 200 ether, 0, 0);
+        ROUTER.limitSell(address(PAIR), 1.5 ether, 200 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitSell(address(PAIR), 1.4 ether, 200 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitSell(address(PAIR), 1 ether, 200 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitSell(address(PAIR), 1.3 ether, 200 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitSell(address(PAIR), 1.1 ether, 200 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitSell(address(PAIR), 1.2 ether, 200 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
 
         vm.roll(block.number + 1);
 
-        ROUTER.limitBuy(address(PAIR), 0.8 ether, 200 ether, 0, 0);
-        ROUTER.limitBuy(address(PAIR), 0.9 ether, 200 ether, 0, 0);
-        ROUTER.limitBuy(address(PAIR), 0.4 ether, 200 ether, 0, 0);
-        ROUTER.limitBuy(address(PAIR), 0.5 ether, 200 ether, 0, 0);
-        ROUTER.limitBuy(address(PAIR), 0.7 ether, 200 ether, 0, 0);
-        ROUTER.limitBuy(address(PAIR), 0.6 ether, 200 ether, 0, 0);
+        ROUTER.limitBuy(address(PAIR), 0.8 ether, 200 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitBuy(address(PAIR), 0.9 ether, 200 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitBuy(address(PAIR), 0.4 ether, 200 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitBuy(address(PAIR), 0.5 ether, 200 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitBuy(address(PAIR), 0.7 ether, 200 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitBuy(address(PAIR), 0.6 ether, 200 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
 
         vm.roll(block.number + 1);
         vm.stopPrank();
@@ -922,8 +966,8 @@ contract DEXTradeTest is DEXBaseTest {
             BASE.approve(address(ROUTER), type(uint256).max);
             QUOTE.approve(address(ROUTER), type(uint256).max);
             latestOrderId = isSell[i]
-                ? ROUTER.limitSell(address(PAIR), price, amount, 0, 0)
-                : ROUTER.limitBuy(address(PAIR), price, amount, 0, 0);
+                ? ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0)
+                : ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
 
             vm.stopPrank();
         }
@@ -1003,7 +1047,8 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user1);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId1 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId1 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
@@ -1014,18 +1059,18 @@ contract DEXTradeTest is DEXBaseTest {
         ROUTER.marketBuy(address(PAIR), _toQuote(100), 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(2);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertEq(address(0), order2.owner, "market data is must not init");
-        // PAIR 에는 잔액이 없는지 확인
+        // Verify that the PAIR has no remaining balance.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(100), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user2), 0, "QUOTE user2");
         assertEq(BASE.balanceOf(user2), _toBase(100), "BASE user2");
     }
@@ -1043,8 +1088,10 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user1);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId1 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
-        uint256 orderId2 = ROUTER.limitSell(address(PAIR), _toQuote(2), _toBase(100), 0, 0);
+        uint256 orderId1 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        uint256 orderId2 =
+            ROUTER.limitSell(address(PAIR), _toQuote(2), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
@@ -1055,20 +1102,20 @@ contract DEXTradeTest is DEXBaseTest {
         ROUTER.marketBuy(address(PAIR), _toQuote(300), 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(3);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertEq(address(0), order2.owner, "order2, not deleted");
         assertEq(address(0), order3.owner, "market data is must not init");
-        // PAIR 에는 잔액이 없는지 확인
+        // Verify that the PAIR has no remaining balance.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(300), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user2), 0, "QUOTE user2");
         assertEq(BASE.balanceOf(user2), _toBase(200), "BASE user2");
     }
@@ -1086,7 +1133,8 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user1);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId1 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId1 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
@@ -1097,18 +1145,18 @@ contract DEXTradeTest is DEXBaseTest {
         ROUTER.marketBuy(address(PAIR), _toQuote(50), 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(2);
         assertNotEq(address(0), order1.owner, "order1, deleted");
         assertEq(address(0), order2.owner, "market data is must not init");
-        // PAIR 에는 잔액이 없는지 확인
+        // Verify that the PAIR has no remaining balance.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), _toBase(50), "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(50), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user2), 0, "QUOTE user2");
         assertEq(BASE.balanceOf(user2), _toBase(50), "BASE user2");
     }
@@ -1126,8 +1174,10 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user1);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId1 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
-        uint256 orderId2 = ROUTER.limitSell(address(PAIR), _toQuote(2), _toBase(100), 0, 0);
+        uint256 orderId1 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        uint256 orderId2 =
+            ROUTER.limitSell(address(PAIR), _toQuote(2), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
@@ -1139,20 +1189,20 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(3);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertNotEq(address(0), order2.owner, "order2, deleted");
         assertEq(address(0), order3.owner, "market data is must not init");
-        // PAIR 에는 잔액이 없는지 확인
+        // Verify that the PAIR has no remaining balance.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), _toBase(50), "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(200), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user2), 0, "QUOTE user2");
         assertEq(BASE.balanceOf(user2), _toBase(150), "BASE user2");
     }
@@ -1170,7 +1220,8 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user1);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId1 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
+        uint256 orderId1 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
@@ -1181,18 +1232,18 @@ contract DEXTradeTest is DEXBaseTest {
         ROUTER.marketBuy(address(PAIR), _toQuote(200), 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(2);
         assertEq(address(0), order1.owner, "order1, deleted");
         assertEq(address(0), order2.owner, "market data is must not init");
-        // PAIR 에는 잔액이 없는지 확인
+        // Verify that the PAIR has no remaining balance.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(100), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user2), _toQuote(100), "QUOTE user2");
         assertEq(BASE.balanceOf(user2), _toBase(100), "BASE user2");
     }
@@ -1210,8 +1261,10 @@ contract DEXTradeTest is DEXBaseTest {
 
         vm.startPrank(user1);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId1 = ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), 0, 0);
-        uint256 orderId2 = ROUTER.limitSell(address(PAIR), _toQuote(2), _toBase(100), 0, 0);
+        uint256 orderId1 =
+            ROUTER.limitSell(address(PAIR), _toQuote(1), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        uint256 orderId2 =
+            ROUTER.limitSell(address(PAIR), _toQuote(2), _toBase(100), IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
         vm.stopPrank();
 
         assertEq(BASE.balanceOf(user1), 0, "before BASE user1");
@@ -1222,20 +1275,20 @@ contract DEXTradeTest is DEXBaseTest {
         ROUTER.marketBuy(address(PAIR), _toQuote(400), 0);
         vm.stopPrank();
 
-        // order 데이터가 삭제 되었는지 확인
+        // Check if the order data has been deleted.
         IPair.Order memory order1 = PAIR.orderById(orderId1);
         IPair.Order memory order2 = PAIR.orderById(orderId2);
         IPair.Order memory order3 = PAIR.orderById(3);
         assertEq(address(0), order1.owner, "order1, not deleted");
         assertEq(address(0), order2.owner, "order2, not deleted");
         assertEq(address(0), order3.owner, "market data is must not init");
-        // PAIR 에는 잔액이 없는지 확인
+        // Verify that the PAIR has no remaining balance.
         assertEq(QUOTE.balanceOf(address(PAIR)), 0, "QUOTE PAIR");
         assertEq(BASE.balanceOf(address(PAIR)), 0, "BASE PAIR");
-        // [user1] 거래 잔액이 잘 전송 되었는지 확인
+        // [user1] Verify that the exchange transaction was successfully executed.
         assertEq(BASE.balanceOf(user1), 0, "BASE user1");
         assertEq(QUOTE.balanceOf(user1), _toQuote(300), "QUOTE user1");
-        // [user2] 거래 잔액이 잘 전송 되었는지 확인
+        // [user2] Verify that the exchange transaction was successfully executed.
         assertEq(QUOTE.balanceOf(user2), _toQuote(100), "QUOTE user2");
         assertEq(BASE.balanceOf(user2), _toBase(200), "BASE user2");
     }
@@ -1271,14 +1324,16 @@ contract DEXTradeTest is DEXBaseTest {
                 vm.prank(user);
                 BASE.approve(address(ROUTER), type(uint256).max);
                 vm.prank(user);
-                latestOrderId = ROUTER.limitSell(address(PAIR), price, amount, 0, 0);
+                latestOrderId =
+                    ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
             } else if (_type == 1) {
                 vm.prank(OWNER);
                 QUOTE.transfer(user, Math.mulDiv(price, amount, BASE_DECIMALS));
                 vm.prank(user);
                 QUOTE.approve(address(ROUTER), type(uint256).max);
                 vm.prank(user);
-                latestOrderId = ROUTER.limitBuy(address(PAIR), price, amount, 0, 0);
+                latestOrderId =
+                    ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
             } else if (_type == 2) {
                 ++latestOrderId;
 
@@ -1331,5 +1386,177 @@ contract DEXTradeTest is DEXBaseTest {
 
         assertEq(usedBaseAmount, checkBaseBalance);
         assertEq(usedQuoteAmount, checkQuoteBalance);
+    }
+
+    function test_trade_ioc_case1() external {
+        // No order information is created because the order was placed via IOC.
+        // (Remaining balance is returned.)
+
+        address seller1 = address(0x1);
+        address seller2 = address(0x2);
+        address seller3 = address(0x3);
+        address buyer = address(0x4);
+
+        uint256 price1 = _toQuote(1);
+        uint256 price2 = _toQuote(2);
+        uint256 price3 = _toQuote(3);
+
+        uint256 amount = _toBase(10);
+
+        vm.startPrank(OWNER);
+        BASE.transfer(seller1, amount);
+        BASE.transfer(seller2, amount);
+        BASE.transfer(seller3, amount);
+        QUOTE.transfer(buyer, _toTradeVolume(price2, amount * 2));
+        vm.stopPrank();
+
+        {
+            // sell orders
+            vm.startPrank(seller1);
+            BASE.approve(address(ROUTER), type(uint256).max);
+            ROUTER.limitSell(address(PAIR), price1, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+            vm.startPrank(seller2);
+            BASE.approve(address(ROUTER), type(uint256).max);
+            ROUTER.limitSell(address(PAIR), price2, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+            vm.startPrank(seller3);
+            BASE.approve(address(ROUTER), type(uint256).max);
+            ROUTER.limitSell(address(PAIR), price3, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+            vm.stopPrank();
+        }
+
+        (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+        assertEq(3, sellPrices.length);
+        assertEq(0, buyPrices.length);
+        {
+            // buy order
+            vm.startPrank(buyer);
+            QUOTE.approve(address(ROUTER), type(uint256).max);
+            ROUTER.limitBuy(address(PAIR), price2, amount * 2, IPair.LimitConstraints.IMMEDIATE_OR_CANCEL, 0, 0);
+        }
+        // check ticks
+        (sellPrices, buyPrices) = PAIR.ticks();
+        assertEq(1, sellPrices.length);
+        assertEq(0, buyPrices.length); // no new ticks
+        // check return remaining balance
+        assertEq(_toQuote(10), QUOTE.balanceOf(buyer));
+        // check buy base balance
+        assertEq(_toBase(20), BASE.balanceOf(buyer));
+    }
+
+    function test_trade_ioc_case2() external {
+        // No order information is created because the order was placed via IOC.
+        // (Remaining balance is returned.)
+
+        address buyer1 = address(0x1);
+        address buyer2 = address(0x2);
+        address buyer3 = address(0x3);
+        address seller = address(0x4);
+
+        uint256 price1 = _toQuote(1);
+        uint256 price2 = _toQuote(2);
+        uint256 price3 = _toQuote(3);
+
+        uint256 amount = _toBase(10);
+
+        vm.startPrank(OWNER);
+        QUOTE.transfer(buyer1, _toTradeVolume(price1, amount));
+        QUOTE.transfer(buyer2, _toTradeVolume(price2, amount));
+        QUOTE.transfer(buyer3, _toTradeVolume(price3, amount));
+        BASE.transfer(seller, _toBase(30));
+        vm.stopPrank();
+
+        {
+            // buy orders
+            vm.startPrank(buyer1);
+            QUOTE.approve(address(ROUTER), type(uint256).max);
+            ROUTER.limitBuy(address(PAIR), price1, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+            vm.startPrank(buyer2);
+            QUOTE.approve(address(ROUTER), type(uint256).max);
+            ROUTER.limitBuy(address(PAIR), price2, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+            vm.startPrank(buyer3);
+            QUOTE.approve(address(ROUTER), type(uint256).max);
+            ROUTER.limitBuy(address(PAIR), price3, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+            vm.stopPrank();
+        }
+
+        (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+        assertEq(0, sellPrices.length);
+        assertEq(3, buyPrices.length);
+        {
+            // sell order
+            vm.startPrank(seller);
+            BASE.approve(address(ROUTER), type(uint256).max);
+            ROUTER.limitSell(address(PAIR), price2, amount * 3, IPair.LimitConstraints.IMMEDIATE_OR_CANCEL, 0, 0);
+        }
+        // check ticks
+        (sellPrices, buyPrices) = PAIR.ticks();
+        assertEq(0, sellPrices.length); // no new ticks
+        assertEq(1, buyPrices.length);
+        // check return remaining balance
+        assertEq(_toBase(10), BASE.balanceOf(seller));
+        // check sell quote balance
+        assertEq(_toQuote((3 * 10) + (2 * 10)), QUOTE.balanceOf(seller));
+    }
+
+    function test_trade_fok_case1() external {
+        address seller = address(0x1);
+        address buyer = address(0x2);
+
+        uint256 price = _toQuote(1);
+        uint256 amount = _toBase(10);
+
+        vm.startPrank(OWNER);
+        BASE.transfer(seller, amount);
+        QUOTE.transfer(buyer, _toTradeVolume(price, amount * 2));
+        vm.stopPrank();
+        {
+            // sell
+            vm.startPrank(seller);
+            BASE.approve(address(ROUTER), type(uint256).max);
+            ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+            vm.stopPrank();
+        }
+        {
+            // buy more
+            vm.startPrank(buyer);
+            QUOTE.approve(address(ROUTER), type(uint256).max);
+            vm.expectRevert(abi.encodeWithSignature("PairFillOrKill(address)", buyer));
+            ROUTER.limitBuy(address(PAIR), price, amount * 2, IPair.LimitConstraints.FILL_OR_KILL, 0, 0);
+        }
+
+        (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+        assertEq(1, sellPrices.length);
+        assertEq(0, buyPrices.length);
+    }
+
+    function test_trade_fok_case2() external {
+        address seller = address(0x1);
+        address buyer = address(0x2);
+
+        uint256 price = _toQuote(1);
+        uint256 amount = _toBase(10);
+
+        vm.startPrank(OWNER);
+        BASE.transfer(seller, amount * 2);
+        QUOTE.transfer(buyer, _toTradeVolume(price, amount));
+        vm.stopPrank();
+        {
+            // buy
+            vm.startPrank(buyer);
+            QUOTE.approve(address(ROUTER), type(uint256).max);
+            ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        }
+        {
+            // sell  more
+            vm.startPrank(seller);
+            BASE.approve(address(ROUTER), type(uint256).max);
+            vm.expectRevert(abi.encodeWithSignature("PairFillOrKill(address)", seller));
+            ROUTER.limitSell(address(PAIR), price, amount * 2, IPair.LimitConstraints.FILL_OR_KILL, 0, 0);
+            vm.stopPrank();
+        }
+
+        (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+        assertEq(0, sellPrices.length);
+        assertEq(1, buyPrices.length);
     }
 }
