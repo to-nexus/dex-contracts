@@ -10,7 +10,7 @@ import {CrossDexImpl} from "../src/CrossDexImpl.sol";
 import {MarketImpl} from "../src/MarketImpl.sol";
 import {PairImpl} from "../src/PairImpl.sol";
 import {RouterImpl} from "../src/RouterImpl.sol";
-import {WCROSS} from "../src/WCROSS.sol";
+import {WETH} from "../src/WETH.sol";
 import {IPair} from "../src/interfaces/IPair.sol";
 
 import {T20} from "./mock/T20.sol";
@@ -21,7 +21,7 @@ contract DEXBaseTest is Test {
 
     CrossDexImpl public CROSS_DEX;
     RouterImpl public ROUTER;
-    WCROSS public WCross;
+    WETH public WXCROSS;
 
     IERC20 public QUOTE;
     IERC20 public BASE;
@@ -61,7 +61,7 @@ contract DEXBaseTest is Test {
         {
             // get contracts from CROSS_DEX
             ROUTER = RouterImpl(CROSS_DEX.ROUTER());
-            WCross = WCROSS(payable(address(ROUTER.WCross())));
+            WXCROSS = WETH(payable(address(ROUTER.WXCROSS())));
         }
         {
             // deploy base and quote tokens
