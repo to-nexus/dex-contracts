@@ -12,13 +12,13 @@ import {ContextUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/util
 import {ReentrancyGuardUpgradeable} from
     "@openzeppelin-contracts-upgradeable-5.2.0/utils/ReentrancyGuardUpgradeable.sol";
 
-import {WCROSS} from "./WCROSS.sol";
+import {WETH} from "./WETH.sol";
 
 import {ICrossDex} from "./interfaces/ICrossDex.sol";
 import {IOwnable} from "./interfaces/IOwnable.sol";
 import {IPair} from "./interfaces/IPair.sol";
 import {IRouter, IRouterInitializer} from "./interfaces/IRouter.sol";
-import {IWCROSS} from "./interfaces/IWCROSS.sol";
+import {IWETH} from "./interfaces/IWETH.sol";
 
 contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgradeable, ReentrancyGuardUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -33,7 +33,7 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
     event PairRemoved(address indexed pair);
 
     address public CROSS_DEX; // immutable
-    IWCROSS public WCross; // immutable
+    IWETH public WXCROSS; // immutable
 
     uint256 public maxMatchCount;
 
@@ -64,7 +64,7 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
         if (_maxMatchCount == 0) revert RouterInitializeData("maxMatchCount");
 
         CROSS_DEX = _msgSender();
-        WCross = IWCROSS(payable(address(new WCROSS())));
+        WXCROSS = IWETH(payable(address(new WETH())));
         maxMatchCount = _maxMatchCount;
 
         __Context_init();
@@ -87,7 +87,7 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
         IPair.TokenConfig memory info = IPair(pair).getTokenConfig();
 
         IERC20 BASE = info.BASE;
-        if (address(BASE) == address(WCross)) WCross.mintTo{value: amount}(address(pair));
+        if (address(BASE) == address(WXCROSS)) WXCROSS.mintTo{value: amount}(address(pair));
         else BASE.safeTransferFrom(owner, pair, amount);
 
         IPair.Order memory order =
@@ -108,7 +108,7 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
 
         IERC20 QUOTE = info.QUOTE;
         uint256 volume = Math.mulDiv(price, amount, info.DENOMINATOR);
-        if (address(QUOTE) == address(WCross)) WCross.mintTo{value: volume}(address(pair));
+        if (address(QUOTE) == address(WXCROSS)) WXCROSS.mintTo{value: volume}(address(pair));
         else QUOTE.safeTransferFrom(owner, address(pair), volume);
 
         IPair.Order memory order =
@@ -127,7 +127,7 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
         IPair.TokenConfig memory info = IPair(pair).getTokenConfig();
 
         IERC20 BASE = info.BASE;
-        if (address(BASE) == address(WCross)) WCross.mintTo{value: amount}(address(pair));
+        if (address(BASE) == address(WXCROSS)) WXCROSS.mintTo{value: amount}(address(pair));
         else BASE.safeTransferFrom(owner, address(pair), amount);
 
         IPair.Order memory order =
@@ -146,7 +146,7 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
         IPair.TokenConfig memory info = IPair(pair).getTokenConfig();
 
         IERC20 QUOTE = info.QUOTE;
-        if (address(QUOTE) == address(WCross)) WCross.mintTo{value: amount}(address(pair));
+        if (address(QUOTE) == address(WXCROSS)) WXCROSS.mintTo{value: amount}(address(pair));
         else QUOTE.safeTransferFrom(owner, address(pair), amount);
 
         IPair.Order memory order =

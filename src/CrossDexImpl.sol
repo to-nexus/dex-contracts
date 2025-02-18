@@ -12,7 +12,7 @@ import {ICrossDex} from "./interfaces/ICrossDex.sol";
 import {IMarketInitializer} from "./interfaces/IMarket.sol";
 import {IRouter, IRouterInitializer} from "./interfaces/IRouter.sol";
 
-import {WCROSS} from "./WCROSS.sol";
+import {WETH} from "./WETH.sol";
 
 contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableMap for EnumerableMap.AddressToAddressMap;
