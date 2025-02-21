@@ -47,6 +47,15 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         uint256 indexed sellId, uint256 indexed buyId, uint256 indexed price, uint256 amount, uint256 timestamp
     );
     event OrderClosed(uint256 indexed orderId, CloseType indexed closeType, uint256 timestamp);
+    event FeeCollect(
+        uint256 indexed orderId,
+        address indexed owner,
+        uint256 amount,
+        address indexed recipient,
+        uint256 feePermil,
+        uint256 fee,
+        uint256 value
+    );
     event TickSizeUpdated(
         uint256 beforeBaseTickSize, uint256 newBaseTickSize, uint256 beforeQuoteTickSize, uint256 newQuoteTickSize
     );
@@ -290,13 +299,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         // 3. Immediately transfer the proceeds from the trade to the seller.
         if (earnQuoteAmount != 0) {
             quoteReserve -= earnQuoteAmount;
-            if (feePermil == 0) {
-                QUOTE.safeTransfer(order.owner, earnQuoteAmount);
-            } else {
-                uint256 fee = Math.mulDiv(earnQuoteAmount, feePermil, 1000);
-                QUOTE.safeTransfer(feeCollector, fee);
-                QUOTE.safeTransfer(order.owner, earnQuoteAmount - fee);
-            }
+            _exchangeQuote(orderId, order.owner, earnQuoteAmount, feePermil);
         }
 
         return 0;
@@ -423,14 +426,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
                 uint256 tradeQuoteAmount = Math.mulDiv(price, tradeAmount, denominator);
 
                 // Trade executed. ( Calculate using the fee rate at the time the seller registered the sale.)
-                if (targetFeePermil == 0) {
-                    QUOTE.safeTransfer(targetOwner, tradeQuoteAmount);
-                } else {
-                    // The seller pays the fee.
-                    uint256 fee = Math.mulDiv(tradeQuoteAmount, targetFeePermil, 1000);
-                    QUOTE.safeTransfer(feeCollector, fee);
-                    QUOTE.safeTransfer(targetOwner, tradeQuoteAmount - fee);
-                }
+                _exchangeQuote(targetId, targetOwner, tradeQuoteAmount, targetFeePermil);
 
                 // Update information.
                 matchedBaseAmount += tradeAmount;
@@ -528,6 +524,20 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
     function _returnRemainQuote(address to, uint256 mustRemainQuoteAmount) private {
         uint256 remainQuoteAmount = QUOTE.balanceOf(address(this)) - (mustRemainQuoteAmount + quoteReserve);
         if (remainQuoteAmount != 0) QUOTE.safeTransfer(to, remainQuoteAmount);
+    }
+
+    function _exchangeQuote(uint256 orderId, address owner, uint256 amount, uint256 _feePermil) private {
+        if (_feePermil == 0) {
+            QUOTE.safeTransfer(owner, amount);
+        } else {
+            uint256 fee = Math.mulDiv(amount, _feePermil, 1000);
+            uint256 value = amount - fee;
+            address _feeCollector = feeCollector;
+            emit FeeCollect(orderId, owner, amount, _feeCollector, _feePermil, fee, value);
+
+            QUOTE.safeTransfer(_feeCollector, fee);
+            QUOTE.safeTransfer(owner, value);
+        }
     }
 
     //    ##   #    # ##### #    #  ####  #####  # ######   ##   ##### #  ####  #    #
