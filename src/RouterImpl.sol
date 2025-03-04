@@ -84,7 +84,7 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
         uint256 _maxMatchCount
     ) external payable nonReentrant validPair(pair) checkValue returns (uint256) {
         address owner = _msgSender();
-        IPair.TokenConfig memory info = IPair(pair).getTokenConfig();
+        IPair.Config memory info = IPair(pair).getConfig();
 
         IERC20 BASE = info.BASE;
         if (address(BASE) == address(WXCROSS)) WXCROSS.mintTo{value: amount}(address(pair));
@@ -104,7 +104,7 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
         uint256 _maxMatchCount
     ) external payable nonReentrant validPair(pair) checkValue returns (uint256) {
         address owner = _msgSender();
-        IPair.TokenConfig memory info = IPair(pair).getTokenConfig();
+        IPair.Config memory info = IPair(pair).getConfig();
 
         IERC20 QUOTE = info.QUOTE;
         uint256 volume = Math.mulDiv(price, amount, info.DENOMINATOR);
@@ -124,7 +124,7 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
         checkValue
     {
         address owner = _msgSender();
-        IPair.TokenConfig memory info = IPair(pair).getTokenConfig();
+        IPair.Config memory info = IPair(pair).getConfig();
 
         IERC20 BASE = info.BASE;
         if (address(BASE) == address(WXCROSS)) WXCROSS.mintTo{value: amount}(address(pair));
@@ -143,7 +143,7 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
         checkValue
     {
         address owner = _msgSender();
-        IPair.TokenConfig memory info = IPair(pair).getTokenConfig();
+        IPair.Config memory info = IPair(pair).getConfig();
 
         IERC20 QUOTE = info.QUOTE;
         if (address(QUOTE) == address(WXCROSS)) WXCROSS.mintTo{value: amount}(address(pair));

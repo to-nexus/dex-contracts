@@ -16,9 +16,7 @@ interface IPair {
     }
 
     enum CloseType {
-        ALL_MATCH,
-        IMMEDIATE_OR_CANCEL,
-        MARKET,
+        COMPLETED,
         CANCEL,
         EMERGENCY
     }
@@ -31,13 +29,13 @@ interface IPair {
         uint256 amount;
     }
 
-    struct TokenConfig {
+    struct Config {
         IERC20 QUOTE;
         IERC20 BASE;
         uint256 DENOMINATOR;
     }
 
-    function getTokenConfig() external view returns (TokenConfig memory);
+    function getConfig() external view returns (Config memory);
 
     function limit(Order memory order, LimitConstraints constraints, uint256[2] memory adjacent, uint256 maxMatchCount)
         external
