@@ -212,7 +212,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
             emit OrderClosed(orderId, CloseType.COMPLETED, block.timestamp);
         } else {
             if (constraints == LimitConstraints.IMMEDIATE_OR_CANCEL) {
-                emit OrderClosed(orderId, CloseType.CANCEL, block.timestamp);
+                emit OrderClosed(orderId, CloseType.IMMEDIATE_OR_CANCEL, block.timestamp);
                 // Return the remaining balance.
                 if (isSellOrder) BASE.safeTransfer(order.owner, order.amount);
                 // The quantity returned as a quote can occur under all conditions except FILL_OR_KILL,

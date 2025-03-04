@@ -17,6 +17,7 @@ interface IPair {
 
     enum CloseType {
         COMPLETED,
+        IMMEDIATE_OR_CANCEL,
         CANCEL,
         EMERGENCY
     }
