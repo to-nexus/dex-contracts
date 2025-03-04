@@ -164,9 +164,9 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         buyPrices = _buyPrices.values();
     }
 
-    function tickSizes() external view returns (uint256 base, uint256 quote) {
-        base = baseTickSize;
-        quote = quoteTickSize;
+    function tickSizes() external view returns (uint256 tick, uint256 lot) {
+        tick = quoteTickSize;
+        lot = baseTickSize;
     }
 
     function ordersByPrices(OrderSide side, uint256[] memory prices) external view returns (uint256[][] memory) {
