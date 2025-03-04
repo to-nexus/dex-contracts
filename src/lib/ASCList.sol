@@ -41,7 +41,7 @@ library ASCList {
         } else if (_data > list.tail) {
             return list.insert(_data, list.tail);
         } else {
-            uint256 current = _checkContainsForPush(_list, _searchs);
+            uint256 current = _ensureSearchForPush(_list, _searchs);
             if (current < _data) {
                 while (current != 0) {
                     current = list.nodes[current].next;
@@ -67,7 +67,7 @@ library ASCList {
         return _list._inner.remove(_data);
     }
 
-    function _checkContainsForPush(U256 storage _list, uint256[2] memory _searchs) private view returns (uint256) {
+    function _ensureSearchForPush(U256 storage _list, uint256[2] memory _searchs) private view returns (uint256) {
         if (contains(_list, _searchs[0])) return (_searchs[0]);
         else if (contains(_list, _searchs[1])) return (_searchs[1]);
         else return _list._inner.head;
