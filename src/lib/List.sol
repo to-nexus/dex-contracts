@@ -63,6 +63,7 @@ library List {
     }
 
     function insert(U256 storage _list, uint256 _data, uint256 _prev) internal returns (bool) {
+        if (_data == 0) revert ListZeroData();
         if (contains(_list, _data)) return false;
 
         Node storage prevNode = _list.nodes[_prev];
@@ -96,6 +97,7 @@ library List {
     }
 
     function remove(U256 storage _list, uint256 _data) internal returns (bool) {
+        if (_data == 0) revert ListZeroData();
         if (!contains(_list, _data)) return false;
 
         Node storage node = _list.nodes[_data];

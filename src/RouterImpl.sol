@@ -80,7 +80,7 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
         uint256 price,
         uint256 amount,
         IPair.LimitConstraints constraints,
-        uint256 searchPrice,
+        uint256[2] memory searchPrices,
         uint256 _maxMatchCount
     ) external payable nonReentrant validPair(pair) checkValue returns (uint256) {
         address owner = _msgSender();
@@ -92,7 +92,7 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
 
         IPair.Order memory order =
             IPair.Order({side: IPair.OrderSide.SELL, owner: owner, feePermil: 0, price: price, amount: amount});
-        return IPair(pair).limit(order, constraints, searchPrice, _toMaxMatchCount(_maxMatchCount));
+        return IPair(pair).limit(order, constraints, searchPrices, _toMaxMatchCount(_maxMatchCount));
     }
 
     function limitBuy(
@@ -100,7 +100,7 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
         uint256 price,
         uint256 amount,
         IPair.LimitConstraints constraints,
-        uint256 searchPrice,
+        uint256[2] memory searchPrices,
         uint256 _maxMatchCount
     ) external payable nonReentrant validPair(pair) checkValue returns (uint256) {
         address owner = _msgSender();
@@ -113,7 +113,7 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
 
         IPair.Order memory order =
             IPair.Order({side: IPair.OrderSide.BUY, owner: owner, feePermil: 0, price: price, amount: amount});
-        return IPair(pair).limit(order, constraints, searchPrice, _toMaxMatchCount(_maxMatchCount));
+        return IPair(pair).limit(order, constraints, searchPrices, _toMaxMatchCount(_maxMatchCount));
     }
 
     function marketSell(address pair, uint256 amount, uint256 _maxMatchCount)

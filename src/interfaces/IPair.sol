@@ -39,9 +39,12 @@ interface IPair {
 
     function getTokenConfig() external view returns (TokenConfig memory);
 
-    function limit(Order memory order, LimitConstraints constraints, uint256 searchPrice, uint256 maxMatchCount)
-        external
-        returns (uint256 orderId);
+    function limit(
+        Order memory order,
+        LimitConstraints constraints,
+        uint256[2] memory searchPrices,
+        uint256 maxMatchCount
+    ) external returns (uint256 orderId);
     function market(Order memory order, uint256 spendAmount, uint256 maxMatchCount) external;
     function cancel(address caller, uint256[] memory orderIds) external;
 }

@@ -7,7 +7,6 @@ library DESCList {
     using List for List.U256;
 
     error DESCListPushFailed();
-    error DESCListZeroData();
 
     struct U256 {
         List.U256 _inner;
@@ -22,7 +21,6 @@ library DESCList {
     }
 
     function contains(U256 storage _list, uint256 _data) internal view returns (bool) {
-        if (_data == 0) revert DESCListZeroData();
         return _list._inner.contains(_data);
     }
 
@@ -30,17 +28,11 @@ library DESCList {
         return _list._inner.at(_index);
     }
 
-    function next(U256 storage _list, uint256 value) internal view returns (uint256) {
-        return _list._inner.nodes[value].next;
-    }
-
     function values(U256 storage _list) internal view returns (uint256[] memory) {
         return _list._inner.values();
     }
 
-    function push(U256 storage _list, uint256 _data, uint256 _search) internal returns (bool) {
-        if (_data == 0) revert DESCListZeroData();
-
+    function push(U256 storage _list, uint256 _data, uint256[2] memory _search) internal returns (bool) {
         List.U256 storage list = _list._inner;
         if (list.contains(_data)) return false;
 
@@ -49,7 +41,7 @@ library DESCList {
         } else if (_data < list.tail) {
             return list.insert(_data, list.tail);
         } else {
-            uint256 current = list.contains(_search) ? _search : list.head;
+            uint256 current = _checkContainsForPush(_list, _search);
             if (current > _data) {
                 while (current != 0) {
                     if (_data > current) return list.insert(_data, list.nodes[current].prev);
@@ -66,12 +58,18 @@ library DESCList {
     }
 
     function push(U256 storage _list, uint256 _data) internal returns (bool) {
-        if (_data == 0) revert DESCListZeroData();
-        return push(_list, _data, _list._inner.head);
+        uint256[2] memory _searchs;
+        _searchs[0] = _list._inner.tail;
+        return push(_list, _data, _searchs);
     }
 
     function remove(U256 storage _list, uint256 _data) internal returns (bool) {
-        if (_data == 0) revert DESCListZeroData();
         return _list._inner.remove(_data);
+    }
+
+    function _checkContainsForPush(U256 storage _list, uint256[2] memory _searchs) private view returns (uint256) {
+        if (contains(_list, _searchs[0])) return (_searchs[0]);
+        else if (contains(_list, _searchs[1])) return (_searchs[1]);
+        else return _list._inner.tail;
     }
 }

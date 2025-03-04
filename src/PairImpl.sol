@@ -185,13 +185,12 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
     //  #       #  #  #      #    # #    #   #   #      #    #
     //  ###### #    # ######  ####   ####    #   ######  ####
 
-    function limit(Order memory order, LimitConstraints constraints, uint256 searchPrice, uint256 maxMatchCount)
-        external
-        override
-        whenNotPaused
-        onlyRouter
-        returns (uint256 orderId)
-    {
+    function limit(
+        Order memory order,
+        LimitConstraints constraints,
+        uint256[2] memory searchPrices,
+        uint256 maxMatchCount
+    ) external override whenNotPaused onlyRouter returns (uint256 orderId) {
         // Check the conditions of the entered quantity.
         if (order.price == 0 || order.price % quoteTickSize != 0) revert PairInvalidPrice(order.price);
         if (order.amount == 0 || order.amount % baseTickSize != 0) revert PairInvalidAmount(order.amount);
@@ -220,14 +219,14 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
 
                     order.feePermil = feePermil; // For sell orders, a fee is charged when acting as a maker.
                     _allOrders[orderId] = order;
-                    ASCList.push(_sellPrices, order.price, searchPrice);
+                    ASCList.push(_sellPrices, order.price, searchPrices);
                     _sellOrders[order.price].push(orderId);
                 } else {
                     quoteReserve += Math.mulDiv(order.price, order.amount, DENOMINATOR);
 
                     order.feePermil = 0; // Buy orders have no fees.
                     _allOrders[orderId] = order;
-                    DESCList.push(_buyPrices, order.price, searchPrice);
+                    DESCList.push(_buyPrices, order.price, searchPrices);
                     _buyOrders[order.price].push(orderId);
                 }
             }

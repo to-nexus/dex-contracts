@@ -35,6 +35,8 @@ contract DEXBaseTest is Test {
     uint256 public QUOTE_DECIMALS;
     uint256 public BASE_DECIMALS;
 
+    uint256[2] internal _searchPrices;
+
     function _deploy(uint8 quote_decimals, uint8 base_decimals, uint256 quote_tick_size, uint256 base_tick_size)
         internal
     {
