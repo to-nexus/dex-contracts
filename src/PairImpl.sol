@@ -9,6 +9,7 @@ import {Math} from "@openzeppelin-contracts-5.2.0/utils/math/Math.sol";
 
 import {PausableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/utils/PausableUpgradeable.sol";
 
+import {IMarket} from "./interfaces/IMarket.sol";
 import {IOwnable} from "./interfaces/IOwnable.sol";
 import {IPair} from "./interfaces/IPair.sol";
 import {ASCList} from "./lib/ASCList.sol";
@@ -96,6 +97,11 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
     modifier onlyOwner() {
         // The Pair is the same as the Owner of the Router.
         if (_msgSender() != IOwnable(MARKET).owner()) revert IOwnable.OwnableUnauthorizedAccount(_msgSender());
+        _;
+    }
+
+    modifier onlyTickSizeSetter() {
+        IMarket(MARKET).checkTickSizeRoles(_msgSender());
         _;
     }
 
@@ -552,7 +558,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
     //  #    # #    #   #   #    # #    # #   #  #  #     #    #   #   # #    # #   ##
     //  #    #  ####    #   #    #  ####  #    # # ###### #    #   #   #  ####  #    #
 
-    function setTickSize(uint256 _baseTickSize, uint256 _quoteTickSize) external onlyOwner {
+    function setTickSize(uint256 _baseTickSize, uint256 _quoteTickSize) external onlyTickSizeSetter {
         if (_quoteTickSize == 0) revert PairInvalidInitializeData("quoteTickSize");
         if (_baseTickSize == 0) revert PairInvalidInitializeData("baseTickSize");
         if (_quoteTickSize * _baseTickSize % DENOMINATOR != 0) {

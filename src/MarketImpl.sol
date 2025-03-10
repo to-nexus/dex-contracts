@@ -10,17 +10,20 @@ import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/acce
 
 import {PairImpl} from "./PairImpl.sol";
 import {ICrossDex} from "./interfaces/ICrossDex.sol";
-import {IMarketInitializer} from "./interfaces/IMarket.sol";
+import {IMarket, IMarketInitializer} from "./interfaces/IMarket.sol";
 
-contract MarketImpl is IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
+contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableMap for EnumerableMap.AddressToAddressMap;
 
     error MarketInvalidInitializeData(bytes32);
     error MarketInvalidBaseAddress(address);
     error MarketAlreadyCreatedBaseAddress(address);
     error MarketDeployPair();
+    error MarketUnauthorizedChangeTickSizes(address);
+    error MarketAlreadySetTickSizeSetter(address, bool);
 
     event PairCreated(address indexed pair, address indexed base, uint256 timestamp);
+    event SetTickSizeSetter(address indexed setter, bool indexed allowed);
 
     uint256 public deployed; // immutable
     ICrossDex public CROSS_DEX; // immutable
@@ -30,6 +33,7 @@ contract MarketImpl is IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
     address public feeCollector;
     address public pairImpl;
 
+    mapping(address setter => bool) public isTickSizeSetter;
     EnumerableMap.AddressToAddressMap private _allPairs; // base => pair
 
     uint256[43] private __gap;
@@ -72,6 +76,11 @@ contract MarketImpl is IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
         }
     }
 
+    function checkTickSizeRoles(address account) external view override {
+        // check account is owner or tick size setter
+        if (!(account == owner() || isTickSizeSetter[account])) revert MarketUnauthorizedChangeTickSizes(account);
+    }
+
     function baseToPair(address base) external view returns (address) {
         return _allPairs.get(base);
     }
@@ -106,6 +115,13 @@ contract MarketImpl is IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
 
         CROSS_DEX.pairCreated(pair);
         emit PairCreated(pair, base, block.timestamp);
+    }
+
+    function setTickSizeSetter(address setter, bool allowed) external onlyOwner {
+        if (isTickSizeSetter[setter] == allowed) revert MarketAlreadySetTickSizeSetter(setter, allowed);
+
+        isTickSizeSetter[setter] = allowed;
+        emit SetTickSizeSetter(setter, allowed);
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}

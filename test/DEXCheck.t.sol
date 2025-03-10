@@ -1049,4 +1049,38 @@ contract DEXCheckTest is DEXBaseTest {
             }
         }
     }
+
+    function test_check_setTickSizes_case1() external {
+        (uint256 tick, uint256 lot) = PAIR.tickSizes();
+        assertNotEq(tick, 1e20);
+        assertNotEq(lot, 1e20);
+
+        vm.startPrank(OWNER);
+        PAIR.setTickSize(1e20, 1e20);
+        (tick, lot) = PAIR.tickSizes();
+        assertEq(tick, 1e20);
+        assertEq(lot, 1e20);
+    }
+
+    function test_check_setTickSizes_case2() external {
+        (uint256 tick, uint256 lot) = PAIR.tickSizes();
+        assertNotEq(tick, 1e20);
+        assertNotEq(lot, 1e20);
+
+        address setter = address(bytes20("SETTER"));
+
+        // check roles
+        vm.prank(setter);
+        vm.expectRevert(abi.encodeWithSignature("MarketUnauthorizedChangeTickSizes(address)", setter));
+        PAIR.setTickSize(1e20, 1e20);
+        // grant roles
+        vm.prank(OWNER);
+        MARKET.setTickSizeSetter(setter, true);
+        // check success
+        vm.prank(setter);
+        PAIR.setTickSize(1e20, 1e20);
+        (tick, lot) = PAIR.tickSizes();
+        assertEq(tick, 1e20);
+        assertEq(lot, 1e20);
+    }
 }

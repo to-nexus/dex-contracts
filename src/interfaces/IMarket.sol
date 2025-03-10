@@ -5,3 +5,7 @@ interface IMarketInitializer {
     function initialize(address owner, address router, address feeCollector, address quote, address pairImpl)
         external;
 }
+
+interface IMarket {
+    function checkTickSizeRoles(address account) external view;
+}
