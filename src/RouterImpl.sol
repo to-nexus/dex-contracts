@@ -91,7 +91,7 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
         else BASE.safeTransferFrom(owner, pair, amount);
 
         IPair.Order memory order =
-            IPair.Order({side: IPair.OrderSide.SELL, owner: owner, feePermil: 0, price: price, amount: amount});
+            IPair.Order({side: IPair.OrderSide.SELL, owner: owner, feeBps: 0, price: price, amount: amount});
         return IPair(pair).limit(order, constraints, adjacent, _toMaxMatchCount(_maxMatchCount));
     }
 
@@ -112,7 +112,7 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
         else QUOTE.safeTransferFrom(owner, address(pair), volume);
 
         IPair.Order memory order =
-            IPair.Order({side: IPair.OrderSide.BUY, owner: owner, feePermil: 0, price: price, amount: amount});
+            IPair.Order({side: IPair.OrderSide.BUY, owner: owner, feeBps: 0, price: price, amount: amount});
         return IPair(pair).limit(order, constraints, adjacent, _toMaxMatchCount(_maxMatchCount));
     }
 
@@ -131,7 +131,7 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
         else BASE.safeTransferFrom(owner, address(pair), amount);
 
         IPair.Order memory order =
-            IPair.Order({side: IPair.OrderSide.SELL, owner: owner, feePermil: 0, price: 0, amount: 0});
+            IPair.Order({side: IPair.OrderSide.SELL, owner: owner, feeBps: 0, price: 0, amount: 0});
         IPair(pair).market(order, amount, _toMaxMatchCount(_maxMatchCount));
     }
 
@@ -150,7 +150,7 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
         else QUOTE.safeTransferFrom(owner, address(pair), amount);
 
         IPair.Order memory order =
-            IPair.Order({side: IPair.OrderSide.BUY, owner: owner, feePermil: 0, price: 0, amount: 0});
+            IPair.Order({side: IPair.OrderSide.BUY, owner: owner, feeBps: 0, price: 0, amount: 0});
         IPair(pair).market(order, amount, _toMaxMatchCount(_maxMatchCount));
     }
 

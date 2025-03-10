@@ -256,9 +256,8 @@ contract DexWrapBaseTest is DEXBaseTest {
         BASE = IERC20(address(WXCROSS));
 
         vm.startPrank(OWNER);
-        address pair = MARKET.createPair(
-            address(BASE), QUOTE_DECIMALS / quote_tick_size, BASE_DECIMALS / base_tick_size, FEE_PERMIL
-        );
+        address pair =
+            MARKET.createPair(address(BASE), QUOTE_DECIMALS / quote_tick_size, BASE_DECIMALS / base_tick_size, FEE_BPS);
 
         PAIR = PairImpl(pair);
         vm.stopPrank();
@@ -274,9 +273,8 @@ contract DexWrapBaseTest is DEXBaseTest {
         vm.startPrank(OWNER);
         address market = CROSS_DEX.createMarket(OWNER, FEE_COLLECTOR, address(QUOTE));
         MARKET = MarketImpl(market);
-        address pair = MARKET.createPair(
-            address(BASE), QUOTE_DECIMALS / quote_tick_size, BASE_DECIMALS / base_tick_size, FEE_PERMIL
-        );
+        address pair =
+            MARKET.createPair(address(BASE), QUOTE_DECIMALS / quote_tick_size, BASE_DECIMALS / base_tick_size, FEE_BPS);
         PAIR = PairImpl(pair);
         vm.stopPrank();
     }

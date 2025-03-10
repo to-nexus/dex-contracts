@@ -1073,7 +1073,7 @@ contract DEXTradeTest is DEXBaseTest {
             IPair.Order memory order = PAIR.orderById(i);
             assertEq(uint8(0), uint8(order.side));
             assertEq(address(0), order.owner);
-            assertEq(uint32(0), order.feePermil);
+            assertEq(uint32(0), order.feeBps);
             assertEq(0, order.price);
             assertEq(0, order.amount);
         }

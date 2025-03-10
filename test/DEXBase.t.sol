@@ -30,7 +30,7 @@ contract DEXBaseTest is Test {
     PairImpl public PAIR;
 
     uint256 public MAX_MATCH_COUNT = type(uint256).max;
-    uint256 public FEE_PERMIL;
+    uint256 public FEE_BPS;
 
     uint256 public QUOTE_DECIMALS;
     uint256 public BASE_DECIMALS;
@@ -75,7 +75,7 @@ contract DEXBaseTest is Test {
             address market = CROSS_DEX.createMarket(OWNER, FEE_COLLECTOR, address(QUOTE));
             MARKET = MarketImpl(market);
             address pair = MARKET.createPair(
-                address(BASE), QUOTE_DECIMALS / quote_tick_size, BASE_DECIMALS / base_tick_size, FEE_PERMIL
+                address(BASE), QUOTE_DECIMALS / quote_tick_size, BASE_DECIMALS / base_tick_size, FEE_BPS
             );
             PAIR = PairImpl(pair);
         }

@@ -85,7 +85,7 @@ contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgr
         return _allPairs.get(base);
     }
 
-    function createPair(address base, uint256 quoteTickSize, uint256 baseTickSize, uint256 feePermil)
+    function createPair(address base, uint256 quoteTickSize, uint256 baseTickSize, uint256 feeBps)
         external
         onlyOwner
         returns (address pair)
@@ -99,14 +99,7 @@ contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgr
             new ERC1967Proxy(
                 pairImpl,
                 abi.encodeWithSelector(
-                    PairImpl.initialize.selector,
-                    router,
-                    QUOTE,
-                    base,
-                    quoteTickSize,
-                    baseTickSize,
-                    feeCollector,
-                    feePermil
+                    PairImpl.initialize.selector, router, QUOTE, base, quoteTickSize, baseTickSize, feeCollector, feeBps
                 )
             )
         );

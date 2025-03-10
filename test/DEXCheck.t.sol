@@ -5,7 +5,7 @@ import "./DEXBase.t.sol";
 
 contract DEXCheckTest is DEXBaseTest {
     function setUp() external {
-        FEE_PERMIL = 50;
+        FEE_BPS = 99; // 0.99%
 
         _deploy(18, 18, 1e2, 1e4);
     }
@@ -424,7 +424,7 @@ contract DEXCheckTest is DEXBaseTest {
         ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
-        uint256 fee = Math.mulDiv(volume, FEE_PERMIL, 1000);
+        uint256 fee = Math.mulDiv(volume, FEE_BPS, 10000);
 
         // check fee
         assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid quote fee");
@@ -466,7 +466,7 @@ contract DEXCheckTest is DEXBaseTest {
         ROUTER.limitBuy(address(PAIR), price, buyAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
-        uint256 fee = Math.mulDiv(matchVolume, FEE_PERMIL, 1000);
+        uint256 fee = Math.mulDiv(matchVolume, FEE_BPS, 10000);
 
         // check fee
         assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid fee");
@@ -508,7 +508,7 @@ contract DEXCheckTest is DEXBaseTest {
         ROUTER.limitBuy(address(PAIR), price, buyAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
-        uint256 fee = Math.mulDiv(matchVolume, FEE_PERMIL, 1000);
+        uint256 fee = Math.mulDiv(matchVolume, FEE_BPS, 10000);
 
         // check fee
         assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid fee");
@@ -546,7 +546,7 @@ contract DEXCheckTest is DEXBaseTest {
         ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, BASE.balanceOf(seller));
 
-        uint256 fee = Math.mulDiv(volume, FEE_PERMIL, 1000);
+        uint256 fee = Math.mulDiv(volume, FEE_BPS, 10000);
 
         // check fee
         assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid fee");
@@ -588,7 +588,7 @@ contract DEXCheckTest is DEXBaseTest {
         ROUTER.limitSell(address(PAIR), price, sellAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, BASE.balanceOf(seller));
 
-        uint256 fee = Math.mulDiv(matchVolume, FEE_PERMIL, 1000);
+        uint256 fee = Math.mulDiv(matchVolume, FEE_BPS, 10000);
 
         // check fee
         assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid fee");
@@ -630,7 +630,7 @@ contract DEXCheckTest is DEXBaseTest {
         ROUTER.limitSell(address(PAIR), price, sellAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, BASE.balanceOf(seller));
 
-        uint256 fee = Math.mulDiv(matchVolume, FEE_PERMIL, 1000);
+        uint256 fee = Math.mulDiv(matchVolume, FEE_BPS, 10000);
 
         // check fee
         assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid fee");
