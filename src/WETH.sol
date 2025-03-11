@@ -11,7 +11,7 @@ contract WETH is ERC20 {
 
     address payable public immutable ROUTER;
 
-    constructor() ERC20("CrossDEX Wrapped XCross", "XCROSS") {
+    constructor() ERC20("CrossDEX Wrapped CROSSx", "CROSSx") {
         ROUTER = payable(_msgSender());
     }
 
