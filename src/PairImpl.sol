@@ -151,8 +151,8 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
     //   #  #  # #      ##  ## #    #
     //    ##   # ###### #    #  ####
 
-    function getTokenConfig() external view returns (TokenConfig memory) {
-        return TokenConfig({QUOTE: QUOTE, BASE: BASE, DENOMINATOR: DENOMINATOR});
+    function getConfig() external view returns (Config memory) {
+        return Config({QUOTE: QUOTE, BASE: BASE, DENOMINATOR: DENOMINATOR});
     }
 
     function orderById(uint256 id) external view returns (Order memory) {
@@ -162,6 +162,11 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
     function ticks() external view returns (uint256[] memory sellPrices, uint256[] memory buyPrices) {
         sellPrices = _sellPrices.values();
         buyPrices = _buyPrices.values();
+    }
+
+    function tickSizes() external view returns (uint256 tick, uint256 lot) {
+        tick = quoteTickSize;
+        lot = baseTickSize;
     }
 
     function ordersByPrices(OrderSide side, uint256[] memory prices) external view returns (uint256[][] memory) {
@@ -185,7 +190,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
     //  #       #  #  #      #    # #    #   #   #      #    #
     //  ###### #    # ######  ####   ####    #   ######  ####
 
-    function limit(Order memory order, LimitConstraints constraints, uint256 searchPrice, uint256 maxMatchCount)
+    function limit(Order memory order, LimitConstraints constraints, uint256[2] memory adjacent, uint256 maxMatchCount)
         external
         override
         whenNotPaused
@@ -204,7 +209,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
             : _executeBuyOrder(orderId, order, 0, maxMatchCount);
 
         if (order.amount == 0) {
-            emit OrderClosed(orderId, CloseType.ALL_MATCH, block.timestamp);
+            emit OrderClosed(orderId, CloseType.COMPLETED, block.timestamp);
         } else {
             if (constraints == LimitConstraints.IMMEDIATE_OR_CANCEL) {
                 emit OrderClosed(orderId, CloseType.IMMEDIATE_OR_CANCEL, block.timestamp);
@@ -220,14 +225,14 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
 
                     order.feePermil = feePermil; // For sell orders, a fee is charged when acting as a maker.
                     _allOrders[orderId] = order;
-                    ASCList.push(_sellPrices, order.price, searchPrice);
+                    ASCList.push(_sellPrices, order.price, adjacent);
                     _sellOrders[order.price].push(orderId);
                 } else {
                     quoteReserve += Math.mulDiv(order.price, order.amount, DENOMINATOR);
 
                     order.feePermil = 0; // Buy orders have no fees.
                     _allOrders[orderId] = order;
-                    DESCList.push(_buyPrices, order.price, searchPrice);
+                    DESCList.push(_buyPrices, order.price, adjacent);
                     _buyOrders[order.price].push(orderId);
                 }
             }
@@ -259,7 +264,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
             _returnRemainQuote(order.owner, mustRemainQuoteAmount);
         }
 
-        emit OrderClosed(orderId, CloseType.MARKET, block.timestamp);
+        emit OrderClosed(orderId, CloseType.COMPLETED, block.timestamp);
     }
 
     function cancel(address caller, uint256[] memory orderIds) external override onlyRouter {
@@ -468,7 +473,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
 
         // If the entire quantity of target is traded, remove the data.
         if (tradeAmount == target.amount) {
-            _removeOrder(targetId, CloseType.ALL_MATCH, _orders);
+            _removeOrder(targetId, CloseType.COMPLETED, _orders);
         } else {
             unchecked {
                 target.amount -= tradeAmount;

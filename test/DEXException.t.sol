@@ -50,16 +50,18 @@ contract DEXExceptionTest is DEXBaseTest {
         QUOTE.approve(address(ROUTER), type(uint256).max);
         // [limit] check success.
         address pair = address(PAIR);
-        ROUTER.limitSell(pair, quoteTickSize * 2, baseTickSize, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
-        ROUTER.limitBuy(pair, quoteTickSize, baseTickSize, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitSell(
+            pair, quoteTickSize * 2, baseTickSize, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+        );
+        ROUTER.limitBuy(pair, quoteTickSize, baseTickSize, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
 
         // [limit] check fail.
         vm.expectRevert(abi.encodeWithSignature("PairInvalidPrice(uint256)", invalidPrice));
-        ROUTER.limitSell(pair, invalidPrice, baseTickSize, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitSell(pair, invalidPrice, baseTickSize, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
 
         // [limit] check fail.
         vm.expectRevert(abi.encodeWithSignature("PairInvalidAmount(uint256)", invalidAmount));
-        ROUTER.limitSell(pair, quoteTickSize, invalidAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitSell(pair, quoteTickSize, invalidAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
 
         // [market] check success.
         uint256 denominator = PAIR.DENOMINATOR();
@@ -93,7 +95,7 @@ contract DEXExceptionTest is DEXBaseTest {
                 amount: _toBase(1)
             }),
             IPair.LimitConstraints.GOOD_TILL_CANCEL,
-            0,
+            _searchPrices,
             0
         );
 
@@ -108,7 +110,7 @@ contract DEXExceptionTest is DEXBaseTest {
                 amount: _toBase(1)
             }),
             IPair.LimitConstraints.GOOD_TILL_CANCEL,
-            0,
+            _searchPrices,
             0
         );
 
