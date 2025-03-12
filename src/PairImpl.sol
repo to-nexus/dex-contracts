@@ -60,7 +60,6 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
     event TickSizeUpdated(
         uint256 beforeBaseTickSize, uint256 newBaseTickSize, uint256 beforeQuoteTickSize, uint256 newQuoteTickSize
     );
-    event RouterUpdated(address before, address current);
     event FeeCollectorUpdated(address before, address current);
     event FeeUpdated(uint256 before, uint256 current);
     event Skim(address indexed caller, address indexed erc20, address indexed to, uint256 amount);
@@ -95,7 +94,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
     uint256[32] private __gap;
 
     modifier onlyOwner() {
-        // The Pair is the same as the Owner of the Router.
+        // The Pair is the same as the Owner of the Market.
         if (_msgSender() != IOwnable(MARKET).owner()) revert IOwnable.OwnableUnauthorizedAccount(_msgSender());
         _;
     }
@@ -379,7 +378,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
 
                 // Update information.
                 earnQuoteAmount += Math.mulDiv(price, tradeAmount, denominator);
-                if (order.amount == 0 || maxMatchCount == 0) {
+                if (order.amount == 0 || --maxMatchCount == 0) {
                     if (_orders.empty()) {
                         // Although the `while` loop has not yet ended,
                         // if `cOrder` and the last `target.amount` in `orders` are the same,
@@ -390,7 +389,6 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
                 }
                 unchecked {
                     --length;
-                    --maxMatchCount;
                 }
             }
             // Reaching this point means that all orders at the given `price` have been matched,
@@ -442,7 +440,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
                 // Update information.
                 matchedBaseAmount += tradeAmount;
                 useQuoteAmount += tradeQuoteAmount;
-                if (order.amount == 0 || maxMatchCount == 0) {
+                if (order.amount == 0 || --maxMatchCount == 0) {
                     if (_orders.empty()) {
                         // Although the `while` loop has not yet ended,
                         // if `cOrder` and the last `target.amount` in `orders` are the same,
@@ -453,7 +451,6 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
                 }
                 unchecked {
                     --length;
-                    --maxMatchCount;
                 }
             }
             // Reaching this point means that all orders at the given `price` have been matched,

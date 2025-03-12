@@ -29,9 +29,6 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
     error RouterInvalidPairAddress(address);
     error RouterInvalidValue();
 
-    event PairAdded(address indexed pair, address indexed base, address indexed quote);
-    event PairRemoved(address indexed pair);
-
     address public CROSS_DEX; // immutable
     IWETH public WCROSSx; // immutable
 
@@ -57,8 +54,6 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
     constructor() {
         _disableInitializers();
     }
-
-    receive() external payable checkValue {}
 
     function initialize(uint256 _maxMatchCount) external override initializer {
         if (_maxMatchCount == 0) revert RouterInitializeData("maxMatchCount");

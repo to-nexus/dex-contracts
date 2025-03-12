@@ -94,8 +94,8 @@ contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgr
         pair = address(
             new ERC1967Proxy(
                 pairImpl,
-                abi.encodeWithSelector(
-                    PairImpl.initialize.selector, router, QUOTE, base, quoteTickSize, baseTickSize, feeCollector, feeBps
+                abi.encodeCall(
+                    PairImpl.initialize, (router, QUOTE, base, quoteTickSize, baseTickSize, feeCollector, feeBps)
                 )
             )
         );

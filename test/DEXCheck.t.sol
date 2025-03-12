@@ -2,6 +2,7 @@
 pragma solidity ^0.8.13;
 
 import "./DEXBase.t.sol";
+import {ERC1967Proxy} from "@openzeppelin-contracts-5.2.0/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract DEXCheckTest is DEXBaseTest {
     function setUp() external {
@@ -1090,5 +1091,76 @@ contract DEXCheckTest is DEXBaseTest {
         (tick, lot) = PAIR.tickSizes();
         assertEq(tick, 1e20);
         assertEq(lot, 1e20);
+    }
+
+    function test_check_isMarket() external {
+        assertTrue(CROSS_DEX.isMarket(address(MARKET)));
+        vm.expectRevert();
+        CROSS_DEX.isMarket(address(1));
+
+        address pairImpl = address(new PairImpl());
+        address marketImpl = address(new MarketImpl());
+        address proxy = address(new ERC1967Proxy(marketImpl, hex""));
+
+        MarketImpl market = MarketImpl(proxy);
+        market.initialize(OWNER, address(ROUTER), FEE_COLLECTOR, address(QUOTE), pairImpl);
+
+        assertFalse(CROSS_DEX.isMarket(address(market)));
+    }
+
+    function test_check_max_match_count_case1() external {
+        address seller = address(1);
+
+        uint256 price = _toQuote(1);
+        uint256 amount = _toBase(1);
+        uint256 maxMatchCount = 10;
+
+        vm.prank(OWNER);
+        BASE.transfer(seller, amount * (maxMatchCount + 1));
+
+        vm.startPrank(seller);
+        BASE.approve(address(ROUTER), type(uint256).max);
+        for (uint256 i = 0; i < maxMatchCount + 1; i++) {
+            ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        }
+        vm.stopPrank();
+
+        vm.startPrank(OWNER);
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        ROUTER.marketBuy(address(PAIR), QUOTE.balanceOf(OWNER), maxMatchCount);
+        vm.stopPrank();
+
+        uint256 baseReserve = PAIR.baseReserve();
+        assertEq(amount, baseReserve);
+    }
+
+    function test_check_max_match_count_case2() external {
+        address buyer = address(1);
+
+        uint256 price = _toQuote(1);
+        uint256 amount = _toBase(1);
+        uint256 oneVolume = Math.mulDiv(price, amount, BASE_DECIMALS);
+        uint256 maxMatchCount = 10;
+
+        vm.prank(OWNER);
+        QUOTE.transfer(buyer, oneVolume * (maxMatchCount + 1));
+
+        vm.startPrank(buyer);
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        for (uint256 i = 0; i < maxMatchCount + 1; i++) {
+            ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        }
+        vm.stopPrank();
+
+        vm.startPrank(OWNER);
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 baseBalance = BASE.balanceOf(OWNER);
+        uint256 baseTickSize = PAIR.baseTickSize();
+        uint256 sellAmount = baseBalance - (baseBalance % baseTickSize);
+        ROUTER.marketSell(address(PAIR), sellAmount, maxMatchCount);
+        vm.stopPrank();
+
+        uint256 quoteReserve = PAIR.quoteReserve();
+        assertEq(oneVolume, quoteReserve);
     }
 }
