@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 interface IMarketInitializer {
+    function QUOTE() external view returns (address);
     function initialize(address owner, address router, address feeCollector, address quote, address pairImpl)
         external;
 }

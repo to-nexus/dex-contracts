@@ -79,8 +79,7 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     function isMarket(address market) public view returns (bool) {
-        // 0x9c579839 = QUOTE()
-        (bool success, bytes memory data) = market.staticcall(abi.encodeWithSelector(0x9c579839));
+        (bool success, bytes memory data) = market.staticcall(abi.encodeCall(IMarketInitializer.QUOTE, ()));
         if (!success) return false;
         address quote = abi.decode(data, (address));
         return _allMarkets.get(quote) == market;

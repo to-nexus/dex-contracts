@@ -2,6 +2,7 @@
 pragma solidity ^0.8.13;
 
 import "./DEXBase.t.sol";
+import {ERC1967Proxy} from "@openzeppelin-contracts-5.2.0/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract DEXCheckTest is DEXBaseTest {
     function setUp() external {
@@ -1048,5 +1049,20 @@ contract DEXCheckTest is DEXBaseTest {
                 console.log(buyOrders[i][j]);
             }
         }
+    }
+
+    function test_check_isMarket() external {
+        assertTrue(CROSS_DEX.isMarket(address(MARKET)));
+        vm.expectRevert();
+        CROSS_DEX.isMarket(address(1));
+
+        address pairImpl = address(new PairImpl());
+        address marketImpl = address(new MarketImpl());
+        address proxy = address(new ERC1967Proxy(marketImpl, hex""));
+
+        MarketImpl market = MarketImpl(proxy);
+        market.initialize(OWNER, address(ROUTER), FEE_COLLECTOR, address(QUOTE), pairImpl);
+
+        assertFalse(CROSS_DEX.isMarket(address(market)));
     }
 }
