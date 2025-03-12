@@ -55,8 +55,6 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
         _disableInitializers();
     }
 
-    receive() external payable checkValue {}
-
     function initialize(uint256 _maxMatchCount) external override initializer {
         if (_maxMatchCount == 0) revert RouterInitializeData("maxMatchCount");
 

@@ -14,14 +14,6 @@ contract DEXExceptionTest is DEXBaseTest {
         _deploy(6, 18, 1e2, 1e4);
     }
 
-    // [ROUTER] Cannot receive coins.
-    function test_exception_wcross_case1() external {
-        vm.startPrank(OWNER);
-        vm.deal(OWNER, 1);
-        vm.expectRevert(abi.encodeWithSignature("RouterInvalidValue()"));
-        payable(address(ROUTER)).sendValue(1);
-    }
-
     // [MARKET] A registered BASE token cannot be registered again.
     function test_exception_market_case1() external {
         vm.prank(OWNER);
