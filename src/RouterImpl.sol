@@ -29,11 +29,8 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
     error RouterInvalidPairAddress(address);
     error RouterInvalidValue();
 
-    event PairAdded(address indexed pair, address indexed base, address indexed quote);
-    event PairRemoved(address indexed pair);
-
     address public CROSS_DEX; // immutable
-    IWETH public WXCROSS; // immutable
+    IWETH public WCROSSx; // immutable
 
     uint256 public maxMatchCount;
 
@@ -58,13 +55,11 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
         _disableInitializers();
     }
 
-    receive() external payable checkValue {}
-
     function initialize(uint256 _maxMatchCount) external override initializer {
         if (_maxMatchCount == 0) revert RouterInitializeData("maxMatchCount");
 
         CROSS_DEX = _msgSender();
-        WXCROSS = IWETH(payable(address(new WETH())));
+        WCROSSx = IWETH(payable(address(new WETH())));
         maxMatchCount = _maxMatchCount;
 
         __Context_init();
@@ -87,7 +82,7 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
         IPair.Config memory info = IPair(pair).getConfig();
 
         IERC20 BASE = info.BASE;
-        if (address(BASE) == address(WXCROSS)) WXCROSS.mintTo{value: amount}(address(pair));
+        if (address(BASE) == address(WCROSSx)) WCROSSx.mintTo{value: amount}(address(pair));
         else BASE.safeTransferFrom(owner, pair, amount);
 
         IPair.Order memory order =
@@ -108,7 +103,7 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
 
         IERC20 QUOTE = info.QUOTE;
         uint256 volume = Math.mulDiv(price, amount, info.DENOMINATOR);
-        if (address(QUOTE) == address(WXCROSS)) WXCROSS.mintTo{value: volume}(address(pair));
+        if (address(QUOTE) == address(WCROSSx)) WCROSSx.mintTo{value: volume}(address(pair));
         else QUOTE.safeTransferFrom(owner, address(pair), volume);
 
         IPair.Order memory order =
@@ -127,7 +122,7 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
         IPair.Config memory info = IPair(pair).getConfig();
 
         IERC20 BASE = info.BASE;
-        if (address(BASE) == address(WXCROSS)) WXCROSS.mintTo{value: amount}(address(pair));
+        if (address(BASE) == address(WCROSSx)) WCROSSx.mintTo{value: amount}(address(pair));
         else BASE.safeTransferFrom(owner, address(pair), amount);
 
         IPair.Order memory order =
@@ -146,7 +141,7 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
         IPair.Config memory info = IPair(pair).getConfig();
 
         IERC20 QUOTE = info.QUOTE;
-        if (address(QUOTE) == address(WXCROSS)) WXCROSS.mintTo{value: amount}(address(pair));
+        if (address(QUOTE) == address(WCROSSx)) WCROSSx.mintTo{value: amount}(address(pair));
         else QUOTE.safeTransferFrom(owner, address(pair), amount);
 
         IPair.Order memory order =

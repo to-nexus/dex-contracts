@@ -17,6 +17,7 @@ import {WETH} from "./WETH.sol";
 contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableMap for EnumerableMap.AddressToAddressMap;
 
+    error CrossDexInitializeData(bytes32);
     error CrossDexAlreadyCreatedMarketQuote(address);
     error CrossDexInvalidMarketAddress(address);
 
@@ -48,6 +49,9 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
         address _marketImpl,
         address _pairImpl
     ) external initializer {
+        if (_routerImpl == address(0)) revert CrossDexInitializeData("routerImpl");
+        if (_marketImpl == address(0)) revert CrossDexInitializeData("marketImpl");
+        if (_pairImpl == address(0)) revert CrossDexInitializeData("pairImpl");
         {
             // deploy router
             ERC1967Proxy proxy = new ERC1967Proxy(_routerImpl, hex"");
@@ -79,8 +83,7 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     function isMarket(address market) public view returns (bool) {
-        // 0x9c579839 = QUOTE()
-        (bool success, bytes memory data) = market.staticcall(abi.encodeWithSelector(0x9c579839));
+        (bool success, bytes memory data) = market.staticcall(abi.encodeCall(IMarketInitializer.QUOTE, ()));
         if (!success) return false;
         address quote = abi.decode(data, (address));
         return _allMarkets.get(quote) == market;
