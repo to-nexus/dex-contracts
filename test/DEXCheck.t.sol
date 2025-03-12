@@ -1055,11 +1055,19 @@ contract DEXCheckTest is DEXBaseTest {
         assertNotEq(tick, 1e20);
         assertNotEq(lot, 1e20);
 
+        address MARKET_OWNER = address(bytes20("MARKET_OWNER"));
         vm.startPrank(OWNER);
+        MARKET.transferOwnership(MARKET_OWNER);
+        vm.expectRevert(abi.encodeWithSignature("CrossDexUnauthorizedChangeTickSizes(address)", OWNER));
+        PAIR.setTickSize(1e20, 1e20);
+        vm.stopPrank();
+
+        vm.startPrank(MARKET_OWNER);
         PAIR.setTickSize(1e20, 1e20);
         (tick, lot) = PAIR.tickSizes();
         assertEq(tick, 1e20);
         assertEq(lot, 1e20);
+        vm.stopPrank();
     }
 
     function test_check_setTickSizes_case2() external {
@@ -1071,11 +1079,11 @@ contract DEXCheckTest is DEXBaseTest {
 
         // check roles
         vm.prank(setter);
-        vm.expectRevert(abi.encodeWithSignature("MarketUnauthorizedChangeTickSizes(address)", setter));
+        vm.expectRevert(abi.encodeWithSignature("CrossDexUnauthorizedChangeTickSizes(address)", setter));
         PAIR.setTickSize(1e20, 1e20);
         // grant roles
         vm.prank(OWNER);
-        MARKET.setTickSizeSetter(setter, true);
+        CROSS_DEX.setTickSizeSetter(setter, true);
         // check success
         vm.prank(setter);
         PAIR.setTickSize(1e20, 1e20);

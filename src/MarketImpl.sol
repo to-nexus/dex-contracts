@@ -19,11 +19,8 @@ contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgr
     error MarketInvalidBaseAddress(address);
     error MarketAlreadyCreatedBaseAddress(address);
     error MarketDeployPair();
-    error MarketUnauthorizedChangeTickSizes(address);
-    error MarketAlreadySetTickSizeSetter(address, bool);
 
     event PairCreated(address indexed pair, address indexed base, uint256 timestamp);
-    event SetTickSizeSetter(address indexed setter, bool indexed allowed);
 
     uint256 public deployed; // immutable
     ICrossDex public CROSS_DEX; // immutable
@@ -33,7 +30,6 @@ contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgr
     address public feeCollector;
     address public pairImpl;
 
-    mapping(address setter => bool) public isTickSizeSetter;
     EnumerableMap.AddressToAddressMap private _allPairs; // base => pair
 
     uint256[43] private __gap;
@@ -78,7 +74,7 @@ contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgr
 
     function checkTickSizeRoles(address account) external view override {
         // check account is owner or tick size setter
-        if (!(account == owner() || isTickSizeSetter[account])) revert MarketUnauthorizedChangeTickSizes(account);
+        if (account != owner()) CROSS_DEX.checkTickSizeRoles(account);
     }
 
     function baseToPair(address base) external view returns (address) {
@@ -108,13 +104,6 @@ contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgr
 
         CROSS_DEX.pairCreated(pair);
         emit PairCreated(pair, base, block.timestamp);
-    }
-
-    function setTickSizeSetter(address setter, bool allowed) external onlyOwner {
-        if (isTickSizeSetter[setter] == allowed) revert MarketAlreadySetTickSizeSetter(setter, allowed);
-
-        isTickSizeSetter[setter] = allowed;
-        emit SetTickSizeSetter(setter, allowed);
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
