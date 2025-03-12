@@ -21,7 +21,7 @@ contract DEXBaseTest is Test {
 
     CrossDexImpl public CROSS_DEX;
     RouterImpl public ROUTER;
-    WETH public WXCROSS;
+    WETH public WCROSSx;
 
     IERC20 public QUOTE;
     IERC20 public BASE;
@@ -63,7 +63,7 @@ contract DEXBaseTest is Test {
         {
             // get contracts from CROSS_DEX
             ROUTER = RouterImpl(CROSS_DEX.ROUTER());
-            WXCROSS = WETH(payable(address(ROUTER.WXCROSS())));
+            WCROSSx = WETH(payable(address(ROUTER.WCROSSx())));
         }
         {
             // deploy base and quote tokens

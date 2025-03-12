@@ -92,7 +92,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
     mapping(uint256 price => List.U256) private _buyOrders; //  price => buy order id list (For the same price, orders will be stored in chronological order.)
     mapping(uint256 orderId => Order) private _allOrders;
 
-    uint256[31] private __gap;
+    uint256[32] private __gap;
 
     modifier onlyOwner() {
         // The Pair is the same as the Owner of the Router.
@@ -471,8 +471,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         uint256 price,
         List.U256 storage _orders
     ) private returns (address targetOwner, uint256 tradeAmount, uint256 targetFeeBps) {
-        (targetOwner, tradeAmount, targetFeeBps) =
-            (target.owner, Math.min(order.amount, target.amount), target.feeBps);
+        (targetOwner, tradeAmount, targetFeeBps) = (target.owner, Math.min(order.amount, target.amount), target.feeBps);
 
         (uint256 sellId, uint256 buyId) = (order.side == OrderSide.SELL ? (orderId, targetId) : (targetId, orderId));
         emit OrderMatched(sellId, buyId, price, tradeAmount, block.timestamp);

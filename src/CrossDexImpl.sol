@@ -30,7 +30,7 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
     address public marketImpl;
     address public pairImpl;
 
-    EnumerableMap.AddressToAddressMap private _allMarkets; // quote => market (2 slots)
+    EnumerableMap.AddressToAddressMap private _allMarkets; // quote => market
     mapping(address pair => address) public override pairToMarket;
 
     mapping(address setter => bool) public isTickSizeSetter;
