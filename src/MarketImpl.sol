@@ -10,9 +10,9 @@ import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/acce
 
 import {PairImpl} from "./PairImpl.sol";
 import {ICrossDex} from "./interfaces/ICrossDex.sol";
-import {IMarketInitializer} from "./interfaces/IMarket.sol";
+import {IMarket, IMarketInitializer} from "./interfaces/IMarket.sol";
 
-contract MarketImpl is IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
+contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableMap for EnumerableMap.AddressToAddressMap;
 
     error MarketInvalidInitializeData(bytes32);
@@ -72,11 +72,16 @@ contract MarketImpl is IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
         }
     }
 
+    function checkTickSizeRoles(address account) external view override {
+        // check account is owner or tick size setter
+        if (account != owner()) CROSS_DEX.checkTickSizeRoles(account);
+    }
+
     function baseToPair(address base) external view returns (address) {
         return _allPairs.get(base);
     }
 
-    function createPair(address base, uint256 quoteTickSize, uint256 baseTickSize, uint256 feePermil)
+    function createPair(address base, uint256 quoteTickSize, uint256 baseTickSize, uint256 feeBps)
         external
         onlyOwner
         returns (address pair)
@@ -90,7 +95,7 @@ contract MarketImpl is IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
             new ERC1967Proxy(
                 pairImpl,
                 abi.encodeCall(
-                    PairImpl.initialize, (router, QUOTE, base, quoteTickSize, baseTickSize, feeCollector, feePermil)
+                    PairImpl.initialize, (router, QUOTE, base, quoteTickSize, baseTickSize, feeCollector, feeBps)
                 )
             )
         );

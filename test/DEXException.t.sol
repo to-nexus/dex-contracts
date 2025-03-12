@@ -9,7 +9,7 @@ contract DEXExceptionTest is DEXBaseTest {
 
     function setUp() external {
         MAX_MATCH_COUNT = 5;
-        FEE_PERMIL = 50;
+        FEE_BPS = 50;
 
         _deploy(6, 18, 1e2, 1e4);
     }
@@ -19,7 +19,7 @@ contract DEXExceptionTest is DEXBaseTest {
         vm.prank(OWNER);
 
         vm.expectRevert(abi.encodeWithSignature("MarketAlreadyCreatedBaseAddress(address)", address(BASE)));
-        MARKET.createPair(address(BASE), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e4, FEE_PERMIL);
+        MARKET.createPair(address(BASE), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e4, FEE_BPS);
     }
 
     // [MARKET] BASE cannot be registered with the same address as QUOTE.
@@ -27,7 +27,7 @@ contract DEXExceptionTest is DEXBaseTest {
         vm.prank(OWNER);
 
         vm.expectRevert(abi.encodeWithSignature("MarketInvalidBaseAddress(address)", address(QUOTE)));
-        MARKET.createPair(address(QUOTE), QUOTE_DECIMALS / 1e2, QUOTE_DECIMALS / 1e4, FEE_PERMIL);
+        MARKET.createPair(address(QUOTE), QUOTE_DECIMALS / 1e2, QUOTE_DECIMALS / 1e4, FEE_BPS);
     }
 
     // [Pair] Trades cannot be executed in units smaller than the Tick Size.
@@ -82,7 +82,7 @@ contract DEXExceptionTest is DEXBaseTest {
             IPair.Order({
                 side: IPair.OrderSide.SELL,
                 owner: address(OWNER),
-                feePermil: 0,
+                feeBps: 0,
                 price: _toQuote(1),
                 amount: _toBase(1)
             }),
@@ -97,7 +97,7 @@ contract DEXExceptionTest is DEXBaseTest {
             IPair.Order({
                 side: IPair.OrderSide.BUY,
                 owner: address(OWNER),
-                feePermil: 0,
+                feeBps: 0,
                 price: _toQuote(1),
                 amount: _toBase(1)
             }),
@@ -109,7 +109,7 @@ contract DEXExceptionTest is DEXBaseTest {
         // sell market
         vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", address(OWNER)));
         PAIR.market(
-            IPair.Order({side: IPair.OrderSide.SELL, owner: address(OWNER), feePermil: 0, price: 0, amount: 0}),
+            IPair.Order({side: IPair.OrderSide.SELL, owner: address(OWNER), feeBps: 0, price: 0, amount: 0}),
             _toBase(1),
             0
         );
@@ -117,7 +117,7 @@ contract DEXExceptionTest is DEXBaseTest {
         // buy market
         vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", address(OWNER)));
         PAIR.market(
-            IPair.Order({side: IPair.OrderSide.BUY, owner: address(OWNER), feePermil: 0, price: 0, amount: 0}),
+            IPair.Order({side: IPair.OrderSide.BUY, owner: address(OWNER), feeBps: 0, price: 0, amount: 0}),
             _toQuote(1),
             0
         );

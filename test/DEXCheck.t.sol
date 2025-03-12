@@ -6,7 +6,7 @@ import {ERC1967Proxy} from "@openzeppelin-contracts-5.2.0/proxy/ERC1967/ERC1967P
 
 contract DEXCheckTest is DEXBaseTest {
     function setUp() external {
-        FEE_PERMIL = 50;
+        FEE_BPS = 99; // 0.99%
 
         _deploy(18, 18, 1e2, 1e4);
     }
@@ -425,7 +425,7 @@ contract DEXCheckTest is DEXBaseTest {
         ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
-        uint256 fee = Math.mulDiv(volume, FEE_PERMIL, 1000);
+        uint256 fee = Math.mulDiv(volume, FEE_BPS, 10000);
 
         // check fee
         assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid quote fee");
@@ -467,7 +467,7 @@ contract DEXCheckTest is DEXBaseTest {
         ROUTER.limitBuy(address(PAIR), price, buyAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
-        uint256 fee = Math.mulDiv(matchVolume, FEE_PERMIL, 1000);
+        uint256 fee = Math.mulDiv(matchVolume, FEE_BPS, 10000);
 
         // check fee
         assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid fee");
@@ -509,7 +509,7 @@ contract DEXCheckTest is DEXBaseTest {
         ROUTER.limitBuy(address(PAIR), price, buyAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
-        uint256 fee = Math.mulDiv(matchVolume, FEE_PERMIL, 1000);
+        uint256 fee = Math.mulDiv(matchVolume, FEE_BPS, 10000);
 
         // check fee
         assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid fee");
@@ -547,7 +547,7 @@ contract DEXCheckTest is DEXBaseTest {
         ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, BASE.balanceOf(seller));
 
-        uint256 fee = Math.mulDiv(volume, FEE_PERMIL, 1000);
+        uint256 fee = Math.mulDiv(volume, FEE_BPS, 10000);
 
         // check fee
         assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid fee");
@@ -589,7 +589,7 @@ contract DEXCheckTest is DEXBaseTest {
         ROUTER.limitSell(address(PAIR), price, sellAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, BASE.balanceOf(seller));
 
-        uint256 fee = Math.mulDiv(matchVolume, FEE_PERMIL, 1000);
+        uint256 fee = Math.mulDiv(matchVolume, FEE_BPS, 10000);
 
         // check fee
         assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid fee");
@@ -631,7 +631,7 @@ contract DEXCheckTest is DEXBaseTest {
         ROUTER.limitSell(address(PAIR), price, sellAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, BASE.balanceOf(seller));
 
-        uint256 fee = Math.mulDiv(matchVolume, FEE_PERMIL, 1000);
+        uint256 fee = Math.mulDiv(matchVolume, FEE_BPS, 10000);
 
         // check fee
         assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid fee");
@@ -1049,6 +1049,48 @@ contract DEXCheckTest is DEXBaseTest {
                 console.log(buyOrders[i][j]);
             }
         }
+    }
+
+    function test_check_setTickSizes_case1() external {
+        (uint256 tick, uint256 lot) = PAIR.tickSizes();
+        assertNotEq(tick, 1e20);
+        assertNotEq(lot, 1e20);
+
+        address MARKET_OWNER = address(bytes20("MARKET_OWNER"));
+        vm.startPrank(OWNER);
+        MARKET.transferOwnership(MARKET_OWNER);
+        vm.expectRevert(abi.encodeWithSignature("CrossDexUnauthorizedChangeTickSizes(address)", OWNER));
+        PAIR.setTickSize(1e20, 1e20);
+        vm.stopPrank();
+
+        vm.startPrank(MARKET_OWNER);
+        PAIR.setTickSize(1e20, 1e20);
+        (tick, lot) = PAIR.tickSizes();
+        assertEq(tick, 1e20);
+        assertEq(lot, 1e20);
+        vm.stopPrank();
+    }
+
+    function test_check_setTickSizes_case2() external {
+        (uint256 tick, uint256 lot) = PAIR.tickSizes();
+        assertNotEq(tick, 1e20);
+        assertNotEq(lot, 1e20);
+
+        address setter = address(bytes20("SETTER"));
+
+        // check roles
+        vm.prank(setter);
+        vm.expectRevert(abi.encodeWithSignature("CrossDexUnauthorizedChangeTickSizes(address)", setter));
+        PAIR.setTickSize(1e20, 1e20);
+        // grant roles
+        vm.prank(OWNER);
+        CROSS_DEX.setTickSizeSetter(setter, true);
+        // check success
+        vm.prank(setter);
+        PAIR.setTickSize(1e20, 1e20);
+        (tick, lot) = PAIR.tickSizes();
+        assertEq(tick, 1e20);
+        assertEq(lot, 1e20);
     }
 
     function test_check_isMarket() external {
