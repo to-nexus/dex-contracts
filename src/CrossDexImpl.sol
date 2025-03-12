@@ -17,10 +17,14 @@ import {WETH} from "./WETH.sol";
 contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableMap for EnumerableMap.AddressToAddressMap;
 
+    error CrossDexInitializeData(bytes32);
     error CrossDexAlreadyCreatedMarketQuote(address);
     error CrossDexInvalidMarketAddress(address);
+    error CrossDexUnauthorizedChangeTickSizes(address);
+    error CrossDexAlreadyTickSizeSetter(address, bool);
 
     event MarketCreated(address indexed quote, address indexed market, address indexed owner, address fee_collector);
+    event TickSizeSetterSet(address indexed setter, bool indexed allowed);
 
     address payable public ROUTER; // immutable
 
@@ -30,7 +34,9 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
     EnumerableMap.AddressToAddressMap private _allMarkets; // quote => market
     mapping(address pair => address) public override pairToMarket;
 
-    uint256[45] __gap;
+    mapping(address setter => bool) public isTickSizeSetter;
+
+    uint256[44] __gap;
 
     modifier onlyMarket() {
         if (!isMarket(_msgSender())) revert CrossDexInvalidMarketAddress(_msgSender());
@@ -48,6 +54,9 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
         address _marketImpl,
         address _pairImpl
     ) external initializer {
+        if (_routerImpl == address(0)) revert CrossDexInitializeData("routerImpl");
+        if (_marketImpl == address(0)) revert CrossDexInitializeData("marketImpl");
+        if (_pairImpl == address(0)) revert CrossDexInitializeData("pairImpl");
         {
             // deploy router
             ERC1967Proxy proxy = new ERC1967Proxy(_routerImpl, hex"");
@@ -78,9 +87,13 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
         return _allMarkets.get(quote);
     }
 
+    function checkTickSizeRoles(address account) external view override {
+        // check account is owner or tick size setter
+        if (!isTickSizeSetter[account]) revert CrossDexUnauthorizedChangeTickSizes(account);
+    }
+
     function isMarket(address market) public view returns (bool) {
-        // 0x9c579839 = QUOTE()
-        (bool success, bytes memory data) = market.staticcall(abi.encodeWithSelector(0x9c579839));
+        (bool success, bytes memory data) = market.staticcall(abi.encodeCall(IMarketInitializer.QUOTE, ()));
         if (!success) return false;
         address quote = abi.decode(data, (address));
         return _allMarkets.get(quote) == market;
@@ -99,6 +112,13 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
 
         emit MarketCreated(_quote, _market, _owner, _fee_collector);
         return _market;
+    }
+
+    function setTickSizeSetter(address setter, bool allowed) external onlyOwner {
+        if (isTickSizeSetter[setter] == allowed) revert CrossDexAlreadyTickSizeSetter(setter, allowed);
+
+        isTickSizeSetter[setter] = allowed;
+        emit TickSizeSetterSet(setter, allowed);
     }
 
     function pairCreated(address pair) external override onlyMarket {

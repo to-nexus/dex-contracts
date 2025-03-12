@@ -2,10 +2,11 @@
 pragma solidity ^0.8.13;
 
 import "./DEXBase.t.sol";
+import {ERC1967Proxy} from "@openzeppelin-contracts-5.2.0/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract DEXCheckTest is DEXBaseTest {
     function setUp() external {
-        FEE_PERMIL = 50;
+        FEE_BPS = 99; // 0.99%
 
         _deploy(18, 18, 1e2, 1e4);
     }
@@ -28,8 +29,9 @@ contract DEXCheckTest is DEXBaseTest {
             // cancel sell
             vm.startPrank(seller);
             BASE.approve(address(ROUTER), type(uint256).max);
-            uint256 sellOrderId =
-                ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+            uint256 sellOrderId = ROUTER.limitSell(
+                address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+            );
             assertEq(0, BASE.balanceOf(seller));
 
             uint256[] memory cancelOrderIds = new uint256[](1);
@@ -52,7 +54,7 @@ contract DEXCheckTest is DEXBaseTest {
             vm.startPrank(buyer);
             QUOTE.approve(address(ROUTER), type(uint256).max);
             uint256 buyOrderId =
-                ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+                ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
             assertEq(0, QUOTE.balanceOf(buyer));
 
             uint256[] memory cancelOrderIds = new uint256[](1);
@@ -94,11 +96,12 @@ contract DEXCheckTest is DEXBaseTest {
             // cancel sell
             vm.startPrank(seller);
             BASE.approve(address(ROUTER), type(uint256).max);
-            uint256 sellOrderId =
-                ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+            uint256 sellOrderId = ROUTER.limitSell(
+                address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+            );
             assertEq(0, BASE.balanceOf(seller));
             vm.startPrank(OWNER);
-            ROUTER.limitBuy(address(PAIR), price, amount / 2, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+            ROUTER.limitBuy(address(PAIR), price, amount / 2, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
 
             uint256[] memory cancelOrderIds = new uint256[](1);
             cancelOrderIds[0] = sellOrderId;
@@ -120,7 +123,7 @@ contract DEXCheckTest is DEXBaseTest {
             vm.startPrank(buyer);
             QUOTE.approve(address(ROUTER), type(uint256).max);
             uint256 buyOrderId =
-                ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+                ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
             assertEq(0, QUOTE.balanceOf(buyer));
 
             vm.startPrank(OWNER);
@@ -162,8 +165,9 @@ contract DEXCheckTest is DEXBaseTest {
             // cancel sell
             vm.startPrank(seller);
             BASE.approve(address(ROUTER), type(uint256).max);
-            uint256 sellOrderId =
-                ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+            uint256 sellOrderId = ROUTER.limitSell(
+                address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+            );
             assertEq(0, BASE.balanceOf(seller));
 
             uint256[] memory cancelOrderIds = new uint256[](1);
@@ -194,7 +198,7 @@ contract DEXCheckTest is DEXBaseTest {
             vm.startPrank(buyer);
             QUOTE.approve(address(ROUTER), type(uint256).max);
             uint256 buyOrderId =
-                ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+                ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
             assertEq(0, QUOTE.balanceOf(buyer));
 
             uint256[] memory cancelOrderIds = new uint256[](1);
@@ -235,8 +239,9 @@ contract DEXCheckTest is DEXBaseTest {
             // cancel sell
             vm.startPrank(seller);
             BASE.approve(address(ROUTER), type(uint256).max);
-            uint256 sellOrderId =
-                ROUTER.limitSell(address(PAIR), price1, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+            uint256 sellOrderId = ROUTER.limitSell(
+                address(PAIR), price1, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+            );
             assertEq(0, BASE.balanceOf(seller));
             _orderIds[0] = sellOrderId;
         }
@@ -244,8 +249,9 @@ contract DEXCheckTest is DEXBaseTest {
             // cancel buy
             vm.startPrank(buyer);
             QUOTE.approve(address(ROUTER), type(uint256).max);
-            uint256 buyOrderId =
-                ROUTER.limitBuy(address(PAIR), price2, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+            uint256 buyOrderId = ROUTER.limitBuy(
+                address(PAIR), price2, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+            );
             assertEq(0, QUOTE.balanceOf(buyer));
             _orderIds[1] = buyOrderId;
         }
@@ -299,8 +305,9 @@ contract DEXCheckTest is DEXBaseTest {
             // cancel sell
             vm.startPrank(seller);
             BASE.approve(address(ROUTER), type(uint256).max);
-            uint256 sellOrderId =
-                ROUTER.limitSell(address(PAIR), price1, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+            uint256 sellOrderId = ROUTER.limitSell(
+                address(PAIR), price1, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+            );
             assertEq(0, BASE.balanceOf(seller));
             _orderIds[0] = sellOrderId;
         }
@@ -308,8 +315,9 @@ contract DEXCheckTest is DEXBaseTest {
             // cancel buy
             vm.startPrank(buyer);
             QUOTE.approve(address(ROUTER), type(uint256).max);
-            uint256 buyOrderId =
-                ROUTER.limitBuy(address(PAIR), price2, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+            uint256 buyOrderId = ROUTER.limitBuy(
+                address(PAIR), price2, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+            );
             assertEq(0, QUOTE.balanceOf(buyer));
             _orderIds[1] = buyOrderId;
         }
@@ -343,16 +351,18 @@ contract DEXCheckTest is DEXBaseTest {
         {
             // sell
             BASE.approve(address(ROUTER), type(uint256).max);
-            uint256 sellOrderId =
-                ROUTER.limitSell(address(PAIR), price1, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+            uint256 sellOrderId = ROUTER.limitSell(
+                address(PAIR), price1, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+            );
             assertEq(0, BASE.balanceOf(user));
             _orderIds[0] = sellOrderId;
         }
         {
             // buy
             QUOTE.approve(address(ROUTER), type(uint256).max);
-            uint256 buyOrderId =
-                ROUTER.limitBuy(address(PAIR), price2, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+            uint256 buyOrderId = ROUTER.limitBuy(
+                address(PAIR), price2, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+            );
             assertEq(0, QUOTE.balanceOf(user));
             _orderIds[1] = buyOrderId;
         }
@@ -407,15 +417,15 @@ contract DEXCheckTest is DEXBaseTest {
 
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, BASE.balanceOf(seller));
 
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
-        uint256 fee = Math.mulDiv(volume, FEE_PERMIL, 1000);
+        uint256 fee = Math.mulDiv(volume, FEE_BPS, 10000);
 
         // check fee
         assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid quote fee");
@@ -449,15 +459,15 @@ contract DEXCheckTest is DEXBaseTest {
 
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitSell(address(PAIR), price, sellAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitSell(address(PAIR), price, sellAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, BASE.balanceOf(seller));
 
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitBuy(address(PAIR), price, buyAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitBuy(address(PAIR), price, buyAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
-        uint256 fee = Math.mulDiv(matchVolume, FEE_PERMIL, 1000);
+        uint256 fee = Math.mulDiv(matchVolume, FEE_BPS, 10000);
 
         // check fee
         assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid fee");
@@ -491,15 +501,15 @@ contract DEXCheckTest is DEXBaseTest {
 
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitSell(address(PAIR), price, sellAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitSell(address(PAIR), price, sellAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, BASE.balanceOf(seller));
 
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitBuy(address(PAIR), price, buyAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitBuy(address(PAIR), price, buyAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
-        uint256 fee = Math.mulDiv(matchVolume, FEE_PERMIL, 1000);
+        uint256 fee = Math.mulDiv(matchVolume, FEE_BPS, 10000);
 
         // check fee
         assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid fee");
@@ -529,15 +539,15 @@ contract DEXCheckTest is DEXBaseTest {
 
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, BASE.balanceOf(seller));
 
-        uint256 fee = Math.mulDiv(volume, FEE_PERMIL, 1000);
+        uint256 fee = Math.mulDiv(volume, FEE_BPS, 10000);
 
         // check fee
         assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid fee");
@@ -571,15 +581,15 @@ contract DEXCheckTest is DEXBaseTest {
 
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitBuy(address(PAIR), price, buyAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitBuy(address(PAIR), price, buyAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitSell(address(PAIR), price, sellAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitSell(address(PAIR), price, sellAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, BASE.balanceOf(seller));
 
-        uint256 fee = Math.mulDiv(matchVolume, FEE_PERMIL, 1000);
+        uint256 fee = Math.mulDiv(matchVolume, FEE_BPS, 10000);
 
         // check fee
         assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid fee");
@@ -613,15 +623,15 @@ contract DEXCheckTest is DEXBaseTest {
 
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitBuy(address(PAIR), price, buyAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitBuy(address(PAIR), price, buyAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitSell(address(PAIR), price, sellAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitSell(address(PAIR), price, sellAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, BASE.balanceOf(seller));
 
-        uint256 fee = Math.mulDiv(matchVolume, FEE_PERMIL, 1000);
+        uint256 fee = Math.mulDiv(matchVolume, FEE_BPS, 10000);
 
         // check fee
         assertEq(fee, QUOTE.balanceOf(FEE_COLLECTOR), "invalid fee");
@@ -647,7 +657,7 @@ contract DEXCheckTest is DEXBaseTest {
 
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, BASE.balanceOf(seller));
 
         (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
@@ -683,11 +693,11 @@ contract DEXCheckTest is DEXBaseTest {
 
         vm.startPrank(seller1);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, BASE.balanceOf(seller1));
         vm.startPrank(seller2);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, BASE.balanceOf(seller2));
 
         (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
@@ -724,11 +734,11 @@ contract DEXCheckTest is DEXBaseTest {
 
         vm.startPrank(seller1);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitSell(address(PAIR), price1, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitSell(address(PAIR), price1, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, BASE.balanceOf(seller1));
         vm.startPrank(seller2);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitSell(address(PAIR), price2, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitSell(address(PAIR), price2, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, BASE.balanceOf(seller2));
 
         (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
@@ -761,7 +771,7 @@ contract DEXCheckTest is DEXBaseTest {
 
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, QUOTE.balanceOf(buyer));
 
         (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
@@ -797,12 +807,12 @@ contract DEXCheckTest is DEXBaseTest {
 
         vm.startPrank(buyer1);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, QUOTE.balanceOf(buyer1));
 
         vm.startPrank(buyer2);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, QUOTE.balanceOf(buyer2));
 
         (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
@@ -840,12 +850,12 @@ contract DEXCheckTest is DEXBaseTest {
 
         vm.startPrank(buyer1);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitBuy(address(PAIR), price1, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitBuy(address(PAIR), price1, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, QUOTE.balanceOf(buyer1));
 
         vm.startPrank(buyer2);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitBuy(address(PAIR), price2, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitBuy(address(PAIR), price2, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertEq(0, QUOTE.balanceOf(buyer2));
 
         (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
@@ -879,7 +889,7 @@ contract DEXCheckTest is DEXBaseTest {
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
         for (uint256 i = 0; i < loopCount; i++) {
-            ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+            ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         }
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
@@ -906,7 +916,7 @@ contract DEXCheckTest is DEXBaseTest {
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
         for (uint256 i = 0; i < loopCount; i++) {
-            ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+            ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         }
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
@@ -928,7 +938,8 @@ contract DEXCheckTest is DEXBaseTest {
 
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId = ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        uint256 orderId =
+            ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertNotEq(0, orderId);
         vm.stopPrank();
 
@@ -958,7 +969,8 @@ contract DEXCheckTest is DEXBaseTest {
 
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        uint256 orderId = ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        uint256 orderId =
+            ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         assertNotEq(0, orderId);
         vm.stopPrank();
         assertEq(QUOTE.balanceOf(address(PAIR)), volume);
@@ -992,30 +1004,30 @@ contract DEXCheckTest is DEXBaseTest {
         BASE.approve(address(ROUTER), type(uint256).max);
         QUOTE.approve(address(ROUTER), type(uint256).max);
 
-        ROUTER.limitSell(address(PAIR), 12 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
-        ROUTER.limitSell(address(PAIR), 12 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
-        ROUTER.limitSell(address(PAIR), 12 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitSell(address(PAIR), 12 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        ROUTER.limitSell(address(PAIR), 12 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        ROUTER.limitSell(address(PAIR), 12 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
 
-        ROUTER.limitSell(address(PAIR), 11 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
-        ROUTER.limitSell(address(PAIR), 11 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
-        ROUTER.limitSell(address(PAIR), 11 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitSell(address(PAIR), 11 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        ROUTER.limitSell(address(PAIR), 11 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        ROUTER.limitSell(address(PAIR), 11 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
 
-        ROUTER.limitSell(address(PAIR), 10 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
-        ROUTER.limitSell(address(PAIR), 10 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
-        ROUTER.limitSell(address(PAIR), 10 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitSell(address(PAIR), 10 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        ROUTER.limitSell(address(PAIR), 10 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        ROUTER.limitSell(address(PAIR), 10 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
 
-        ROUTER.limitBuy(address(PAIR), 9 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
-        ROUTER.limitBuy(address(PAIR), 9 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
-        ROUTER.limitBuy(address(PAIR), 9 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitBuy(address(PAIR), 9 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        ROUTER.limitBuy(address(PAIR), 9 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        ROUTER.limitBuy(address(PAIR), 9 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
 
-        ROUTER.limitBuy(address(PAIR), 8 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
-        ROUTER.limitBuy(address(PAIR), 8 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
-        ROUTER.limitBuy(address(PAIR), 8 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitBuy(address(PAIR), 8 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        ROUTER.limitBuy(address(PAIR), 8 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        ROUTER.limitBuy(address(PAIR), 8 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
 
-        ROUTER.limitBuy(address(PAIR), 7 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
-        ROUTER.limitBuy(address(PAIR), 7 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
-        ROUTER.limitBuy(address(PAIR), 7 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
-        ROUTER.limitBuy(address(PAIR), 7 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, 0, 0);
+        ROUTER.limitBuy(address(PAIR), 7 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        ROUTER.limitBuy(address(PAIR), 7 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        ROUTER.limitBuy(address(PAIR), 7 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        ROUTER.limitBuy(address(PAIR), 7 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         vm.stopPrank();
 
         (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
@@ -1037,5 +1049,118 @@ contract DEXCheckTest is DEXBaseTest {
                 console.log(buyOrders[i][j]);
             }
         }
+    }
+
+    function test_check_setTickSizes_case1() external {
+        (uint256 tick, uint256 lot) = PAIR.tickSizes();
+        assertNotEq(tick, 1e20);
+        assertNotEq(lot, 1e20);
+
+        address MARKET_OWNER = address(bytes20("MARKET_OWNER"));
+        vm.startPrank(OWNER);
+        MARKET.transferOwnership(MARKET_OWNER);
+        vm.expectRevert(abi.encodeWithSignature("CrossDexUnauthorizedChangeTickSizes(address)", OWNER));
+        PAIR.setTickSize(1e20, 1e20);
+        vm.stopPrank();
+
+        vm.startPrank(MARKET_OWNER);
+        PAIR.setTickSize(1e20, 1e20);
+        (tick, lot) = PAIR.tickSizes();
+        assertEq(tick, 1e20);
+        assertEq(lot, 1e20);
+        vm.stopPrank();
+    }
+
+    function test_check_setTickSizes_case2() external {
+        (uint256 tick, uint256 lot) = PAIR.tickSizes();
+        assertNotEq(tick, 1e20);
+        assertNotEq(lot, 1e20);
+
+        address setter = address(bytes20("SETTER"));
+
+        // check roles
+        vm.prank(setter);
+        vm.expectRevert(abi.encodeWithSignature("CrossDexUnauthorizedChangeTickSizes(address)", setter));
+        PAIR.setTickSize(1e20, 1e20);
+        // grant roles
+        vm.prank(OWNER);
+        CROSS_DEX.setTickSizeSetter(setter, true);
+        // check success
+        vm.prank(setter);
+        PAIR.setTickSize(1e20, 1e20);
+        (tick, lot) = PAIR.tickSizes();
+        assertEq(tick, 1e20);
+        assertEq(lot, 1e20);
+    }
+
+    function test_check_isMarket() external {
+        assertTrue(CROSS_DEX.isMarket(address(MARKET)));
+        vm.expectRevert();
+        CROSS_DEX.isMarket(address(1));
+
+        address pairImpl = address(new PairImpl());
+        address marketImpl = address(new MarketImpl());
+        address proxy = address(new ERC1967Proxy(marketImpl, hex""));
+
+        MarketImpl market = MarketImpl(proxy);
+        market.initialize(OWNER, address(ROUTER), FEE_COLLECTOR, address(QUOTE), pairImpl);
+
+        assertFalse(CROSS_DEX.isMarket(address(market)));
+    }
+
+    function test_check_max_match_count_case1() external {
+        address seller = address(1);
+
+        uint256 price = _toQuote(1);
+        uint256 amount = _toBase(1);
+        uint256 maxMatchCount = 10;
+
+        vm.prank(OWNER);
+        BASE.transfer(seller, amount * (maxMatchCount + 1));
+
+        vm.startPrank(seller);
+        BASE.approve(address(ROUTER), type(uint256).max);
+        for (uint256 i = 0; i < maxMatchCount + 1; i++) {
+            ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        }
+        vm.stopPrank();
+
+        vm.startPrank(OWNER);
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        ROUTER.marketBuy(address(PAIR), QUOTE.balanceOf(OWNER), maxMatchCount);
+        vm.stopPrank();
+
+        uint256 baseReserve = PAIR.baseReserve();
+        assertEq(amount, baseReserve);
+    }
+
+    function test_check_max_match_count_case2() external {
+        address buyer = address(1);
+
+        uint256 price = _toQuote(1);
+        uint256 amount = _toBase(1);
+        uint256 oneVolume = Math.mulDiv(price, amount, BASE_DECIMALS);
+        uint256 maxMatchCount = 10;
+
+        vm.prank(OWNER);
+        QUOTE.transfer(buyer, oneVolume * (maxMatchCount + 1));
+
+        vm.startPrank(buyer);
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        for (uint256 i = 0; i < maxMatchCount + 1; i++) {
+            ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        }
+        vm.stopPrank();
+
+        vm.startPrank(OWNER);
+        BASE.approve(address(ROUTER), type(uint256).max);
+        uint256 baseBalance = BASE.balanceOf(OWNER);
+        uint256 baseTickSize = PAIR.baseTickSize();
+        uint256 sellAmount = baseBalance - (baseBalance % baseTickSize);
+        ROUTER.marketSell(address(PAIR), sellAmount, maxMatchCount);
+        vm.stopPrank();
+
+        uint256 quoteReserve = PAIR.quoteReserve();
+        assertEq(oneVolume, quoteReserve);
     }
 }
