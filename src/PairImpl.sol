@@ -372,7 +372,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
 
                 // Update information.
                 earnQuoteAmount += Math.mulDiv(price, tradeAmount, denominator);
-                if (order.amount == 0 || maxMatchCount == 0) {
+                if (order.amount == 0 || --maxMatchCount == 0) {
                     if (_orders.empty()) {
                         // Although the `while` loop has not yet ended,
                         // if `cOrder` and the last `target.amount` in `orders` are the same,
@@ -383,7 +383,6 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
                 }
                 unchecked {
                     --length;
-                    --maxMatchCount;
                 }
             }
             // Reaching this point means that all orders at the given `price` have been matched,
@@ -435,7 +434,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
                 // Update information.
                 matchedBaseAmount += tradeAmount;
                 useQuoteAmount += tradeQuoteAmount;
-                if (order.amount == 0 || maxMatchCount == 0) {
+                if (order.amount == 0 || --maxMatchCount == 0) {
                     if (_orders.empty()) {
                         // Although the `while` loop has not yet ended,
                         // if `cOrder` and the last `target.amount` in `orders` are the same,
@@ -446,7 +445,6 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
                 }
                 unchecked {
                     --length;
-                    --maxMatchCount;
                 }
             }
             // Reaching this point means that all orders at the given `price` have been matched,
