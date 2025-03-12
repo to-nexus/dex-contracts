@@ -122,7 +122,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         if (_quoteTickSize == 0) revert PairInvalidInitializeData("quoteTickSize");
         if (_baseTickSize == 0) revert PairInvalidInitializeData("baseTickSize");
         if (_feeCollector == address(0)) revert PairInvalidInitializeData("feeCollector");
-        if (feePermil > 1000) revert PairInvalidInitializeData("feePermil");
+        if (_feePermil > 1000) revert PairInvalidInitializeData("feePermil");
 
         MARKET = _msgSender();
         ROUTER = router;
