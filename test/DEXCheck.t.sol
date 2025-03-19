@@ -42,7 +42,7 @@ contract DEXCheckTest is DEXBaseTest {
             assertEq(0, buyPrices.length);
 
             vm.startPrank(seller);
-            ROUTER.cancel(address(PAIR), cancelOrderIds);
+            ROUTER.cancelOrder(address(PAIR), cancelOrderIds);
             assertEq(amount, BASE.balanceOf(seller));
 
             (sellPrices, buyPrices) = PAIR.ticks();
@@ -65,7 +65,7 @@ contract DEXCheckTest is DEXBaseTest {
             assertEq(1, buyPrices.length);
 
             vm.startPrank(buyer);
-            ROUTER.cancel(address(PAIR), cancelOrderIds);
+            ROUTER.cancelOrder(address(PAIR), cancelOrderIds);
             assertEq(volume, QUOTE.balanceOf(buyer));
 
             (sellPrices, buyPrices) = PAIR.ticks();
@@ -111,7 +111,7 @@ contract DEXCheckTest is DEXBaseTest {
             assertEq(0, buyPrices.length);
 
             vm.startPrank(seller);
-            ROUTER.cancel(address(PAIR), cancelOrderIds);
+            ROUTER.cancelOrder(address(PAIR), cancelOrderIds);
             assertEq(amount / 2, BASE.balanceOf(seller));
 
             (sellPrices, buyPrices) = PAIR.ticks();
@@ -137,7 +137,7 @@ contract DEXCheckTest is DEXBaseTest {
             assertEq(1, buyPrices.length);
 
             vm.startPrank(buyer);
-            ROUTER.cancel(address(PAIR), cancelOrderIds);
+            ROUTER.cancelOrder(address(PAIR), cancelOrderIds);
             assertEq(volume / 2, QUOTE.balanceOf(buyer));
 
             (sellPrices, buyPrices) = PAIR.ticks();
@@ -179,7 +179,7 @@ contract DEXCheckTest is DEXBaseTest {
 
             vm.startPrank(hacker);
             vm.expectRevert(abi.encodeWithSignature("PairNotOwner(uint256,address)", sellOrderId, hacker));
-            ROUTER.cancel(address(PAIR), cancelOrderIds);
+            ROUTER.cancelOrder(address(PAIR), cancelOrderIds);
             assertEq(0, BASE.balanceOf(seller));
 
             (sellPrices, buyPrices) = PAIR.ticks();
@@ -187,7 +187,7 @@ contract DEXCheckTest is DEXBaseTest {
             assertEq(0, buyPrices.length);
 
             vm.startPrank(seller);
-            ROUTER.cancel(address(PAIR), cancelOrderIds);
+            ROUTER.cancelOrder(address(PAIR), cancelOrderIds);
 
             (sellPrices, buyPrices) = PAIR.ticks();
             assertEq(0, sellPrices.length);
@@ -210,7 +210,7 @@ contract DEXCheckTest is DEXBaseTest {
 
             vm.startPrank(hacker);
             vm.expectRevert(abi.encodeWithSignature("PairNotOwner(uint256,address)", buyOrderId, hacker));
-            ROUTER.cancel(address(PAIR), cancelOrderIds);
+            ROUTER.cancelOrder(address(PAIR), cancelOrderIds);
             assertEq(0, QUOTE.balanceOf(buyer));
 
             (sellPrices, buyPrices) = PAIR.ticks();
@@ -263,7 +263,7 @@ contract DEXCheckTest is DEXBaseTest {
 
         vm.startPrank(OWNER);
         PAIR.setPause(true);
-        PAIR.emergencyCancel(_orderIds);
+        PAIR.emergencyCancelOrder(_orderIds);
 
         // Check if the order information has been removed.
         for (uint256 i = 0; i < 2; i++) {
@@ -329,7 +329,7 @@ contract DEXCheckTest is DEXBaseTest {
 
         vm.startPrank(OWNER);
         vm.expectRevert(abi.encodeWithSignature("ExpectedPause()"));
-        PAIR.emergencyCancel(_orderIds);
+        PAIR.emergencyCancelOrder(_orderIds);
     }
 
     // When the PAIR is in a PAUSE state, the order owner can cancel the order using 'cancel'.
@@ -376,7 +376,7 @@ contract DEXCheckTest is DEXBaseTest {
         vm.prank(OWNER);
         PAIR.setPause(true);
         vm.prank(user);
-        ROUTER.cancel(address(PAIR), _orderIds);
+        ROUTER.cancelOrder(address(PAIR), _orderIds);
 
         // Check if the order information has been removed.
         for (uint256 i = 0; i < 2; i++) {

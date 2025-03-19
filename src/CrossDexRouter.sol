@@ -20,7 +20,13 @@ import {IPair} from "./interfaces/IPair.sol";
 import {IRouter, IRouterInitializer} from "./interfaces/IRouter.sol";
 import {IWETH} from "./interfaces/IWETH.sol";
 
-contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgradeable, ReentrancyGuardUpgradeable {
+contract CrossDexRouter is
+    IRouter,
+    IRouterInitializer,
+    UUPSUpgradeable,
+    ContextUpgradeable,
+    ReentrancyGuardUpgradeable
+{
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
     using Math for uint256;
@@ -149,8 +155,8 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
         IPair(pair).market(order, amount, _toMaxMatchCount(_maxMatchCount));
     }
 
-    function cancel(address pair, uint256[] calldata orderIds) external validPair(pair) {
-        IPair(pair).cancel(_msgSender(), orderIds);
+    function cancelOrder(address pair, uint256[] calldata orderIds) external validPair(pair) {
+        IPair(pair).cancelOrder(_msgSender(), orderIds);
     }
 
     function _toMaxMatchCount(uint256 _maxMatchCount) private view returns (uint256) {

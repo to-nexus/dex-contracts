@@ -1056,7 +1056,7 @@ contract DEXTradeTest is DEXBaseTest {
             vm.prank(order.owner);
             uint256[] memory orderIds = new uint256[](1);
             orderIds[0] = i;
-            ROUTER.cancel(address(PAIR), orderIds);
+            ROUTER.cancelOrder(address(PAIR), orderIds);
         }
         // balance
         assertEq(0, BASE.balanceOf(address(PAIR)));

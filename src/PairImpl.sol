@@ -272,7 +272,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         emit OrderClosed(orderId, CloseType.COMPLETED, block.timestamp);
     }
 
-    function cancel(address caller, uint256[] memory orderIds) external override onlyRouter {
+    function cancelOrder(address caller, uint256[] memory orderIds) external override onlyRouter {
         uint256 length = orderIds.length;
         for (uint256 i = 0; i < length;) {
             uint256 orderId = orderIds[i];
@@ -593,7 +593,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         emit Skim(_msgSender(), address(erc20), to, amount);
     }
 
-    function emergencyCancel(uint256[] memory orderIds) external whenPaused onlyOwner {
+    function emergencyCancelOrder(uint256[] memory orderIds) external whenPaused onlyOwner {
         uint256 length = orderIds.length;
         for (uint256 i = 0; i < length;) {
             uint256 orderId = orderIds[i];

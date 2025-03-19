@@ -42,5 +42,5 @@ interface IPair {
         external
         returns (uint256 orderId);
     function market(Order memory order, uint256 spendAmount, uint256 maxMatchCount) external;
-    function cancel(address caller, uint256[] memory orderIds) external;
+    function cancelOrder(address caller, uint256[] memory orderIds) external;
 }
