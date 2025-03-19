@@ -42,32 +42,38 @@ contract DEXExceptionTest is DEXBaseTest {
         QUOTE.approve(address(ROUTER), type(uint256).max);
         // [limit] check success.
         address pair = address(PAIR);
-        ROUTER.limitSell(
+        ROUTER.submitSellLimit(
             pair, quoteTickSize * 2, baseTickSize, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
         );
-        ROUTER.limitBuy(pair, quoteTickSize, baseTickSize, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        ROUTER.submitBuyLimit(
+            pair, quoteTickSize, baseTickSize, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+        );
 
         // [limit] check fail.
         vm.expectRevert(abi.encodeWithSignature("PairInvalidPrice(uint256)", invalidPrice));
-        ROUTER.limitSell(pair, invalidPrice, baseTickSize, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        ROUTER.submitSellLimit(
+            pair, invalidPrice, baseTickSize, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+        );
 
         // [limit] check fail.
         vm.expectRevert(abi.encodeWithSignature("PairInvalidAmount(uint256)", invalidAmount));
-        ROUTER.limitSell(pair, quoteTickSize, invalidAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        ROUTER.submitSellLimit(
+            pair, quoteTickSize, invalidAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+        );
 
         // [market] check success.
         uint256 denominator = PAIR.DENOMINATOR();
         uint256 volume = Math.mulDiv(quoteTickSize, baseTickSize, denominator);
-        ROUTER.marketSell(pair, baseTickSize, 0);
-        ROUTER.marketBuy(pair, volume, 0);
+        ROUTER.submitSellMarket(pair, baseTickSize, 0);
+        ROUTER.submitBuyMarket(pair, volume, 0);
 
         // [market] check fail.
         vm.expectRevert(abi.encodeWithSignature("PairInvalidAmount(uint256)", invalidAmount));
-        ROUTER.marketSell(pair, invalidAmount, 0);
+        ROUTER.submitSellMarket(pair, invalidAmount, 0);
 
         // [market] check fail.
         vm.expectRevert(abi.encodeWithSignature("PairInsufficientTradeVolume(uint256,uint256)", volume - 1, volume));
-        ROUTER.marketBuy(pair, volume - 1, 0);
+        ROUTER.submitBuyMarket(pair, volume - 1, 0);
     }
 
     // [Pair] Users cannot directly request trades through the Pair.

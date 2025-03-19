@@ -76,7 +76,7 @@ contract CrossDexRouter is
         return ICrossDex(CROSS_DEX).pairToMarket(pair) != address(0);
     }
 
-    function limitSell(
+    function submitSellLimit(
         address pair,
         uint256 price,
         uint256 amount,
@@ -96,7 +96,7 @@ contract CrossDexRouter is
         return IPair(pair).limit(order, constraints, adjacent, _toMaxMatchCount(_maxMatchCount));
     }
 
-    function limitBuy(
+    function submitBuyLimit(
         address pair,
         uint256 price,
         uint256 amount,
@@ -117,7 +117,7 @@ contract CrossDexRouter is
         return IPair(pair).limit(order, constraints, adjacent, _toMaxMatchCount(_maxMatchCount));
     }
 
-    function marketSell(address pair, uint256 amount, uint256 _maxMatchCount)
+    function submitSellMarket(address pair, uint256 amount, uint256 _maxMatchCount)
         external
         payable
         nonReentrant
@@ -136,7 +136,7 @@ contract CrossDexRouter is
         IPair(pair).market(order, amount, _toMaxMatchCount(_maxMatchCount));
     }
 
-    function marketBuy(address pair, uint256 amount, uint256 _maxMatchCount)
+    function submitBuyMarket(address pair, uint256 amount, uint256 _maxMatchCount)
         external
         payable
         nonReentrant
