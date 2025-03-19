@@ -93,7 +93,7 @@ contract CrossDexRouter is
 
         IPair.Order memory order =
             IPair.Order({side: IPair.OrderSide.SELL, owner: owner, feeBps: 0, price: price, amount: amount});
-        return IPair(pair).limit(order, constraints, adjacent, _toMaxMatchCount(_maxMatchCount));
+        return IPair(pair).submitLimitOrder(order, constraints, adjacent, _toMaxMatchCount(_maxMatchCount));
     }
 
     function submitBuyLimit(
@@ -114,7 +114,7 @@ contract CrossDexRouter is
 
         IPair.Order memory order =
             IPair.Order({side: IPair.OrderSide.BUY, owner: owner, feeBps: 0, price: price, amount: amount});
-        return IPair(pair).limit(order, constraints, adjacent, _toMaxMatchCount(_maxMatchCount));
+        return IPair(pair).submitLimitOrder(order, constraints, adjacent, _toMaxMatchCount(_maxMatchCount));
     }
 
     function submitSellMarket(address pair, uint256 amount, uint256 _maxMatchCount)
@@ -133,7 +133,7 @@ contract CrossDexRouter is
 
         IPair.Order memory order =
             IPair.Order({side: IPair.OrderSide.SELL, owner: owner, feeBps: 0, price: 0, amount: 0});
-        IPair(pair).market(order, amount, _toMaxMatchCount(_maxMatchCount));
+        IPair(pair).submitMarketOrder(order, amount, _toMaxMatchCount(_maxMatchCount));
     }
 
     function submitBuyMarket(address pair, uint256 amount, uint256 _maxMatchCount)
@@ -152,7 +152,7 @@ contract CrossDexRouter is
 
         IPair.Order memory order =
             IPair.Order({side: IPair.OrderSide.BUY, owner: owner, feeBps: 0, price: 0, amount: 0});
-        IPair(pair).market(order, amount, _toMaxMatchCount(_maxMatchCount));
+        IPair(pair).submitMarketOrder(order, amount, _toMaxMatchCount(_maxMatchCount));
     }
 
     function cancelOrder(address pair, uint256[] calldata orderIds) external validPair(pair) {

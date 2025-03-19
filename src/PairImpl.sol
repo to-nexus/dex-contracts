@@ -195,13 +195,12 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
     //  #       #  #  #      #    # #    #   #   #      #    #
     //  ###### #    # ######  ####   ####    #   ######  ####
 
-    function limit(Order memory order, LimitConstraints constraints, uint256[2] memory adjacent, uint256 maxMatchCount)
-        external
-        override
-        whenNotPaused
-        onlyRouter
-        returns (uint256 orderId)
-    {
+    function submitLimitOrder(
+        Order memory order,
+        LimitConstraints constraints,
+        uint256[2] memory adjacent,
+        uint256 maxMatchCount
+    ) external override whenNotPaused onlyRouter returns (uint256 orderId) {
         // Check the conditions of the entered quantity.
         if (order.price == 0 || order.price % quoteTickSize != 0) revert PairInvalidPrice(order.price);
         if (order.amount == 0 || order.amount % baseTickSize != 0) revert PairInvalidAmount(order.amount);
@@ -245,7 +244,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         if (!isSellOrder) _returnRemainQuote(order.owner, mustRemainQuoteAmount);
     }
 
-    function market(Order memory order, uint256 spendAmount, uint256 maxMatchCount)
+    function submitMarketOrder(Order memory order, uint256 spendAmount, uint256 maxMatchCount)
         external
         override
         whenNotPaused
