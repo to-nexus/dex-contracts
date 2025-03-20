@@ -90,20 +90,14 @@ contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgr
         return _allPairs.get(base);
     }
 
-    function createPair(address base, uint256 quoteTickSize, uint256 baseTickSize)
-        external
-        onlyOwner
-        returns (address pair)
-    {
+    function createPair(address base, uint256 tickSize, uint256 lotSize) external onlyOwner returns (address pair) {
         if (base == address(0) || base == address(QUOTE)) revert MarketInvalidBaseAddress(base);
         uint256 baseDecimals = IERC20Metadata(base).decimals();
         if (baseDecimals == 0) revert MarketInvalidBaseAddress(base);
         if (_allPairs.contains(base)) revert MarketAlreadyCreatedBaseAddress(base);
 
         pair = address(
-            new ERC1967Proxy(
-                pairImpl, abi.encodeCall(PairImpl.initialize, (ROUTER, QUOTE, base, quoteTickSize, baseTickSize))
-            )
+            new ERC1967Proxy(pairImpl, abi.encodeCall(PairImpl.initialize, (ROUTER, QUOTE, base, tickSize, lotSize)))
         );
         if (pair == address(0)) revert MarketDeployPair();
         if (!_allPairs.set(base, pair)) revert MarketAlreadyCreatedBaseAddress(base);
