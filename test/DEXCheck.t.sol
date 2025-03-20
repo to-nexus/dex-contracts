@@ -1116,27 +1116,7 @@ contract DEXCheckTest is DEXBaseTest {
         }
     }
 
-    function test_check_setTickSizes_case1() external {
-        (uint256 tick, uint256 lot) = PAIR.tickSizes();
-        assertNotEq(tick, 1e20);
-        assertNotEq(lot, 1e20);
-
-        address MARKET_OWNER = address(bytes20("MARKET_OWNER"));
-        vm.startPrank(OWNER);
-        MARKET.transferOwnership(MARKET_OWNER);
-        vm.expectRevert(abi.encodeWithSignature("CrossDexUnauthorizedChangeTickSizes(address)", OWNER));
-        PAIR.setTickSize(1e20, 1e20);
-        vm.stopPrank();
-
-        vm.startPrank(MARKET_OWNER);
-        PAIR.setTickSize(1e20, 1e20);
-        (tick, lot) = PAIR.tickSizes();
-        assertEq(tick, 1e20);
-        assertEq(lot, 1e20);
-        vm.stopPrank();
-    }
-
-    function test_check_setTickSizes_case2() external {
+    function test_check_setTickSizes_case() external {
         (uint256 tick, uint256 lot) = PAIR.tickSizes();
         assertNotEq(tick, 1e20);
         assertNotEq(lot, 1e20);
@@ -1224,7 +1204,7 @@ contract DEXCheckTest is DEXBaseTest {
         vm.startPrank(OWNER);
         BASE.approve(address(ROUTER), type(uint256).max);
         uint256 baseBalance = BASE.balanceOf(OWNER);
-        uint256 baseTickSize = PAIR.baseTickSize();
+        uint256 baseTickSize = PAIR.lotSize();
         uint256 sellAmount = baseBalance - (baseBalance % baseTickSize);
         ROUTER.submitSellMarket(address(PAIR), sellAmount, maxMatchCount);
         vm.stopPrank();

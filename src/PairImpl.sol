@@ -16,7 +16,7 @@ import {ASCList} from "./lib/ASCList.sol";
 import {DESCList} from "./lib/DESCList.sol";
 import {List} from "./lib/List.sol";
 
-contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
+contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     using SafeERC20 for IERC20;
     using Math for uint256;
     using List for List.U256;
@@ -57,9 +57,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         uint256 fee,
         uint256 value
     );
-    event TickSizeUpdated(
-        uint256 beforeBaseTickSize, uint256 newBaseTickSize, uint256 beforeQuoteTickSize, uint256 newQuoteTickSize
-    );
+    event TickSizeUpdated(uint256 beforelotSize, uint256 newlotSize, uint256 beforetickSize, uint256 newtickSize);
     event Skim(address indexed caller, address indexed erc20, address indexed to, uint256 amount);
 
     // slots
@@ -85,9 +83,9 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
     uint256 public matchedAt;
 
     // tick size
-    uint256 public baseTickSize;
-    uint256 public quoteTickSize;
-    uint256 public minTradeVolume; // [QUOTE] Math.mulDiv(_quoteTickSize, _baseTickSize, DENOMINATOR);
+    uint256 public tickSize;
+    uint256 public lotSize;
+    uint256 public minTradeVolume; // [QUOTE] Math.mulDiv(_tickSize, _lotSize, DENOMINATOR);
 
     // orders
     uint256 private _orderIdCounter;
@@ -101,12 +99,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
 
     modifier onlyOwner() {
         // The Pair is the same as the Owner of the Market.
-        if (_msgSender() != IOwnable(MARKET).owner()) revert IOwnable.OwnableUnauthorizedAccount(_msgSender());
-        _;
-    }
-
-    modifier onlyTickSizeSetter() {
-        IMarket(MARKET).checkTickSizeRoles(_msgSender());
+        if (_msgSender() != owner()) revert OwnableUnauthorizedAccount(_msgSender());
         _;
     }
 
@@ -133,14 +126,14 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         address router,
         address quote,
         address base,
-        uint256 _quoteTickSize, // tick size for quote token
-        uint256 _baseTickSize // lot size for base token
+        uint256 _tickSize, // tick size for quote token
+        uint256 _lotSize // lot size for base token
     ) external initializer {
         if (router == address(0)) revert PairInvalidInitializeData("router");
         if (quote == address(0)) revert PairInvalidInitializeData("quote");
         if (base == address(0)) revert PairInvalidInitializeData("base");
-        if (_quoteTickSize == 0) revert PairInvalidInitializeData("quoteTickSize");
-        if (_baseTickSize == 0) revert PairInvalidInitializeData("baseTickSize");
+        if (_tickSize == 0) revert PairInvalidInitializeData("tickSize");
+        if (_lotSize == 0) revert PairInvalidInitializeData("lotSize");
 
         MARKET = _msgSender();
         ROUTER = router;
@@ -148,12 +141,11 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         BASE = IERC20(base);
         DENOMINATOR = 10 ** IERC20Metadata(base).decimals();
 
-        if (_quoteTickSize * _baseTickSize % DENOMINATOR != 0) {
-            revert PairInvalidTickSize(_quoteTickSize, _baseTickSize, DENOMINATOR);
-        }
-        quoteTickSize = _quoteTickSize;
-        baseTickSize = _baseTickSize;
-        minTradeVolume = Math.mulDiv(_quoteTickSize, _baseTickSize, DENOMINATOR);
+        if (_tickSize * _lotSize % DENOMINATOR != 0) revert PairInvalidTickSize(_tickSize, _lotSize, DENOMINATOR);
+
+        tickSize = _tickSize;
+        lotSize = _lotSize;
+        minTradeVolume = Math.mulDiv(_tickSize, _lotSize, DENOMINATOR);
 
         __Pausable_init();
     }
@@ -179,8 +171,8 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
     }
 
     function tickSizes() external view returns (uint256 tick, uint256 lot) {
-        tick = quoteTickSize;
-        lot = baseTickSize;
+        tick = tickSize;
+        lot = lotSize;
     }
 
     function ordersByPrices(OrderSide side, uint256[] memory prices) external view returns (uint256[][] memory) {
@@ -197,6 +189,10 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         return orderIds;
     }
 
+    function owner() public view returns (address) {
+        return IOwnable(MARKET).owner();
+    }
+
     //  ###### #    # ######  ####  #    # ##### ######  ####
     //  #       #  #  #      #    # #    #   #   #      #
     //  #####    ##   #####  #      #    #   #   #####   ####
@@ -211,8 +207,8 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         uint256 maxMatchCount
     ) external override whenNotPaused onlyRouter cacheFeeInfos returns (uint256 orderId) {
         // Check the conditions of the entered quantity.
-        if (order.price == 0 || order.price % quoteTickSize != 0) revert PairInvalidPrice(order.price);
-        if (order.amount == 0 || order.amount % baseTickSize != 0) revert PairInvalidAmount(order.amount);
+        if (order.price == 0 || order.price % tickSize != 0) revert PairInvalidPrice(order.price);
+        if (order.amount == 0 || order.amount % lotSize != 0) revert PairInvalidAmount(order.amount);
 
         orderId = ++_orderIdCounter;
         (bool isSellOrder) = order.side == OrderSide.SELL;
@@ -262,7 +258,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
     {
         uint256 orderId = ++_orderIdCounter;
         if (order.side == OrderSide.SELL) {
-            if (spendAmount == 0 || spendAmount % baseTickSize != 0) revert PairInvalidAmount(spendAmount);
+            if (spendAmount == 0 || spendAmount % lotSize != 0) revert PairInvalidAmount(spendAmount);
             order.price = 0; // For selling, the price is lowered until the entire spendAmount is sold.
             order.amount = spendAmount;
 
@@ -432,7 +428,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
             // If it is a Market trade, calculate the maximum quantity that can be purchased at the given price.
             if (quoteAmount != 0) {
                 uint256 buyAmount = Math.mulDiv(quoteAmount - useQuoteAmount, denominator, price);
-                buyAmount -= buyAmount % baseTickSize;
+                buyAmount -= buyAmount % lotSize;
                 order.amount = buyAmount;
                 if (buyAmount == 0) return matchedBaseAmount;
             }
@@ -546,18 +542,18 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         if (remainQuoteAmount != 0) QUOTE.safeTransfer(to, remainQuoteAmount);
     }
 
-    function _exchangeQuote(uint256 orderId, address owner, uint256 amount, address feeCollector, uint32 feeBps)
+    function _exchangeQuote(uint256 orderId, address _owner, uint256 amount, address feeCollector, uint32 feeBps)
         private
     {
         if (feeBps == 0) {
-            QUOTE.safeTransfer(owner, amount);
+            QUOTE.safeTransfer(_owner, amount);
         } else {
             uint256 fee = Math.mulDiv(amount, feeBps, 10000);
             uint256 value = amount - fee;
-            emit FeeCollect(orderId, owner, amount, feeCollector, feeBps, fee, value);
+            emit FeeCollect(orderId, _owner, amount, feeCollector, feeBps, fee, value);
 
             QUOTE.safeTransfer(feeCollector, fee);
-            QUOTE.safeTransfer(owner, value);
+            QUOTE.safeTransfer(_owner, value);
         }
     }
 
@@ -606,16 +602,17 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
     //  #    # #    #   #   #    # #    # #   #  #  #     #    #   #   # #    # #   ##
     //  #    #  ####    #   #    #  ####  #    # # ###### #    #   #   #  ####  #    #
 
-    function setTickSize(uint256 _baseTickSize, uint256 _quoteTickSize) external onlyTickSizeSetter {
-        if (_quoteTickSize == 0) revert PairInvalidInitializeData("quoteTickSize");
-        if (_baseTickSize == 0) revert PairInvalidInitializeData("baseTickSize");
-        if (_quoteTickSize * _baseTickSize % DENOMINATOR != 0) {
-            revert PairInvalidTickSize(_quoteTickSize, _baseTickSize, DENOMINATOR);
-        }
-        emit TickSizeUpdated(baseTickSize, _baseTickSize, quoteTickSize, _quoteTickSize);
+    function setTickSize(uint256 _lotSize, uint256 _tickSize) external {
+        IMarket(MARKET).checkTickSizeRoles(_msgSender());
 
-        baseTickSize = _baseTickSize;
-        quoteTickSize = _quoteTickSize;
+        if (_tickSize == 0) revert PairInvalidInitializeData("tickSize");
+        if (_lotSize == 0) revert PairInvalidInitializeData("lotSize");
+        if (_tickSize * _lotSize % DENOMINATOR != 0) revert PairInvalidTickSize(_tickSize, _lotSize, DENOMINATOR);
+        emit TickSizeUpdated(lotSize, _lotSize, tickSize, _tickSize);
+
+        lotSize = _lotSize;
+        tickSize = _tickSize;
+        minTradeVolume = Math.mulDiv(_tickSize, _lotSize, DENOMINATOR);
     }
 
     function skim(IERC20 erc20, address to, uint256 amount) external onlyOwner {

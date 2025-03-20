@@ -1015,7 +1015,7 @@ contract DEXTradeTest is DEXBaseTest {
         for (uint256 i = 0; i < fuzz_limit_length; i++) {
             users[i] = address(uint160(i + 1));
         }
-        (uint256 quoteTickSize, uint256 baseTickSize) = (PAIR.quoteTickSize(), PAIR.baseTickSize());
+        (uint256 quoteTickSize, uint256 baseTickSize) = (PAIR.tickSize(), PAIR.lotSize());
         uint256 length = fuzz_limit_length / 2;
         uint256 latestOrderId;
 
@@ -1387,7 +1387,7 @@ contract DEXTradeTest is DEXBaseTest {
             users[i] = address(uint160(i + 1));
         }
 
-        (uint256 quoteTickSize, uint256 baseTickSize) = (PAIR.quoteTickSize(), PAIR.baseTickSize());
+        (uint256 quoteTickSize, uint256 baseTickSize) = (PAIR.tickSize(), PAIR.lotSize());
         uint256 length = fuzz_market_length / 2;
         uint256 latestOrderId;
 

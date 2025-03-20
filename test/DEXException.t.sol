@@ -32,7 +32,7 @@ contract DEXExceptionTest is DEXBaseTest {
 
     // [Pair] Trades cannot be executed in units smaller than the Tick Size.
     function test_exception_pair_case1() external {
-        (uint256 quoteTickSize, uint256 baseTickSize) = (PAIR.quoteTickSize(), PAIR.baseTickSize());
+        (uint256 quoteTickSize, uint256 baseTickSize) = (PAIR.tickSize(), PAIR.lotSize());
 
         uint256 invalidPrice = (quoteTickSize * 11) / 10;
         uint256 invalidAmount = (baseTickSize * 11) / 10;
