@@ -20,7 +20,13 @@ import {IPair} from "./interfaces/IPair.sol";
 import {IRouter, IRouterInitializer} from "./interfaces/IRouter.sol";
 import {IWETH} from "./interfaces/IWETH.sol";
 
-contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgradeable, ReentrancyGuardUpgradeable {
+contract CrossDexRouter is
+    IRouter,
+    IRouterInitializer,
+    UUPSUpgradeable,
+    ContextUpgradeable,
+    ReentrancyGuardUpgradeable
+{
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
     using Math for uint256;
@@ -30,7 +36,7 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
     error RouterInvalidValue();
 
     address public CROSS_DEX; // immutable
-    IWETH public WCROSSx; // immutable
+    IWETH public WCROSS; // immutable
 
     uint256 public maxMatchCount;
 
@@ -59,7 +65,7 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
         if (_maxMatchCount == 0) revert RouterInitializeData("maxMatchCount");
 
         CROSS_DEX = _msgSender();
-        WCROSSx = IWETH(payable(address(new WETH())));
+        WCROSS = IWETH(payable(address(new WETH())));
         maxMatchCount = _maxMatchCount;
 
         __Context_init();
@@ -70,7 +76,7 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
         return ICrossDex(CROSS_DEX).pairToMarket(pair) != address(0);
     }
 
-    function limitSell(
+    function submitSellLimit(
         address pair,
         uint256 price,
         uint256 amount,
@@ -82,15 +88,15 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
         IPair.Config memory info = IPair(pair).getConfig();
 
         IERC20 BASE = info.BASE;
-        if (address(BASE) == address(WCROSSx)) WCROSSx.mintTo{value: amount}(address(pair));
+        if (address(BASE) == address(WCROSS)) WCROSS.mintTo{value: amount}(address(pair));
         else BASE.safeTransferFrom(owner, pair, amount);
 
         IPair.Order memory order =
             IPair.Order({side: IPair.OrderSide.SELL, owner: owner, feeBps: 0, price: price, amount: amount});
-        return IPair(pair).limit(order, constraints, adjacent, _toMaxMatchCount(_maxMatchCount));
+        return IPair(pair).submitLimitOrder(order, constraints, adjacent, _toMaxMatchCount(_maxMatchCount));
     }
 
-    function limitBuy(
+    function submitBuyLimit(
         address pair,
         uint256 price,
         uint256 amount,
@@ -103,15 +109,15 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
 
         IERC20 QUOTE = info.QUOTE;
         uint256 volume = Math.mulDiv(price, amount, info.DENOMINATOR);
-        if (address(QUOTE) == address(WCROSSx)) WCROSSx.mintTo{value: volume}(address(pair));
+        if (address(QUOTE) == address(WCROSS)) WCROSS.mintTo{value: volume}(address(pair));
         else QUOTE.safeTransferFrom(owner, address(pair), volume);
 
         IPair.Order memory order =
             IPair.Order({side: IPair.OrderSide.BUY, owner: owner, feeBps: 0, price: price, amount: amount});
-        return IPair(pair).limit(order, constraints, adjacent, _toMaxMatchCount(_maxMatchCount));
+        return IPair(pair).submitLimitOrder(order, constraints, adjacent, _toMaxMatchCount(_maxMatchCount));
     }
 
-    function marketSell(address pair, uint256 amount, uint256 _maxMatchCount)
+    function submitSellMarket(address pair, uint256 amount, uint256 _maxMatchCount)
         external
         payable
         nonReentrant
@@ -122,15 +128,15 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
         IPair.Config memory info = IPair(pair).getConfig();
 
         IERC20 BASE = info.BASE;
-        if (address(BASE) == address(WCROSSx)) WCROSSx.mintTo{value: amount}(address(pair));
+        if (address(BASE) == address(WCROSS)) WCROSS.mintTo{value: amount}(address(pair));
         else BASE.safeTransferFrom(owner, address(pair), amount);
 
         IPair.Order memory order =
             IPair.Order({side: IPair.OrderSide.SELL, owner: owner, feeBps: 0, price: 0, amount: 0});
-        IPair(pair).market(order, amount, _toMaxMatchCount(_maxMatchCount));
+        IPair(pair).submitMarketOrder(order, amount, _toMaxMatchCount(_maxMatchCount));
     }
 
-    function marketBuy(address pair, uint256 amount, uint256 _maxMatchCount)
+    function submitBuyMarket(address pair, uint256 amount, uint256 _maxMatchCount)
         external
         payable
         nonReentrant
@@ -141,16 +147,16 @@ contract RouterImpl is IRouter, IRouterInitializer, UUPSUpgradeable, ContextUpgr
         IPair.Config memory info = IPair(pair).getConfig();
 
         IERC20 QUOTE = info.QUOTE;
-        if (address(QUOTE) == address(WCROSSx)) WCROSSx.mintTo{value: amount}(address(pair));
+        if (address(QUOTE) == address(WCROSS)) WCROSS.mintTo{value: amount}(address(pair));
         else QUOTE.safeTransferFrom(owner, address(pair), amount);
 
         IPair.Order memory order =
             IPair.Order({side: IPair.OrderSide.BUY, owner: owner, feeBps: 0, price: 0, amount: 0});
-        IPair(pair).market(order, amount, _toMaxMatchCount(_maxMatchCount));
+        IPair(pair).submitMarketOrder(order, amount, _toMaxMatchCount(_maxMatchCount));
     }
 
-    function cancel(address pair, uint256[] calldata orderIds) external validPair(pair) {
-        IPair(pair).cancel(_msgSender(), orderIds);
+    function cancelOrder(address pair, uint256[] calldata orderIds) external validPair(pair) {
+        IPair(pair).cancelOrder(_msgSender(), orderIds);
     }
 
     function _toMaxMatchCount(uint256 _maxMatchCount) private view returns (uint256) {

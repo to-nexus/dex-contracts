@@ -21,10 +21,10 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
     error CrossDexAlreadyCreatedMarketQuote(address);
     error CrossDexInvalidMarketAddress(address);
     error CrossDexUnauthorizedChangeTickSizes(address);
-    error CrossDexAlreadyTickSizeSetter(address, bool);
+    error CrossDexInvalidTickSizeSetter(address current, address input);
 
     event MarketCreated(address indexed quote, address indexed market, address indexed owner, address fee_collector);
-    event TickSizeSetterSet(address indexed setter, bool indexed allowed);
+    event TickSizeSetterSet(address indexed before, address indexed current);
 
     address payable public ROUTER; // immutable
 
@@ -34,7 +34,7 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
     EnumerableMap.AddressToAddressMap private _allMarkets; // quote => market
     mapping(address pair => address) public override pairToMarket;
 
-    mapping(address setter => bool) public isTickSizeSetter;
+    address public tickSizeSetter;
 
     uint256[44] __gap;
 
@@ -88,8 +88,8 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     function checkTickSizeRoles(address account) external view override {
-        // check account is owner or tick size setter
-        if (!isTickSizeSetter[account]) revert CrossDexUnauthorizedChangeTickSizes(account);
+        // check account is tick size setter
+        if (tickSizeSetter != account) revert CrossDexUnauthorizedChangeTickSizes(account);
     }
 
     function isMarket(address market) public view returns (bool) {
@@ -99,26 +99,28 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
         return _allMarkets.get(quote) == market;
     }
 
-    function createMarket(address _owner, address _fee_collector, address _quote)
+    function createMarket(address _owner, address _quote, address _feeCollector, uint256 _feeBps)
         external
         onlyOwner
         returns (address)
     {
         IMarketInitializer market = IMarketInitializer(address(new ERC1967Proxy(marketImpl, hex"")));
-        market.initialize(_owner, ROUTER, _fee_collector, _quote, pairImpl);
+        market.initialize(_owner, ROUTER, _quote, pairImpl, _feeCollector, _feeBps);
 
         address _market = address(market);
         if (!_allMarkets.set(_quote, _market)) revert CrossDexAlreadyCreatedMarketQuote(_quote);
 
-        emit MarketCreated(_quote, _market, _owner, _fee_collector);
+        emit MarketCreated(_quote, _market, _owner, _feeCollector);
         return _market;
     }
 
-    function setTickSizeSetter(address setter, bool allowed) external onlyOwner {
-        if (isTickSizeSetter[setter] == allowed) revert CrossDexAlreadyTickSizeSetter(setter, allowed);
+    function setTickSizeSetter(address setter) external onlyOwner {
+        if (setter == address(0) || tickSizeSetter == setter) {
+            revert CrossDexInvalidTickSizeSetter(tickSizeSetter, setter);
+        }
 
-        isTickSizeSetter[setter] = allowed;
-        emit TickSizeSetterSet(setter, allowed);
+        emit TickSizeSetterSet(tickSizeSetter, setter);
+        tickSizeSetter = setter;
     }
 
     function pairCreated(address pair) external override onlyMarket {

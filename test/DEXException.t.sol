@@ -19,7 +19,7 @@ contract DEXExceptionTest is DEXBaseTest {
         vm.prank(OWNER);
 
         vm.expectRevert(abi.encodeWithSignature("MarketAlreadyCreatedBaseAddress(address)", address(BASE)));
-        MARKET.createPair(address(BASE), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e4, FEE_BPS);
+        MARKET.createPair(address(BASE), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e4);
     }
 
     // [MARKET] BASE cannot be registered with the same address as QUOTE.
@@ -27,12 +27,12 @@ contract DEXExceptionTest is DEXBaseTest {
         vm.prank(OWNER);
 
         vm.expectRevert(abi.encodeWithSignature("MarketInvalidBaseAddress(address)", address(QUOTE)));
-        MARKET.createPair(address(QUOTE), QUOTE_DECIMALS / 1e2, QUOTE_DECIMALS / 1e4, FEE_BPS);
+        MARKET.createPair(address(QUOTE), QUOTE_DECIMALS / 1e2, QUOTE_DECIMALS / 1e4);
     }
 
     // [Pair] Trades cannot be executed in units smaller than the Tick Size.
     function test_exception_pair_case1() external {
-        (uint256 quoteTickSize, uint256 baseTickSize) = (PAIR.quoteTickSize(), PAIR.baseTickSize());
+        (uint256 quoteTickSize, uint256 baseTickSize) = (PAIR.tickSize(), PAIR.lotSize());
 
         uint256 invalidPrice = (quoteTickSize * 11) / 10;
         uint256 invalidAmount = (baseTickSize * 11) / 10;
@@ -42,32 +42,38 @@ contract DEXExceptionTest is DEXBaseTest {
         QUOTE.approve(address(ROUTER), type(uint256).max);
         // [limit] check success.
         address pair = address(PAIR);
-        ROUTER.limitSell(
+        ROUTER.submitSellLimit(
             pair, quoteTickSize * 2, baseTickSize, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
         );
-        ROUTER.limitBuy(pair, quoteTickSize, baseTickSize, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        ROUTER.submitBuyLimit(
+            pair, quoteTickSize, baseTickSize, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+        );
 
         // [limit] check fail.
         vm.expectRevert(abi.encodeWithSignature("PairInvalidPrice(uint256)", invalidPrice));
-        ROUTER.limitSell(pair, invalidPrice, baseTickSize, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        ROUTER.submitSellLimit(
+            pair, invalidPrice, baseTickSize, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+        );
 
         // [limit] check fail.
         vm.expectRevert(abi.encodeWithSignature("PairInvalidAmount(uint256)", invalidAmount));
-        ROUTER.limitSell(pair, quoteTickSize, invalidAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        ROUTER.submitSellLimit(
+            pair, quoteTickSize, invalidAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+        );
 
         // [market] check success.
         uint256 denominator = PAIR.DENOMINATOR();
         uint256 volume = Math.mulDiv(quoteTickSize, baseTickSize, denominator);
-        ROUTER.marketSell(pair, baseTickSize, 0);
-        ROUTER.marketBuy(pair, volume, 0);
+        ROUTER.submitSellMarket(pair, baseTickSize, 0);
+        ROUTER.submitBuyMarket(pair, volume, 0);
 
         // [market] check fail.
         vm.expectRevert(abi.encodeWithSignature("PairInvalidAmount(uint256)", invalidAmount));
-        ROUTER.marketSell(pair, invalidAmount, 0);
+        ROUTER.submitSellMarket(pair, invalidAmount, 0);
 
         // [market] check fail.
         vm.expectRevert(abi.encodeWithSignature("PairInsufficientTradeVolume(uint256,uint256)", volume - 1, volume));
-        ROUTER.marketBuy(pair, volume - 1, 0);
+        ROUTER.submitBuyMarket(pair, volume - 1, 0);
     }
 
     // [Pair] Users cannot directly request trades through the Pair.
@@ -78,7 +84,7 @@ contract DEXExceptionTest is DEXBaseTest {
 
         // sell limit
         vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", address(OWNER)));
-        PAIR.limit(
+        PAIR.submitLimitOrder(
             IPair.Order({
                 side: IPair.OrderSide.SELL,
                 owner: address(OWNER),
@@ -93,7 +99,7 @@ contract DEXExceptionTest is DEXBaseTest {
 
         // buy limit
         vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", address(OWNER)));
-        PAIR.limit(
+        PAIR.submitLimitOrder(
             IPair.Order({
                 side: IPair.OrderSide.BUY,
                 owner: address(OWNER),
@@ -108,7 +114,7 @@ contract DEXExceptionTest is DEXBaseTest {
 
         // sell market
         vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", address(OWNER)));
-        PAIR.market(
+        PAIR.submitMarketOrder(
             IPair.Order({side: IPair.OrderSide.SELL, owner: address(OWNER), feeBps: 0, price: 0, amount: 0}),
             _toBase(1),
             0
@@ -116,7 +122,7 @@ contract DEXExceptionTest is DEXBaseTest {
 
         // buy market
         vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", address(OWNER)));
-        PAIR.market(
+        PAIR.submitMarketOrder(
             IPair.Order({side: IPair.OrderSide.BUY, owner: address(OWNER), feeBps: 0, price: 0, amount: 0}),
             _toQuote(1),
             0

@@ -39,6 +39,9 @@ var ERC1967ProxyMetaData = &bind.MetaData{
 // Deprecated: Use ERC1967ProxyMetaData.ABI instead.
 var ERC1967ProxyABI = ERC1967ProxyMetaData.ABI
 
+// ERC1967ProxyBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const ERC1967ProxyBinRuntime = "6080604052600a600c565b005b60186014601a565b6050565b565b5f604b7f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc546001600160a01b031690565b905090565b365f5f375f5f365f845af43d5f5f3e8080156069573d5ff35b3d5ffdfea26469706673582212205990887f0037c04aa22ef84499f094f4341c02e52649e71080dd1a78b7edba3e64736f6c634300081c0033"
+
 // ERC1967ProxyBin is the compiled bytecode used for deploying new contracts.
 // Deprecated: Use ERC1967ProxyMetaData.Bin instead.
 var ERC1967ProxyBin = ERC1967ProxyMetaData.Bin

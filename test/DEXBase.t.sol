@@ -7,9 +7,10 @@ import {Math} from "@openzeppelin-contracts-5.2.0/utils/math/Math.sol";
 import {Test, console} from "forge-std/Test.sol";
 
 import {CrossDexImpl} from "../src/CrossDexImpl.sol";
+
+import {CrossDexRouter} from "../src/CrossDexRouter.sol";
 import {MarketImpl} from "../src/MarketImpl.sol";
 import {PairImpl} from "../src/PairImpl.sol";
-import {RouterImpl} from "../src/RouterImpl.sol";
 import {WETH} from "../src/WETH.sol";
 import {IPair} from "../src/interfaces/IPair.sol";
 
@@ -20,8 +21,8 @@ contract DEXBaseTest is Test {
     address public constant FEE_COLLECTOR = address(bytes20("FEE_COLLECTOR"));
 
     CrossDexImpl public CROSS_DEX;
-    RouterImpl public ROUTER;
-    WETH public WCROSSx;
+    CrossDexRouter public ROUTER;
+    WETH public WCROSS;
 
     IERC20 public QUOTE;
     IERC20 public BASE;
@@ -50,7 +51,7 @@ contract DEXBaseTest is Test {
 
         {
             // deploy impl contracts
-            address routerImpl = address(new RouterImpl());
+            address routerImpl = address(new CrossDexRouter());
             address marketImpl = address(new MarketImpl());
             address pairImpl = address(new PairImpl());
 
@@ -62,8 +63,8 @@ contract DEXBaseTest is Test {
         }
         {
             // get contracts from CROSS_DEX
-            ROUTER = RouterImpl(CROSS_DEX.ROUTER());
-            WCROSSx = WETH(payable(address(ROUTER.WCROSSx())));
+            ROUTER = CrossDexRouter(CROSS_DEX.ROUTER());
+            WCROSS = WETH(payable(address(ROUTER.WCROSS())));
         }
         {
             // deploy base and quote tokens
@@ -72,11 +73,10 @@ contract DEXBaseTest is Test {
         }
         {
             // create market & Pair
-            address market = CROSS_DEX.createMarket(OWNER, FEE_COLLECTOR, address(QUOTE));
+            address market = CROSS_DEX.createMarket(OWNER, address(QUOTE), FEE_COLLECTOR, FEE_BPS);
             MARKET = MarketImpl(market);
-            address pair = MARKET.createPair(
-                address(BASE), QUOTE_DECIMALS / quote_tick_size, BASE_DECIMALS / base_tick_size, FEE_BPS
-            );
+            address pair =
+                MARKET.createPair(address(BASE), QUOTE_DECIMALS / quote_tick_size, BASE_DECIMALS / base_tick_size);
             PAIR = PairImpl(pair);
         }
 
