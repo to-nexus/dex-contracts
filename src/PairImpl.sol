@@ -74,6 +74,12 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
     uint256 public baseReserve;
     uint256 public quoteReserve;
 
+    // latest
+    // keccak256(abi.encode(uint256(keccak256("crossdex.pair.latestprice")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant _latestPriceSlot = 0x83754418dc128a23de1cafe35d3367823e8700becf69f0325e4c284ccb1fb900;
+    uint256 public latestPrice;
+    uint256 public latestTimestamp;
+
     // tick size
     uint256 public baseTickSize;
     uint256 public quoteTickSize;
@@ -107,6 +113,11 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
     modifier onlyRouter() {
         if (_msgSender() != ROUTER) revert PairInvalidRouter(_msgSender());
         _;
+    }
+
+    modifier setLatest() {
+        _;
+        _setLatest();
     }
 
     constructor() {
@@ -351,6 +362,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
     // and only execute trades where order.price is equal to or lower than the buy order price.
     function _matchSellOrder(uint256 orderId, Order memory order, uint256 maxMatchCount)
         private
+        setLatest
         returns (uint256 earnQuoteAmount)
     {
         // (earnQuoteAmount) The amount of Quote earned from the sale.
@@ -362,6 +374,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
             uint256 price = _buyPrices.at(0);
             if (price < order.price) break;
             List.U256 storage _orders = _buyOrders[price];
+            _cacheLatestPrice(price);
 
             uint256 length = List.length(_orders);
             while (length != 0) {
@@ -404,7 +417,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
         Order memory order,
         uint256 quoteAmount, // Quote amount to be used for Market trades.
         uint256 maxMatchCount
-    ) private returns (uint256 matchedBaseAmount) {
+    ) private setLatest returns (uint256 matchedBaseAmount) {
         uint256 useQuoteAmount;
 
         // cache storage immutables to memory
@@ -414,6 +427,7 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
             uint256 price = _sellPrices.at(0);
             if (price > order.price) break;
             List.U256 storage _orders = _sellOrders[price];
+            _cacheLatestPrice(price);
 
             // If it is a Market trade, calculate the maximum quantity that can be purchased at the given price.
             if (quoteAmount != 0) {
@@ -543,6 +557,23 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
 
             QUOTE.safeTransfer(_feeCollector, fee);
             QUOTE.safeTransfer(owner, value);
+        }
+    }
+
+    function _cacheLatestPrice(uint256 price) private {
+        assembly {
+            tstore(_latestPriceSlot, price)
+        }
+    }
+
+    function _setLatest() private {
+        uint256 _latestPrice;
+        assembly {
+            _latestPrice := tload(_latestPriceSlot)
+        }
+        if (_latestPrice != 0) {
+            latestPrice = _latestPrice;
+            latestTimestamp = block.timestamp;
         }
     }
 

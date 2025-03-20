@@ -1232,4 +1232,79 @@ contract DEXCheckTest is DEXBaseTest {
         uint256 quoteReserve = PAIR.quoteReserve();
         assertEq(oneVolume, quoteReserve);
     }
+
+    function test_check_latestprice_slot() external pure {
+        bytes32 _latestPriceSlot =
+            keccak256(abi.encode(uint256(keccak256("crossdex.pair.latestprice")) - 1)) & ~bytes32(uint256(0xff));
+
+        console.logBytes32(_latestPriceSlot);
+    }
+
+    function test_check_set_latest_price_case1() external {
+        vm.startPrank(OWNER);
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        BASE.approve(address(ROUTER), type(uint256).max);
+
+        uint256 price = _toQuote(1);
+        uint256 amount = _toBase(1);
+        uint256 priceStep = price / 10;
+
+        // sell orders
+        for (uint256 i = 0; i < 10; i++) {
+            ROUTER.submitSellLimit(
+                address(PAIR),
+                price + (priceStep * i),
+                amount,
+                IPair.LimitConstraints.GOOD_TILL_CANCEL,
+                _searchPrices,
+                0
+            );
+            // The latest price is not updated because the orders are not matched.
+            assertEq(0, PAIR.latestPrice());
+        }
+
+        // buy orders
+        for (uint256 i = 0; i < 10; i++) {
+            uint256 _price = price + (priceStep * i);
+            ROUTER.submitBuyLimit(
+                address(PAIR), _price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+            );
+            // The latest price is updated because the orders are matched.
+            assertEq(_price, PAIR.latestPrice());
+        }
+    }
+
+    function test_check_set_latest_price_case2() external {
+        vm.startPrank(OWNER);
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        BASE.approve(address(ROUTER), type(uint256).max);
+
+        uint256 price = _toQuote(1);
+        uint256 amount = _toBase(1);
+        uint256 priceStep = price / 10;
+
+        // buy orders
+        for (uint256 i = 0; i < 10; i++) {
+            ROUTER.submitBuyLimit(
+                address(PAIR),
+                price + (priceStep * i),
+                amount,
+                IPair.LimitConstraints.GOOD_TILL_CANCEL,
+                _searchPrices,
+                0
+            );
+            // The latest price is not updated because the orders are not matched.
+            assertEq(0, PAIR.latestPrice());
+        }
+
+        // buy orders
+        for (uint256 i = 10; i != 0;) {
+            uint256 _price = price + (priceStep * --i);
+            ROUTER.submitSellLimit(
+                address(PAIR), _price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+            );
+            // The latest price is updated because the orders are matched.
+            assertEq(_price, PAIR.latestPrice());
+        }
+    }
 }
