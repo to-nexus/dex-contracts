@@ -82,7 +82,7 @@ contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgr
     }
 
     function checkTickSizeRoles(address account) external view override {
-        // check account is owner or tick size setter
+        // check account is tick size setter
         CROSS_DEX.checkTickSizeRoles(account);
     }
 

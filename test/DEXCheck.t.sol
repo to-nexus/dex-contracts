@@ -1128,8 +1128,9 @@ contract DEXCheckTest is DEXBaseTest {
         vm.expectRevert(abi.encodeWithSignature("CrossDexUnauthorizedChangeTickSizes(address)", setter));
         PAIR.setTickSize(1e20, 1e20);
         // grant roles
+        assertNotEq(setter, CROSS_DEX.tickSizeSetter());
         vm.prank(OWNER);
-        CROSS_DEX.setTickSizeSetter(setter, true);
+        CROSS_DEX.setTickSizeSetter(setter);
         // check success
         vm.prank(setter);
         PAIR.setTickSize(1e20, 1e20);

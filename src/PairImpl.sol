@@ -57,7 +57,7 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         uint256 fee,
         uint256 value
     );
-    event TickSizeUpdated(uint256 beforelotSize, uint256 newlotSize, uint256 beforetickSize, uint256 newtickSize);
+    event TickSizeUpdated(uint256 beforeLotSize, uint256 newLotSize, uint256 beforeTickSize, uint256 newTickSize);
     event Skim(address indexed caller, address indexed erc20, address indexed to, uint256 amount);
 
     // slots
