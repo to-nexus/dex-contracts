@@ -99,18 +99,18 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
         return _allMarkets.get(quote) == market;
     }
 
-    function createMarket(address _owner, address _fee_collector, address _quote)
+    function createMarket(address _owner, address _quote, address _feeCollector, uint256 _feeBps)
         external
         onlyOwner
         returns (address)
     {
         IMarketInitializer market = IMarketInitializer(address(new ERC1967Proxy(marketImpl, hex"")));
-        market.initialize(_owner, ROUTER, _fee_collector, _quote, pairImpl);
+        market.initialize(_owner, ROUTER, _quote, pairImpl, _feeCollector, _feeBps);
 
         address _market = address(market);
         if (!_allMarkets.set(_quote, _market)) revert CrossDexAlreadyCreatedMarketQuote(_quote);
 
-        emit MarketCreated(_quote, _market, _owner, _fee_collector);
+        emit MarketCreated(_quote, _market, _owner, _feeCollector);
         return _market;
     }
 

@@ -21,41 +21,50 @@ contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgr
     error MarketDeployPair();
 
     event PairCreated(address indexed pair, address indexed base, uint256 timestamp);
+    event FeeCollectorChanged(address indexed before, address indexed current);
+    event FeeBpsChanged(uint256 indexed before, uint256 indexed current);
 
     uint256 public deployed; // immutable
     ICrossDex public CROSS_DEX; // immutable
     address public QUOTE; // immutable
+    address public ROUTER; // immutable
 
-    address public router;
-    address public feeCollector;
     address public pairImpl;
+
+    address public override feeCollector;
+    uint32 public override feeBps; // BPS: basis point (1/10000)
 
     EnumerableMap.AddressToAddressMap private _allPairs; // base => pair
 
-    uint256[43] private __gap;
+    uint256[41] private __gap;
 
     constructor() {
         _disableInitializers();
     }
 
-    function initialize(address _owner, address _router, address _feeCollector, address _quote, address _pairImpl)
-        external
-        override
-        initializer
-    {
+    function initialize(
+        address _owner,
+        address _router,
+        address _quote,
+        address _pairImpl,
+        address _feeCollector,
+        uint256 _feeBPS
+    ) external override initializer {
         if (_owner == address(0)) revert MarketInvalidInitializeData("owner");
         if (_router == address(0)) revert MarketInvalidInitializeData("router");
-        if (_feeCollector == address(0)) revert MarketInvalidInitializeData("feeCollector");
         if (_quote == address(0)) revert MarketInvalidInitializeData("quote");
         if (_pairImpl == address(0)) revert MarketInvalidInitializeData("pairImpl");
+        if (_feeCollector == address(0)) revert MarketInvalidInitializeData("feeCollector");
+        if (_feeBPS > type(uint32).max) revert MarketInvalidInitializeData("feeBPS");
 
         deployed = block.number;
         CROSS_DEX = ICrossDex(_msgSender());
         QUOTE = _quote;
-
-        router = _router;
-        feeCollector = _feeCollector;
+        ROUTER = _router;
         pairImpl = _pairImpl;
+
+        feeCollector = _feeCollector;
+        feeBps = uint32(_feeBPS);
 
         __Ownable_init(_owner);
     }
@@ -81,7 +90,7 @@ contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgr
         return _allPairs.get(base);
     }
 
-    function createPair(address base, uint256 quoteTickSize, uint256 baseTickSize, uint256 feeBps)
+    function createPair(address base, uint256 quoteTickSize, uint256 baseTickSize)
         external
         onlyOwner
         returns (address pair)
@@ -93,10 +102,7 @@ contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgr
 
         pair = address(
             new ERC1967Proxy(
-                pairImpl,
-                abi.encodeCall(
-                    PairImpl.initialize, (router, QUOTE, base, quoteTickSize, baseTickSize, feeCollector, feeBps)
-                )
+                pairImpl, abi.encodeCall(PairImpl.initialize, (ROUTER, QUOTE, base, quoteTickSize, baseTickSize))
             )
         );
         if (pair == address(0)) revert MarketDeployPair();
@@ -104,6 +110,18 @@ contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgr
 
         CROSS_DEX.pairCreated(pair);
         emit PairCreated(pair, base, block.timestamp);
+    }
+
+    function setFeeCollector(address _feeCollector) external onlyOwner {
+        if (_feeCollector == address(0)) revert MarketInvalidInitializeData("feeCollector");
+        emit FeeCollectorChanged(feeCollector, _feeCollector);
+        feeCollector = _feeCollector;
+    }
+
+    function setFeeBps(uint256 _feeBps) external onlyOwner {
+        if (_feeBps > type(uint32).max) revert MarketInvalidInitializeData("feeBPS");
+        emit FeeBpsChanged(feeBps, _feeBps);
+        feeBps = uint32(_feeBps);
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}

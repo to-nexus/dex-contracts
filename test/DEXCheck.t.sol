@@ -1168,7 +1168,7 @@ contract DEXCheckTest is DEXBaseTest {
         address proxy = address(new ERC1967Proxy(marketImpl, hex""));
 
         MarketImpl market = MarketImpl(proxy);
-        market.initialize(OWNER, address(ROUTER), FEE_COLLECTOR, address(QUOTE), pairImpl);
+        market.initialize(OWNER, address(ROUTER), address(QUOTE), pairImpl, FEE_COLLECTOR, FEE_BPS);
 
         assertFalse(CROSS_DEX.isMarket(address(market)));
     }
@@ -1233,11 +1233,25 @@ contract DEXCheckTest is DEXBaseTest {
         assertEq(oneVolume, quoteReserve);
     }
 
-    function test_check_matchedprice_slot() external pure {
+    function test_check_slot_matchedprice() external pure {
         bytes32 _matchedprice =
             keccak256(abi.encode(uint256(keccak256("crossdex.pair.matchedprice")) - 1)) & ~bytes32(uint256(0xff));
 
         console.logBytes32(_matchedprice);
+    }
+
+    function test_check_slot_feecollector() external pure {
+        bytes32 _feecollector =
+            keccak256(abi.encode(uint256(keccak256("crossdex.pair.feecollector")) - 1)) & ~bytes32(uint256(0xff));
+
+        console.logBytes32(_feecollector);
+    }
+
+    function test_check_slot_feebps() external pure {
+        bytes32 _feebps =
+            keccak256(abi.encode(uint256(keccak256("crossdex.pair.feebps")) - 1)) & ~bytes32(uint256(0xff));
+
+        console.logBytes32(_feebps);
     }
 
     function test_check_set_matchedprice_case1() external {

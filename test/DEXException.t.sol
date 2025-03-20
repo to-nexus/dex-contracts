@@ -19,7 +19,7 @@ contract DEXExceptionTest is DEXBaseTest {
         vm.prank(OWNER);
 
         vm.expectRevert(abi.encodeWithSignature("MarketAlreadyCreatedBaseAddress(address)", address(BASE)));
-        MARKET.createPair(address(BASE), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e4, FEE_BPS);
+        MARKET.createPair(address(BASE), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e4);
     }
 
     // [MARKET] BASE cannot be registered with the same address as QUOTE.
@@ -27,7 +27,7 @@ contract DEXExceptionTest is DEXBaseTest {
         vm.prank(OWNER);
 
         vm.expectRevert(abi.encodeWithSignature("MarketInvalidBaseAddress(address)", address(QUOTE)));
-        MARKET.createPair(address(QUOTE), QUOTE_DECIMALS / 1e2, QUOTE_DECIMALS / 1e4, FEE_BPS);
+        MARKET.createPair(address(QUOTE), QUOTE_DECIMALS / 1e2, QUOTE_DECIMALS / 1e4);
     }
 
     // [Pair] Trades cannot be executed in units smaller than the Tick Size.

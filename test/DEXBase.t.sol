@@ -73,11 +73,10 @@ contract DEXBaseTest is Test {
         }
         {
             // create market & Pair
-            address market = CROSS_DEX.createMarket(OWNER, FEE_COLLECTOR, address(QUOTE));
+            address market = CROSS_DEX.createMarket(OWNER, address(QUOTE), FEE_COLLECTOR, FEE_BPS);
             MARKET = MarketImpl(market);
-            address pair = MARKET.createPair(
-                address(BASE), QUOTE_DECIMALS / quote_tick_size, BASE_DECIMALS / base_tick_size, FEE_BPS
-            );
+            address pair =
+                MARKET.createPair(address(BASE), QUOTE_DECIMALS / quote_tick_size, BASE_DECIMALS / base_tick_size);
             PAIR = PairImpl(pair);
         }
 
