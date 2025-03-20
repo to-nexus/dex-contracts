@@ -75,10 +75,10 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
     uint256 public quoteReserve;
 
     // latest
-    // keccak256(abi.encode(uint256(keccak256("crossdex.pair.latestprice")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant _latestPriceSlot = 0x83754418dc128a23de1cafe35d3367823e8700becf69f0325e4c284ccb1fb900;
-    uint256 public latestPrice;
-    uint256 public latestTimestamp;
+    // keccak256(abi.encode(uint256(keccak256("crossdex.pair.matchedprice")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant _matchedPriceSlot = 0xfd0e5d4f9b88892d3b04349a0e2bc0d1359414c21932fcd7d5a523a6c0a5cd00;
+    uint256 public matchedPrice;
+    uint256 public matchedAt;
 
     // tick size
     uint256 public baseTickSize;
@@ -562,18 +562,18 @@ contract PairImpl is IPair, UUPSUpgradeable, PausableUpgradeable {
 
     function _cacheLatestPrice(uint256 price) private {
         assembly {
-            tstore(_latestPriceSlot, price)
+            tstore(_matchedPriceSlot, price)
         }
     }
 
     function _setLatest() private {
         uint256 _latestPrice;
         assembly {
-            _latestPrice := tload(_latestPriceSlot)
+            _latestPrice := tload(_matchedPriceSlot)
         }
         if (_latestPrice != 0) {
-            latestPrice = _latestPrice;
-            latestTimestamp = block.timestamp;
+            matchedPrice = _latestPrice;
+            matchedAt = block.timestamp;
         }
     }
 

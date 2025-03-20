@@ -1233,14 +1233,14 @@ contract DEXCheckTest is DEXBaseTest {
         assertEq(oneVolume, quoteReserve);
     }
 
-    function test_check_latestprice_slot() external pure {
-        bytes32 _latestPriceSlot =
-            keccak256(abi.encode(uint256(keccak256("crossdex.pair.latestprice")) - 1)) & ~bytes32(uint256(0xff));
+    function test_check_matchedprice_slot() external pure {
+        bytes32 _matchedprice =
+            keccak256(abi.encode(uint256(keccak256("crossdex.pair.matchedprice")) - 1)) & ~bytes32(uint256(0xff));
 
-        console.logBytes32(_latestPriceSlot);
+        console.logBytes32(_matchedprice);
     }
 
-    function test_check_set_latest_price_case1() external {
+    function test_check_set_matchedprice_case1() external {
         vm.startPrank(OWNER);
         QUOTE.approve(address(ROUTER), type(uint256).max);
         BASE.approve(address(ROUTER), type(uint256).max);
@@ -1260,7 +1260,7 @@ contract DEXCheckTest is DEXBaseTest {
                 0
             );
             // The latest price is not updated because the orders are not matched.
-            assertEq(0, PAIR.latestPrice());
+            assertEq(0, PAIR.matchedPrice());
         }
 
         // buy orders
@@ -1270,11 +1270,11 @@ contract DEXCheckTest is DEXBaseTest {
                 address(PAIR), _price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
             );
             // The latest price is updated because the orders are matched.
-            assertEq(_price, PAIR.latestPrice());
+            assertEq(_price, PAIR.matchedPrice());
         }
     }
 
-    function test_check_set_latest_price_case2() external {
+    function test_check_set_matchedprice_case2() external {
         vm.startPrank(OWNER);
         QUOTE.approve(address(ROUTER), type(uint256).max);
         BASE.approve(address(ROUTER), type(uint256).max);
@@ -1294,7 +1294,7 @@ contract DEXCheckTest is DEXBaseTest {
                 0
             );
             // The latest price is not updated because the orders are not matched.
-            assertEq(0, PAIR.latestPrice());
+            assertEq(0, PAIR.matchedPrice());
         }
 
         // buy orders
@@ -1304,7 +1304,7 @@ contract DEXCheckTest is DEXBaseTest {
                 address(PAIR), _price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
             );
             // The latest price is updated because the orders are matched.
-            assertEq(_price, PAIR.latestPrice());
+            assertEq(_price, PAIR.matchedPrice());
         }
     }
 }
