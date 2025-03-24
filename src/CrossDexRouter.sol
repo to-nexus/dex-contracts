@@ -36,7 +36,7 @@ contract CrossDexRouter is
     error RouterInvalidValue();
 
     address public CROSS_DEX; // immutable
-    IWETH public WCROSS; // immutable
+    IWETH public CROSS; // immutable
 
     uint256 public maxMatchCount;
 
@@ -65,7 +65,7 @@ contract CrossDexRouter is
         if (_maxMatchCount == 0) revert RouterInitializeData("maxMatchCount");
 
         CROSS_DEX = _msgSender();
-        WCROSS = IWETH(payable(address(new WETH())));
+        CROSS = IWETH(payable(address(new WETH())));
         maxMatchCount = _maxMatchCount;
 
         __Context_init();
@@ -88,7 +88,7 @@ contract CrossDexRouter is
         IPair.Config memory info = IPair(pair).getConfig();
 
         IERC20 BASE = info.BASE;
-        if (address(BASE) == address(WCROSS)) WCROSS.mintTo{value: amount}(address(pair));
+        if (address(BASE) == address(CROSS)) CROSS.mintTo{value: amount}(address(pair));
         else BASE.safeTransferFrom(owner, pair, amount);
 
         IPair.Order memory order =
@@ -109,7 +109,7 @@ contract CrossDexRouter is
 
         IERC20 QUOTE = info.QUOTE;
         uint256 volume = Math.mulDiv(price, amount, info.DENOMINATOR);
-        if (address(QUOTE) == address(WCROSS)) WCROSS.mintTo{value: volume}(address(pair));
+        if (address(QUOTE) == address(CROSS)) CROSS.mintTo{value: volume}(address(pair));
         else QUOTE.safeTransferFrom(owner, address(pair), volume);
 
         IPair.Order memory order =
@@ -128,7 +128,7 @@ contract CrossDexRouter is
         IPair.Config memory info = IPair(pair).getConfig();
 
         IERC20 BASE = info.BASE;
-        if (address(BASE) == address(WCROSS)) WCROSS.mintTo{value: amount}(address(pair));
+        if (address(BASE) == address(CROSS)) CROSS.mintTo{value: amount}(address(pair));
         else BASE.safeTransferFrom(owner, address(pair), amount);
 
         IPair.Order memory order =
@@ -147,7 +147,7 @@ contract CrossDexRouter is
         IPair.Config memory info = IPair(pair).getConfig();
 
         IERC20 QUOTE = info.QUOTE;
-        if (address(QUOTE) == address(WCROSS)) WCROSS.mintTo{value: amount}(address(pair));
+        if (address(QUOTE) == address(CROSS)) CROSS.mintTo{value: amount}(address(pair));
         else QUOTE.safeTransferFrom(owner, address(pair), amount);
 
         IPair.Order memory order =
