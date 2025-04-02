@@ -48,7 +48,7 @@ contract CrossDexRouter is
     uint256 public maxMatchCount;
     uint256 public cancelLimit;
 
-    uint256[46] private __gap;
+    uint256[45] private __gap;
 
     modifier checkValue() {
         _;
