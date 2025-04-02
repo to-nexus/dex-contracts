@@ -32,6 +32,7 @@ contract DEXBaseTest is Test {
 
     uint256 public FIND_PREV_PRICE_COUNT = type(uint256).max;
     uint256 public MAX_MATCH_COUNT = type(uint256).max;
+    uint256 public CANCEL_LIMIT = type(uint256).max;
     uint256 public FEE_BPS;
 
     uint256 public QUOTE_DECIMALS;
@@ -60,7 +61,9 @@ contract DEXBaseTest is Test {
             address crossDexImpl = address(new CrossDexImpl());
             ERC1967Proxy proxy = new ERC1967Proxy(crossDexImpl, hex"");
             CROSS_DEX = CrossDexImpl(address(proxy));
-            CROSS_DEX.initialize(OWNER, routerImpl, FIND_PREV_PRICE_COUNT, MAX_MATCH_COUNT, marketImpl, pairImpl);
+            CROSS_DEX.initialize(
+                OWNER, routerImpl, FIND_PREV_PRICE_COUNT, MAX_MATCH_COUNT, CANCEL_LIMIT, marketImpl, pairImpl
+            );
         }
         {
             // get contracts from CROSS_DEX

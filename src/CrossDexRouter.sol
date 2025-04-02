@@ -32,18 +32,21 @@ contract CrossDexRouter is
     using SafeERC20 for IERC20;
     using Math for uint256;
 
-    error RouterInitializeData(bytes32);
+    error RouterInvalidInputData(bytes32);
     error RouterInvalidPairAddress(address);
     error RouterInvalidValue();
+    error RouterCancelLimitExceeded(uint256 length, uint256 limit);
 
     event FindPrevPriceCountChanged(uint256 indexed before, uint256 indexed current);
     event MaxMatchCountChanged(uint256 indexed before, uint256 indexed current);
+    event CancelLimitChanged(uint256 indexed before, uint256 indexed current);
 
     address public CROSS_DEX; // immutable
     IWETH public CROSS; // immutable
 
     uint256 public findPrevPriceCount;
     uint256 public maxMatchCount;
+    uint256 public cancelLimit;
 
     uint256[46] private __gap;
 
@@ -66,14 +69,20 @@ contract CrossDexRouter is
         _disableInitializers();
     }
 
-    function initialize(uint256 _findPrevPriceCount, uint256 _maxMatchCount) external override initializer {
-        if (_findPrevPriceCount == 0) revert RouterInitializeData("findPrevPriceCount");
-        if (_maxMatchCount == 0) revert RouterInitializeData("maxMatchCount");
+    function initialize(uint256 _findPrevPriceCount, uint256 _maxMatchCount, uint256 _cancelLimit)
+        external
+        override
+        initializer
+    {
+        if (_findPrevPriceCount == 0) revert RouterInvalidInputData("findPrevPriceCount");
+        if (_maxMatchCount == 0) revert RouterInvalidInputData("maxMatchCount");
+        if (_cancelLimit == 0) revert RouterInvalidInputData("cancelLimit");
 
         CROSS_DEX = _msgSender();
         CROSS = IWETH(payable(address(new WETH())));
         findPrevPriceCount = _findPrevPriceCount;
         maxMatchCount = _maxMatchCount;
+        cancelLimit = _cancelLimit;
 
         __Context_init();
         __ReentrancyGuard_init();
@@ -170,7 +179,11 @@ contract CrossDexRouter is
     }
 
     function cancelOrder(address pair, uint256[] calldata orderIds) external validPair(pair) {
-        IPair(pair).cancelOrder(_msgSender(), orderIds);
+        uint256 length = orderIds.length;
+        if (length != 0) {
+            if (length > cancelLimit) revert RouterCancelLimitExceeded(length, cancelLimit);
+            IPair(pair).cancelOrder(_msgSender(), orderIds);
+        }
     }
 
     function _toMaxMatchCount(uint256 _maxMatchCount) private view returns (uint256) {
@@ -178,15 +191,21 @@ contract CrossDexRouter is
     }
 
     function setfindPrevPriceCount(uint256 _findPrevPriceCount) external onlyOwner {
-        if (_findPrevPriceCount == 0) revert RouterInitializeData("findPrevPriceCount");
+        if (_findPrevPriceCount == 0) revert RouterInvalidInputData("findPrevPriceCount");
         emit FindPrevPriceCountChanged(findPrevPriceCount, _findPrevPriceCount);
         findPrevPriceCount = _findPrevPriceCount;
     }
 
     function setMaxMatchCount(uint256 _maxMatchCount) external onlyOwner {
-        if (_maxMatchCount == 0) revert RouterInitializeData("findPrevPriceCount");
+        if (_maxMatchCount == 0) revert RouterInvalidInputData("findPrevPriceCount");
         emit MaxMatchCountChanged(maxMatchCount, _maxMatchCount);
         maxMatchCount = _maxMatchCount;
+    }
+
+    function setCancelLimit(uint256 _cancelLimit) external onlyOwner {
+        if (_cancelLimit == 0) revert RouterInvalidInputData("cancelLimit");
+        emit CancelLimitChanged(cancelLimit, _cancelLimit);
+        cancelLimit = _cancelLimit;
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
