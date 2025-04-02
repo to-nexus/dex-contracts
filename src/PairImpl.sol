@@ -12,16 +12,12 @@ import {PausableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/uti
 import {IMarket} from "./interfaces/IMarket.sol";
 import {IOwnable} from "./interfaces/IOwnable.sol";
 import {IPair} from "./interfaces/IPair.sol";
-// import {ASCList} from "./lib/ASCList.sol";
-// import {DESCList} from "./lib/DESCList.sol";
 import {List} from "./lib/List.sol";
 
 contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     using SafeERC20 for IERC20;
     using Math for uint256;
     using List for List.U256;
-    // using DESCList for DESCList.U256;
-    // using ASCList for ASCList.U256;
 
     error PairInvalidReserve(address);
     error PairInvalidInitializeData(bytes32);
