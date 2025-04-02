@@ -12,22 +12,23 @@ import {PausableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/uti
 import {IMarket} from "./interfaces/IMarket.sol";
 import {IOwnable} from "./interfaces/IOwnable.sol";
 import {IPair} from "./interfaces/IPair.sol";
-import {ASCList} from "./lib/ASCList.sol";
-import {DESCList} from "./lib/DESCList.sol";
+// import {ASCList} from "./lib/ASCList.sol";
+// import {DESCList} from "./lib/DESCList.sol";
 import {List} from "./lib/List.sol";
 
 contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     using SafeERC20 for IERC20;
     using Math for uint256;
     using List for List.U256;
-    using DESCList for DESCList.U256;
-    using ASCList for ASCList.U256;
+    // using DESCList for DESCList.U256;
+    // using ASCList for ASCList.U256;
 
     error PairInvalidReserve(address);
     error PairInvalidInitializeData(bytes32);
     error PairInvalidRouter(address);
     error PairInvalidOrderSide(OrderSide);
     error PairInvalidPrice(uint256);
+    error PairInvalidPrevPrice(OrderSide, uint256, uint256);
     error PairInvalidAmount(uint256);
     error PairInsufficientTradeVolume(uint256, uint256);
     error PairInvalidOrderId(uint256);
@@ -89,8 +90,9 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
 
     // orders
     uint256 private _orderIdCounter;
-    ASCList.U256 private _sellPrices; // This is the price list for sell orders. It will be stored in ascending order.
-    DESCList.U256 private _buyPrices; // This is the price list for buy orders. It will be stored in descending order.
+    List.U256[2] private _prices; // 0: sell, 1: buy (IPair.OrderSide)
+    // ASCList.U256 private _sellPrices; // This is the price list for sell orders. It will be stored in ascending order. // 0: sell, 1: buy
+    // DESCList.U256 private _buyPrices; // This is the price list for buy orders. It will be stored in descending order.
     mapping(uint256 price => List.U256) private _sellOrders; // price => sell order id list (For the same price, orders will be stored in chronological order.)
     mapping(uint256 price => List.U256) private _buyOrders; //  price => buy order id list (For the same price, orders will be stored in chronological order.)
     mapping(uint256 orderId => Order) private _allOrders;
@@ -166,8 +168,8 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     }
 
     function ticks() external view returns (uint256[] memory sellPrices, uint256[] memory buyPrices) {
-        sellPrices = _sellPrices.values();
-        buyPrices = _buyPrices.values();
+        sellPrices = _prices[uint8(OrderSide.SELL)].values();
+        buyPrices = _prices[uint8(OrderSide.BUY)].values();
     }
 
     function tickSizes() external view returns (uint256 tick, uint256 lot) {
@@ -193,6 +195,22 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         return IOwnable(MARKET).owner();
     }
 
+    function findPrevPrice(OrderSide side, uint256 price, uint256[2] calldata adjacent, uint256 findMaxCount)
+        external
+        view
+        returns (uint256)
+    {
+        if (side == OrderSide.SELL) {
+            // For a SELL order, search from the most expensive price in the BUY list
+            // and only match with buy orders that have a price equal to or higher than the input price.
+            return _prices[uint8(side)].findASCPrev(price, adjacent, findMaxCount);
+        } else {
+            // For a BUY order, search from the cheapest price in the SELL list
+            // and only match with sell orders that have a price equal to or lower than the input price.
+            return _prices[uint8(side)].findDESCPrev(price, adjacent, findMaxCount);
+        }
+    }
+
     //  ###### #    # ######  ####  #    # ##### ######  ####
     //  #       #  #  #      #    # #    #   #   #      #
     //  #####    ##   #####  #      #    #   #   #####   ####
@@ -203,7 +221,7 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     function submitLimitOrder(
         Order memory order,
         LimitConstraints constraints,
-        uint256[2] memory adjacent,
+        uint256 prevPrice,
         uint256 maxMatchCount
     ) external override whenNotPaused onlyRouter cacheFeeInfos returns (uint256 orderId) {
         // Check the conditions of the entered quantity.
@@ -230,18 +248,27 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
                 revert PairFillOrKill(order.owner);
             } else {
                 if (isSellOrder) {
+                    if (prevPrice != 0 && order.price < prevPrice) {
+                        // If the price is lowerthan the previous price, it is not possible to register.
+                        revert PairInvalidPrevPrice(OrderSide.SELL, order.price, prevPrice);
+                    }
                     baseReserve += order.amount;
 
                     order.feeBps = _feeBps(); // For sell orders, a fee is charged when acting as a maker.
                     _allOrders[orderId] = order;
-                    ASCList.push(_sellPrices, order.price, adjacent);
+                    _prices[uint8(OrderSide.SELL)].insert(order.price, prevPrice);
+                    // ASCList.push(_sellPrices, order.price, adjacent);
                     _sellOrders[order.price].push(orderId);
                 } else {
+                    if (prevPrice != 0 && order.price > prevPrice) {
+                        // If the price is higher than the previous price, it is not possible to register.
+                        revert PairInvalidPrevPrice(OrderSide.BUY, order.price, prevPrice);
+                    }
                     quoteReserve += Math.mulDiv(order.price, order.amount, DENOMINATOR);
 
                     order.feeBps = 0; // Buy orders have no fees.
                     _allOrders[orderId] = order;
-                    DESCList.push(_buyPrices, order.price, adjacent);
+                    _prices[uint8(OrderSide.BUY)].insert(order.price, prevPrice);
                     _buyOrders[order.price].push(orderId);
                 }
             }
@@ -365,7 +392,7 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
 
         // cache storage immutables to memory
         (IERC20 base, uint256 denominator) = (BASE, DENOMINATOR);
-
+        List.U256 storage _buyPrices = _prices[uint8(OrderSide.BUY)];
         while (!_buyPrices.empty()) {
             uint256 price = _buyPrices.at(0);
             if (price < order.price) break;
@@ -416,9 +443,7 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     ) private setLatest returns (uint256 matchedBaseAmount) {
         uint256 useQuoteAmount;
 
-        // cache storage immutables to memory
-        uint256 denominator = DENOMINATOR;
-
+        List.U256 storage _sellPrices = _prices[uint8(OrderSide.SELL)];
         while (!_sellPrices.empty()) {
             uint256 price = _sellPrices.at(0);
             if (price > order.price) break;
@@ -427,7 +452,7 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
 
             // If it is a Market trade, calculate the maximum quantity that can be purchased at the given price.
             if (quoteAmount != 0) {
-                uint256 buyAmount = Math.mulDiv(quoteAmount - useQuoteAmount, denominator, price);
+                uint256 buyAmount = Math.mulDiv(quoteAmount - useQuoteAmount, DENOMINATOR, price);
                 buyAmount -= buyAmount % lotSize;
                 order.amount = buyAmount;
                 if (buyAmount == 0) return matchedBaseAmount;
@@ -441,7 +466,7 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
                 // Update the settled quantity.
                 (address targetOwner, uint256 tradeAmount, uint32 targetFeeBps) =
                     _matchOrderAmount(orderId, order, targetId, target, price, _orders);
-                uint256 tradeQuoteAmount = Math.mulDiv(price, tradeAmount, denominator);
+                uint256 tradeQuoteAmount = Math.mulDiv(price, tradeAmount, DENOMINATOR);
 
                 // Trade executed. ( Calculate using the fee rate at the time the seller registered the sale.)
                 _exchangeQuote(targetId, targetOwner, tradeQuoteAmount, _feeCollector(), targetFeeBps);
@@ -525,10 +550,7 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         _removeOrder(orderId, _type, _orders);
 
         // If this was the last entry for the given price, remove the price.
-        if (_orders.empty()) {
-            if (isSellOrder) _sellPrices.remove(order.price);
-            else _buyPrices.remove(order.price);
-        }
+        if (_orders.empty()) _prices[uint8(order.side)].remove(order.price);
     }
 
     function _removeOrder(uint256 orderId, CloseType closeType, List.U256 storage _orders) private {

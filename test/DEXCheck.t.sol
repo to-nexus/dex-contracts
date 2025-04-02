@@ -1026,47 +1026,31 @@ contract DEXCheckTest is DEXBaseTest {
         vm.stopPrank();
     }
 
-    function test_check_ordersByPrices() external {
+    function test_check_orders_prices() external {
         vm.startPrank(OWNER);
         BASE.approve(address(ROUTER), type(uint256).max);
         QUOTE.approve(address(ROUTER), type(uint256).max);
 
-        ROUTER.submitSellLimit(
-            address(PAIR), 12 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
-        );
-        ROUTER.submitSellLimit(
-            address(PAIR), 12 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
-        );
+        // enroll sell prices
+
         ROUTER.submitSellLimit(
             address(PAIR), 12 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
         );
 
         ROUTER.submitSellLimit(
-            address(PAIR), 11 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+            address(PAIR), 10 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
         );
-        ROUTER.submitSellLimit(
-            address(PAIR), 11 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
-        );
+
         ROUTER.submitSellLimit(
             address(PAIR), 11 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
         );
 
-        ROUTER.submitSellLimit(
-            address(PAIR), 10 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
-        );
-        ROUTER.submitSellLimit(
-            address(PAIR), 10 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
-        );
-        ROUTER.submitSellLimit(
-            address(PAIR), 10 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
-        );
+        // enroll buy prices
 
         ROUTER.submitBuyLimit(
-            address(PAIR), 9 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+            address(PAIR), 7 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
         );
-        ROUTER.submitBuyLimit(
-            address(PAIR), 9 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
-        );
+
         ROUTER.submitBuyLimit(
             address(PAIR), 9 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
         );
@@ -1074,44 +1058,86 @@ contract DEXCheckTest is DEXBaseTest {
         ROUTER.submitBuyLimit(
             address(PAIR), 8 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
         );
-        ROUTER.submitBuyLimit(
-            address(PAIR), 8 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
-        );
-        ROUTER.submitBuyLimit(
-            address(PAIR), 8 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
-        );
 
-        ROUTER.submitBuyLimit(
-            address(PAIR), 7 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
-        );
-        ROUTER.submitBuyLimit(
-            address(PAIR), 7 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
-        );
-        ROUTER.submitBuyLimit(
-            address(PAIR), 7 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
-        );
-        ROUTER.submitBuyLimit(
-            address(PAIR), 7 ether, 1 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
-        );
         vm.stopPrank();
 
         (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
-        uint256[][] memory sellOrders = PAIR.ordersByPrices(IPair.OrderSide.SELL, sellPrices);
-        uint256[][] memory buyOrders = PAIR.ordersByPrices(IPair.OrderSide.BUY, buyPrices);
 
-        uint256 l1 = sellOrders.length;
-        for (uint256 i = 0; i < l1; i++) {
-            uint256 l2 = sellOrders[i].length;
-            for (uint256 j = 0; j < l2; j++) {
-                console.log(sellOrders[i][j]);
+        {
+            uint256 price = sellPrices[0];
+            for (uint256 i = 1; i < sellPrices.length; i++) {
+                assertGt(sellPrices[i], price);
+                price = sellPrices[i];
+            }
+        }
+        {
+            uint256 price = buyPrices[0];
+            for (uint256 i = 1; i < buyPrices.length; i++) {
+                assertLt(buyPrices[i], price);
+            }
+        }
+    }
+
+    mapping(uint8 => bool) _testFuzz_check_orders_prices_set;
+
+    function testFuzz_check_orders_prices(uint8[30] calldata _prices) external {
+        vm.startPrank(OWNER);
+        BASE.approve(address(ROUTER), type(uint256).max);
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+
+        uint8 min = type(uint8).max;
+        uint8 max = 0;
+        uint256 length;
+        for (uint256 i = 0; i < _prices.length; i++) {
+            uint8 price = _prices[i];
+            if (price == 0 || _testFuzz_check_orders_prices_set[price]) continue;
+            _testFuzz_check_orders_prices_set[price] = true;
+            ++length;
+            if (price < min) min = price;
+            if (price > max) max = price;
+        }
+        vm.assume(length > 10);
+
+        uint256 mid = uint256(min) + uint256(max) / 2;
+        for (uint256 i = 0; i < _prices.length; i++) {
+            if (_prices[i] == 0) continue;
+            uint8 price = _prices[i];
+            if (price > mid) {
+                ROUTER.submitSellLimit(
+                    address(PAIR),
+                    price * QUOTE_DECIMALS,
+                    1 ether,
+                    IPair.LimitConstraints.GOOD_TILL_CANCEL,
+                    _searchPrices,
+                    0
+                );
+            } else {
+                ROUTER.submitBuyLimit(
+                    address(PAIR),
+                    price * QUOTE_DECIMALS,
+                    1 ether,
+                    IPair.LimitConstraints.GOOD_TILL_CANCEL,
+                    _searchPrices,
+                    0
+                );
             }
         }
 
-        l1 = buyOrders.length;
-        for (uint256 i = 0; i < l1; i++) {
-            uint256 l2 = buyOrders[i].length;
-            for (uint256 j = 0; j < l2; j++) {
-                console.log(buyOrders[i][j]);
+        vm.stopPrank();
+
+        (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+
+        {
+            uint256 price = sellPrices[0];
+            for (uint256 i = 1; i < sellPrices.length; i++) {
+                assertGt(sellPrices[i], price);
+                price = sellPrices[i];
+            }
+        }
+        {
+            uint256 price = buyPrices[0];
+            for (uint256 i = 1; i < buyPrices.length; i++) {
+                assertLt(buyPrices[i], price);
             }
         }
     }

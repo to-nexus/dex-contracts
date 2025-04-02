@@ -23,6 +23,7 @@ import {IWETH} from "./interfaces/IWETH.sol";
 contract CrossDexRouter is
     IRouter,
     IRouterInitializer,
+    IOwnable,
     UUPSUpgradeable,
     ContextUpgradeable,
     ReentrancyGuardUpgradeable
@@ -35,12 +36,16 @@ contract CrossDexRouter is
     error RouterInvalidPairAddress(address);
     error RouterInvalidValue();
 
+    event FindPrevPriceCountChanged(uint256 indexed before, uint256 indexed current);
+    event MaxMatchCountChanged(uint256 indexed before, uint256 indexed current);
+
     address public CROSS_DEX; // immutable
     IWETH public CROSS; // immutable
 
+    uint256 public findPrevPriceCount;
     uint256 public maxMatchCount;
 
-    uint256[47] private __gap;
+    uint256[46] private __gap;
 
     modifier checkValue() {
         _;
@@ -53,7 +58,7 @@ contract CrossDexRouter is
     }
 
     modifier onlyOwner() {
-        if (_msgSender() != IOwnable(CROSS_DEX).owner()) revert IOwnable.OwnableUnauthorizedAccount(_msgSender());
+        if (_msgSender() != owner()) revert OwnableUnauthorizedAccount(_msgSender());
         _;
     }
 
@@ -61,11 +66,13 @@ contract CrossDexRouter is
         _disableInitializers();
     }
 
-    function initialize(uint256 _maxMatchCount) external override initializer {
+    function initialize(uint256 _findPrevPriceCount, uint256 _maxMatchCount) external override initializer {
+        if (_findPrevPriceCount == 0) revert RouterInitializeData("findPrevPriceCount");
         if (_maxMatchCount == 0) revert RouterInitializeData("maxMatchCount");
 
         CROSS_DEX = _msgSender();
         CROSS = IWETH(payable(address(new WETH())));
+        findPrevPriceCount = _findPrevPriceCount;
         maxMatchCount = _maxMatchCount;
 
         __Context_init();
@@ -76,6 +83,10 @@ contract CrossDexRouter is
         return ICrossDex(CROSS_DEX).pairToMarket(pair) != address(0);
     }
 
+    function owner() public view override returns (address) {
+        return IOwnable(CROSS_DEX).owner();
+    }
+
     function submitSellLimit(
         address pair,
         uint256 price,
@@ -84,16 +95,18 @@ contract CrossDexRouter is
         uint256[2] memory adjacent,
         uint256 _maxMatchCount
     ) external payable nonReentrant validPair(pair) checkValue returns (uint256) {
-        address owner = _msgSender();
-        IPair.Config memory info = IPair(pair).getConfig();
+        address _owner = _msgSender();
+        IPair _pair = IPair(pair);
+        IPair.Config memory info = _pair.getConfig();
 
-        IERC20 BASE = info.BASE;
-        if (address(BASE) == address(CROSS)) CROSS.mintTo{value: amount}(address(pair));
-        else BASE.safeTransferFrom(owner, pair, amount);
+        uint256 prevPrice = _pair.findPrevPrice(IPair.OrderSide.SELL, price, adjacent, findPrevPriceCount);
+
+        if (address(info.BASE) == address(CROSS)) CROSS.mintTo{value: amount}(pair);
+        else info.BASE.safeTransferFrom(_owner, pair, amount);
 
         IPair.Order memory order =
-            IPair.Order({side: IPair.OrderSide.SELL, owner: owner, feeBps: 0, price: price, amount: amount});
-        return IPair(pair).submitLimitOrder(order, constraints, adjacent, _toMaxMatchCount(_maxMatchCount));
+            IPair.Order({side: IPair.OrderSide.SELL, owner: _owner, feeBps: 0, price: price, amount: amount});
+        return _pair.submitLimitOrder(order, constraints, prevPrice, _toMaxMatchCount(_maxMatchCount));
     }
 
     function submitBuyLimit(
@@ -101,20 +114,21 @@ contract CrossDexRouter is
         uint256 price,
         uint256 amount,
         IPair.LimitConstraints constraints,
-        uint256[2] memory adjacent,
+        uint256[2] calldata adjacent,
         uint256 _maxMatchCount
     ) external payable nonReentrant validPair(pair) checkValue returns (uint256) {
-        address owner = _msgSender();
-        IPair.Config memory info = IPair(pair).getConfig();
+        address _owner = _msgSender();
+        IPair _pair = IPair(pair);
+        IPair.Config memory info = _pair.getConfig();
+        uint256 prevPrice = _pair.findPrevPrice(IPair.OrderSide.BUY, price, adjacent, findPrevPriceCount);
 
-        IERC20 QUOTE = info.QUOTE;
         uint256 volume = Math.mulDiv(price, amount, info.DENOMINATOR);
-        if (address(QUOTE) == address(CROSS)) CROSS.mintTo{value: volume}(address(pair));
-        else QUOTE.safeTransferFrom(owner, address(pair), volume);
+        if (address(info.QUOTE) == address(CROSS)) CROSS.mintTo{value: volume}(pair);
+        else info.QUOTE.safeTransferFrom(_owner, address(pair), volume);
 
         IPair.Order memory order =
-            IPair.Order({side: IPair.OrderSide.BUY, owner: owner, feeBps: 0, price: price, amount: amount});
-        return IPair(pair).submitLimitOrder(order, constraints, adjacent, _toMaxMatchCount(_maxMatchCount));
+            IPair.Order({side: IPair.OrderSide.BUY, owner: _owner, feeBps: 0, price: price, amount: amount});
+        return _pair.submitLimitOrder(order, constraints, prevPrice, _toMaxMatchCount(_maxMatchCount));
     }
 
     function submitSellMarket(address pair, uint256 amount, uint256 _maxMatchCount)
@@ -124,15 +138,15 @@ contract CrossDexRouter is
         validPair(pair)
         checkValue
     {
-        address owner = _msgSender();
+        address _owner = _msgSender();
         IPair.Config memory info = IPair(pair).getConfig();
 
         IERC20 BASE = info.BASE;
         if (address(BASE) == address(CROSS)) CROSS.mintTo{value: amount}(address(pair));
-        else BASE.safeTransferFrom(owner, address(pair), amount);
+        else BASE.safeTransferFrom(_owner, address(pair), amount);
 
         IPair.Order memory order =
-            IPair.Order({side: IPair.OrderSide.SELL, owner: owner, feeBps: 0, price: 0, amount: 0});
+            IPair.Order({side: IPair.OrderSide.SELL, owner: _owner, feeBps: 0, price: 0, amount: 0});
         IPair(pair).submitMarketOrder(order, amount, _toMaxMatchCount(_maxMatchCount));
     }
 
@@ -143,15 +157,15 @@ contract CrossDexRouter is
         validPair(pair)
         checkValue
     {
-        address owner = _msgSender();
+        address _owner = _msgSender();
         IPair.Config memory info = IPair(pair).getConfig();
 
         IERC20 QUOTE = info.QUOTE;
         if (address(QUOTE) == address(CROSS)) CROSS.mintTo{value: amount}(address(pair));
-        else QUOTE.safeTransferFrom(owner, address(pair), amount);
+        else QUOTE.safeTransferFrom(_owner, address(pair), amount);
 
         IPair.Order memory order =
-            IPair.Order({side: IPair.OrderSide.BUY, owner: owner, feeBps: 0, price: 0, amount: 0});
+            IPair.Order({side: IPair.OrderSide.BUY, owner: _owner, feeBps: 0, price: 0, amount: 0});
         IPair(pair).submitMarketOrder(order, amount, _toMaxMatchCount(_maxMatchCount));
     }
 
@@ -161,6 +175,18 @@ contract CrossDexRouter is
 
     function _toMaxMatchCount(uint256 _maxMatchCount) private view returns (uint256) {
         return _maxMatchCount == 0 || _maxMatchCount > maxMatchCount ? maxMatchCount : _maxMatchCount;
+    }
+
+    function setfindPrevPriceCount(uint256 _findPrevPriceCount) external onlyOwner {
+        if (_findPrevPriceCount == 0) revert RouterInitializeData("findPrevPriceCount");
+        emit FindPrevPriceCountChanged(findPrevPriceCount, _findPrevPriceCount);
+        findPrevPriceCount = _findPrevPriceCount;
+    }
+
+    function setMaxMatchCount(uint256 _maxMatchCount) external onlyOwner {
+        if (_maxMatchCount == 0) revert RouterInitializeData("findPrevPriceCount");
+        emit MaxMatchCountChanged(maxMatchCount, _maxMatchCount);
+        maxMatchCount = _maxMatchCount;
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}

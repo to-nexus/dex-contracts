@@ -37,11 +37,14 @@ interface IPair {
     }
 
     function getConfig() external view returns (Config memory);
-
+    function findPrevPrice(OrderSide side, uint256 price, uint256[2] calldata adjacent, uint256 findMaxCount)
+        external
+        view
+        returns (uint256);
     function submitLimitOrder(
         Order memory order,
         LimitConstraints constraints,
-        uint256[2] memory adjacent,
+        uint256 prevPrice,
         uint256 maxMatchCount
     ) external returns (uint256 orderId);
     function submitMarketOrder(Order memory order, uint256 spendAmount, uint256 maxMatchCount) external;

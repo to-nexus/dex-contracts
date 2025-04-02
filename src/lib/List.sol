@@ -10,6 +10,8 @@ library List {
     error ListZeroData();
     error ListInvalidIndex();
     error ListInvalidPrevNode();
+    error ListInvalidFindMaxCount();
+    error ListFailToFindPrev();
 
     function _linked(Node memory node) private pure returns (bool) {
         return node.prev != 0 || node.next != 0;
@@ -60,6 +62,71 @@ library List {
             }
         }
         return result;
+    }
+
+    function findASCPrev(U256 storage _list, uint256 _data, uint256[2] memory _adjacent, uint256 _findMaxCount)
+        internal
+        view
+        returns (uint256)
+    {
+        if (_data == 0) revert ListZeroData();
+        if (contains(_list, _data)) return _list.nodes[_data].prev;
+
+        if (_data < _list.head || empty(_list)) {
+            return 0;
+        } else if (_data > _list.tail) {
+            return _list.tail;
+        } else {
+            if (_findMaxCount == 0) revert ListInvalidFindMaxCount();
+            uint256 current = _ensureAdjacentForPush(_list, _adjacent);
+            unchecked {
+                if (current < _data) {
+                    while (current != 0 && --_findMaxCount != 0) {
+                        current = _list.nodes[current].next;
+                        if (current > _data) return _list.nodes[current].prev;
+                    }
+                } else {
+                    while (current != 0 && --_findMaxCount != 0) {
+                        current = _list.nodes[current].prev;
+                        if (current < _data) return current;
+                    }
+                }
+            }
+            revert ListFailToFindPrev();
+        }
+    }
+
+    function findDESCPrev(U256 storage _list, uint256 _data, uint256[2] memory _adjacent, uint256 _findMaxCount)
+        internal
+        view
+        returns (uint256)
+    {
+        if (_data == 0) revert ListZeroData();
+        if (contains(_list, _data)) return _list.nodes[_data].prev;
+
+        if (_data > _list.head || empty(_list)) {
+            return 0;
+        } else if (_data < _list.tail) {
+            return _list.tail;
+        } else {
+            if (_findMaxCount == 0) revert ListInvalidFindMaxCount();
+            uint256 current = _ensureAdjacentForPush(_list, _adjacent);
+            unchecked {
+                if (current > _data) {
+                    while (current != 0 && --_findMaxCount != 0) {
+                        current = _list.nodes[current].next;
+                        if (_data > current) return _list.nodes[current].prev;
+                    }
+                } else {
+                    // current < _data
+                    while (current != 0 && --_findMaxCount != 0) {
+                        current = _list.nodes[current].prev;
+                        if (_data < current) return current;
+                    }
+                }
+            }
+            revert ListFailToFindPrev();
+        }
     }
 
     function insert(U256 storage _list, uint256 _data, uint256 _prev) internal returns (bool) {
@@ -113,5 +180,11 @@ library List {
         delete _list.nodes[_data];
         --_list.length;
         return true;
+    }
+
+    function _ensureAdjacentForPush(U256 storage _list, uint256[2] memory _adjacent) private view returns (uint256) {
+        if (contains(_list, _adjacent[0])) return (_adjacent[0]);
+        else if (contains(_list, _adjacent[1])) return (_adjacent[1]);
+        else return _list.head;
     }
 }

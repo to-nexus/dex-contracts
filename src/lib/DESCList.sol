@@ -41,7 +41,7 @@ library DESCList {
         } else if (_data < list.tail) {
             return list.insert(_data, list.tail);
         } else {
-            uint256 current = _ensureAdjacentForPush(_list, _adjacent);
+            uint256 current = ensureAdjacentForPush(_list, _adjacent);
             if (current > _data) {
                 while (current != 0) {
                     if (_data > current) return list.insert(_data, list.nodes[current].prev);
@@ -67,7 +67,7 @@ library DESCList {
         return _list._inner.remove(_data);
     }
 
-    function _ensureAdjacentForPush(U256 storage _list, uint256[2] memory _adjacent) private view returns (uint256) {
+    function ensureAdjacentForPush(U256 storage _list, uint256[2] memory _adjacent) internal view returns (uint256) {
         if (contains(_list, _adjacent[0])) return (_adjacent[0]);
         else if (contains(_list, _adjacent[1])) return (_adjacent[1]);
         else return _list._inner.tail;
