@@ -1328,4 +1328,214 @@ contract DEXCheckTest is DEXBaseTest {
             assertEq(_price, PAIR.matchedPrice());
         }
     }
+
+    function test_check_account_reserve_case1() external {
+        address seller1 = address(0x1);
+        address seller2 = address(0x2);
+        address seller3 = address(0x3);
+
+        vm.startPrank(OWNER);
+        MARKET.setFeeBps(0);
+
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        BASE.transfer(seller1, 100 ether);
+        BASE.transfer(seller2, 100 ether);
+        BASE.transfer(seller3, 100 ether);
+        vm.stopPrank();
+        vm.startPrank(seller1);
+        BASE.approve(address(ROUTER), type(uint256).max);
+        ROUTER.submitSellLimit(
+            address(PAIR), 1 ether, 100 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+        );
+        {
+            (uint256 baseReserve,) = PAIR.accountReserves(seller1);
+            assertEq(100 ether, baseReserve);
+        }
+        vm.startPrank(seller2);
+        BASE.approve(address(ROUTER), type(uint256).max);
+        ROUTER.submitSellLimit(
+            address(PAIR), 1 ether, 100 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+        );
+        {
+            (uint256 baseReserve,) = PAIR.accountReserves(seller2);
+            assertEq(100 ether, baseReserve);
+        }
+        vm.startPrank(seller3);
+        BASE.approve(address(ROUTER), type(uint256).max);
+        ROUTER.submitSellLimit(
+            address(PAIR), 1 ether, 100 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+        );
+        {
+            (uint256 baseReserve,) = PAIR.accountReserves(seller3);
+            assertEq(100 ether, baseReserve);
+        }
+
+        // check reduce by trade
+        vm.startPrank(OWNER);
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        ROUTER.submitBuyMarket(address(PAIR), 50 ether, 0);
+
+        {
+            (uint256 baseReserve,) = PAIR.accountReserves(seller1);
+            assertEq(50 ether, baseReserve);
+            assertEq(50 ether, QUOTE.balanceOf(seller1));
+        }
+        {
+            (uint256 baseReserve,) = PAIR.accountReserves(seller2);
+            assertEq(100 ether, baseReserve);
+        }
+        {
+            (uint256 baseReserve,) = PAIR.accountReserves(seller3);
+            assertEq(100 ether, baseReserve);
+        }
+        assertEq(250 ether, PAIR.baseReserve());
+
+        // check reduce by cancel
+        {
+            uint256[] memory orderIds = new uint256[](1);
+            orderIds[0] = 2;
+            vm.startPrank(seller2);
+            ROUTER.cancelOrder(address(PAIR), orderIds);
+            {
+                (uint256 baseReserve,) = PAIR.accountReserves(seller1);
+                assertEq(50 ether, baseReserve);
+            }
+            {
+                (uint256 baseReserve,) = PAIR.accountReserves(seller2);
+                assertEq(0, baseReserve);
+            }
+            {
+                (uint256 baseReserve,) = PAIR.accountReserves(seller3);
+                assertEq(100 ether, baseReserve);
+            }
+            assertEq(150 ether, PAIR.baseReserve());
+        }
+
+        // check reduce by emergencyCancel
+        {
+            vm.startPrank(OWNER);
+            PAIR.setPause(true);
+            uint256[] memory orderIds = new uint256[](2);
+            orderIds[0] = 1;
+            orderIds[1] = 3;
+            PAIR.emergencyCancelOrder(orderIds);
+            {
+                (uint256 baseReserve,) = PAIR.accountReserves(seller1);
+                assertEq(0, baseReserve);
+            }
+            {
+                (uint256 baseReserve,) = PAIR.accountReserves(seller2);
+                assertEq(0, baseReserve);
+            }
+            {
+                (uint256 baseReserve,) = PAIR.accountReserves(seller3);
+                assertEq(0, baseReserve);
+            }
+            assertEq(0, PAIR.baseReserve());
+        }
+    }
+
+    function test_check_account_reserve_case2() external {
+        address buyer1 = address(0x1);
+        address buyer2 = address(0x2);
+        address buyer3 = address(0x3);
+
+        vm.startPrank(OWNER);
+        MARKET.setFeeBps(0);
+
+        BASE.approve(address(ROUTER), type(uint256).max);
+        QUOTE.transfer(buyer1, 100 ether);
+        QUOTE.transfer(buyer2, 100 ether);
+        QUOTE.transfer(buyer3, 100 ether);
+        vm.stopPrank();
+        vm.startPrank(buyer1);
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        ROUTER.submitBuyLimit(
+            address(PAIR), 1 ether, 100 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+        );
+        {
+            (, uint256 quoteReserve) = PAIR.accountReserves(buyer1);
+            assertEq(100 ether, quoteReserve);
+        }
+        vm.startPrank(buyer2);
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        ROUTER.submitBuyLimit(
+            address(PAIR), 1 ether, 100 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+        );
+        {
+            (, uint256 quoteReserve) = PAIR.accountReserves(buyer2);
+            assertEq(100 ether, quoteReserve);
+        }
+        vm.startPrank(buyer3);
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        ROUTER.submitBuyLimit(
+            address(PAIR), 1 ether, 100 ether, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+        );
+        {
+            (, uint256 quoteReserve) = PAIR.accountReserves(buyer3);
+            assertEq(100 ether, quoteReserve);
+        }
+
+        // check reduce by trade
+        vm.startPrank(OWNER);
+        BASE.approve(address(ROUTER), type(uint256).max);
+        ROUTER.submitSellMarket(address(PAIR), 50 ether, 0);
+
+        {
+            (, uint256 quoteReserve) = PAIR.accountReserves(buyer1);
+            assertEq(50 ether, quoteReserve);
+            assertEq(50 ether, BASE.balanceOf(buyer1));
+        }
+        {
+            (, uint256 quoteReserve) = PAIR.accountReserves(buyer2);
+            assertEq(100 ether, quoteReserve);
+        }
+        {
+            (, uint256 quoteReserve) = PAIR.accountReserves(buyer3);
+            assertEq(100 ether, quoteReserve);
+        }
+        assertEq(250 ether, PAIR.quoteReserve());
+        // check reduce by cancel
+        {
+            uint256[] memory orderIds = new uint256[](1);
+            orderIds[0] = 2;
+            vm.startPrank(buyer2);
+            ROUTER.cancelOrder(address(PAIR), orderIds);
+            {
+                (, uint256 quoteReserve) = PAIR.accountReserves(buyer1);
+                assertEq(50 ether, quoteReserve);
+            }
+            {
+                (, uint256 quoteReserve) = PAIR.accountReserves(buyer2);
+                assertEq(0, quoteReserve);
+            }
+            {
+                (, uint256 quoteReserve) = PAIR.accountReserves(buyer3);
+                assertEq(100 ether, quoteReserve);
+            }
+            assertEq(150 ether, PAIR.quoteReserve());
+        }
+        // check reduce by emergencyCancel
+        {
+            vm.startPrank(OWNER);
+            PAIR.setPause(true);
+            uint256[] memory orderIds = new uint256[](2);
+            orderIds[0] = 1;
+            orderIds[1] = 3;
+            PAIR.emergencyCancelOrder(orderIds);
+            {
+                (, uint256 quoteReserve) = PAIR.accountReserves(buyer1);
+                assertEq(0, quoteReserve);
+            }
+            {
+                (, uint256 quoteReserve) = PAIR.accountReserves(buyer2);
+                assertEq(0, quoteReserve);
+            }
+            {
+                (, uint256 quoteReserve) = PAIR.accountReserves(buyer3);
+                assertEq(0, quoteReserve);
+            }
+            assertEq(0, PAIR.quoteReserve());
+        }
+    }
 }
