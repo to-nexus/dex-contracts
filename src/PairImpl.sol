@@ -92,6 +92,7 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     mapping(uint256 price => List.U256) private _sellOrders; // price => sell order id list (For the same price, orders will be stored in chronological order.)
     mapping(uint256 price => List.U256) private _buyOrders; //  price => buy order id list (For the same price, orders will be stored in chronological order.)
     mapping(uint256 orderId => Order) private _allOrders;
+    mapping(address account => uint256[2]) private _accountReserves; // 0: sell (BASE), 1: buy (QUOTE)
 
     uint256[32] private __gap;
 
@@ -161,6 +162,10 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
 
     function orderById(uint256 id) external view returns (Order memory) {
         return _allOrders[id];
+    }
+
+    function accountReserves(address account) external view returns (uint256 base, uint256 quote) {
+        return (_accountReserves[account][0], _accountReserves[account][1]);
     }
 
     function ticks() external view returns (uint256[] memory sellPrices, uint256[] memory buyPrices) {
@@ -248,7 +253,7 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
                         // If the price is lowerthan the previous price, it is not possible to register.
                         revert PairInvalidPrevPrice(OrderSide.SELL, order.price, prevPrice);
                     }
-                    baseReserve += order.amount;
+                    _addReserve(false, order.owner, order.amount);
 
                     order.feeBps = _feeBps(); // For sell orders, a fee is charged when acting as a maker.
                     _allOrders[orderId] = order;
@@ -260,7 +265,7 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
                         // If the price is higher than the previous price, it is not possible to register.
                         revert PairInvalidPrevPrice(OrderSide.BUY, order.price, prevPrice);
                     }
-                    quoteReserve += Math.mulDiv(order.price, order.amount, DENOMINATOR);
+                    _addReserve(true, order.owner, Math.mulDiv(order.price, order.amount, DENOMINATOR));
 
                     order.feeBps = 0; // Buy orders have no fees.
                     _allOrders[orderId] = order;
@@ -408,7 +413,9 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
                 base.safeTransfer(targetOwner, tradeAmount);
 
                 // Update information.
-                earnQuoteAmount += Math.mulDiv(price, tradeAmount, denominator);
+                uint256 tradeQuoteAmount = Math.mulDiv(price, tradeAmount, denominator);
+                earnQuoteAmount += tradeQuoteAmount;
+                _accountReserves[targetOwner][1] -= tradeQuoteAmount; // The `earnQuoteAmount` is processed in a single step, so `_subReserve()` is not used here.
                 if (order.amount == 0 || --maxMatchCount == 0) {
                     if (_orders.empty()) {
                         // Although the `while` loop has not yet ended,
@@ -470,6 +477,7 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
                 // Update information.
                 matchedBaseAmount += tradeAmount;
                 useQuoteAmount += tradeQuoteAmount;
+                _accountReserves[targetOwner][0] -= tradeAmount; // The `matchedBaseAmount` is processed in a single step, so `_subReserve()` is not used here.
                 if (order.amount == 0 || --maxMatchCount == 0) {
                     if (_orders.empty()) {
                         // Although the `while` loop has not yet ended,
@@ -531,14 +539,14 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
             _orders = _sellOrders[order.price];
             if (order.amount != 0) {
                 BASE.safeTransfer(order.owner, order.amount);
-                baseReserve -= order.amount;
+                _subReserve(false, order.owner, order.amount);
             }
         } else {
             _orders = _buyOrders[order.price];
             uint256 returnQuoteAmount = Math.mulDiv(order.price, order.amount, DENOMINATOR);
             if (returnQuoteAmount != 0) {
                 QUOTE.safeTransfer(order.owner, returnQuoteAmount);
-                quoteReserve -= returnQuoteAmount;
+                _subReserve(true, order.owner, returnQuoteAmount);
             }
         }
 
@@ -553,6 +561,29 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         if (!_orders.remove(orderId)) revert PairInvalidOrderId(orderId);
         delete _allOrders[orderId];
         emit OrderClosed(orderId, closeType, block.timestamp);
+    }
+
+    // `_addReserve` and `_subReserve` are used during limit order creation and order cancellation.
+    // However, during order matching, it is better to subtract reserves individually for accuracy,
+    // so these functions are not used at the moment of matching.
+    function _addReserve(bool isQuote, address account, uint256 amount) private {
+        if (isQuote) {
+            quoteReserve += amount;
+            _accountReserves[account][1] += amount;
+        } else {
+            baseReserve += amount;
+            _accountReserves[account][0] += amount;
+        }
+    }
+
+    function _subReserve(bool isQuote, address account, uint256 amount) private {
+        if (isQuote) {
+            quoteReserve -= amount;
+            _accountReserves[account][1] -= amount;
+        } else {
+            baseReserve -= amount;
+            _accountReserves[account][0] -= amount;
+        }
     }
 
     function _returnRemainQuote(address to, uint256 mustRemainQuoteAmount) private {
