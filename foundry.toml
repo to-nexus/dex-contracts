@@ -2,6 +2,8 @@
 src = "src"
 out = "out"
 libs = ["lib", "dependencies"]
+optimizer = true
+optimizer_runs = 20000
 
 [dependencies]
 "@openzeppelin-contracts" = "5.2.0"
