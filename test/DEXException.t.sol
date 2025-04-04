@@ -128,4 +128,58 @@ contract DEXExceptionTest is DEXBaseTest {
             0
         );
     }
+
+    // If the match count is insufficient match count, the order will be linked.
+    // order books with the same price can appear on both sides.
+    function test_exception_duplicate_orderbook_case1() external {
+        vm.startPrank(OWNER);
+        BASE.approve(address(ROUTER), type(uint256).max);
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+
+        uint256 price = _toQuote(1);
+        uint256 amount = _toBase(1);
+        // [limit] check success.
+        address pair = address(PAIR);
+        ROUTER.submitSellLimit(pair, price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        ROUTER.submitSellLimit(pair, price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+
+        {
+            (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+            assertEq(1, sellPrices.length);
+            assertEq(0, buyPrices.length);
+        }
+
+        ROUTER.submitBuyLimit(pair, price, amount * 2, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 1);
+        {
+            (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+            assertEq(1, sellPrices.length);
+            assertEq(0, buyPrices.length, "todo fix");
+        }
+    }
+
+    function test_exception_duplicate_orderbook_case2() external {
+        vm.startPrank(OWNER);
+        BASE.approve(address(ROUTER), type(uint256).max);
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+
+        uint256 price = _toQuote(1);
+        uint256 amount = _toBase(1);
+        // [limit] check success.
+        address pair = address(PAIR);
+        ROUTER.submitBuyLimit(pair, price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        ROUTER.submitBuyLimit(pair, price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+
+        {
+            (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+            assertEq(0, sellPrices.length);
+            assertEq(1, buyPrices.length);
+        }
+
+        ROUTER.submitSellLimit(pair, price, amount * 2, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 1);
+        {
+            (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+            assertEq(0, sellPrices.length, "todo fix");
+            assertEq(1, buyPrices.length);
+        }
+    }
 }
