@@ -93,7 +93,7 @@ contract DEXExceptionTest is DEXBaseTest {
                 amount: _toBase(1)
             }),
             IPair.LimitConstraints.GOOD_TILL_CANCEL,
-            _searchPrices,
+            0,
             0
         );
 
@@ -108,7 +108,7 @@ contract DEXExceptionTest is DEXBaseTest {
                 amount: _toBase(1)
             }),
             IPair.LimitConstraints.GOOD_TILL_CANCEL,
-            _searchPrices,
+            0,
             0
         );
 

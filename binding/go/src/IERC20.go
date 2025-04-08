@@ -46,9 +46,6 @@ var IERC20MetaData = &bind.MetaData{
 // Deprecated: Use IERC20MetaData.ABI instead.
 var IERC20ABI = IERC20MetaData.ABI
 
-// IERC20BinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const IERC20BinRuntime = ""
-
 // Deprecated: Use IERC20MetaData.Sigs instead.
 // IERC20FuncSigs maps the 4-byte function signature to its string representation.
 var IERC20FuncSigs = IERC20MetaData.Sigs
