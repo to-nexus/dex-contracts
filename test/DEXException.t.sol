@@ -128,4 +128,74 @@ contract DEXExceptionTest is DEXBaseTest {
             0
         );
     }
+
+    // If the match count is insufficient match count, the order will be linked.
+    // order books with the same price can appear on both sides.
+    function test_exception_duplicate_orderbook_case1() external {
+        vm.startPrank(OWNER);
+        MARKET.setFeeBps(0); // for simple calculation
+        BASE.approve(address(ROUTER), type(uint256).max);
+
+        uint256 price = _toQuote(1);
+        uint256 amount = _toBase(1);
+        uint256 volume = Math.mulDiv(price, amount, PAIR.DENOMINATOR());
+        // [limit] check success.
+        address pair = address(PAIR);
+        ROUTER.submitSellLimit(pair, price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        ROUTER.submitSellLimit(pair, price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+
+        {
+            (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+            assertEq(1, sellPrices.length);
+            assertEq(0, buyPrices.length);
+        }
+
+        address buyer = address(0x1);
+        QUOTE.transfer(buyer, volume * 2);
+
+        vm.startPrank(buyer);
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        ROUTER.submitBuyLimit(pair, price, amount * 2, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 1);
+        {
+            (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+            assertEq(1, sellPrices.length); // remain other order
+            assertEq(0, buyPrices.length, "todo fix");
+        }
+
+        assertEq(volume, QUOTE.balanceOf(buyer)); // check return balance
+        assertEq(amount, BASE.balanceOf(buyer)); // check match balance
+    }
+
+    function test_exception_duplicate_orderbook_case2() external {
+        vm.startPrank(OWNER);
+        MARKET.setFeeBps(0); // for simple calculation
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+
+        uint256 price = _toQuote(1);
+        uint256 amount = _toBase(1);
+        uint256 volume = Math.mulDiv(price, amount, PAIR.DENOMINATOR());
+
+        // [limit] check success.
+        address pair = address(PAIR);
+        ROUTER.submitBuyLimit(pair, price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        ROUTER.submitBuyLimit(pair, price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        {
+            (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+            assertEq(0, sellPrices.length);
+            assertEq(1, buyPrices.length);
+        }
+
+        address seller = address(0x1);
+        BASE.transfer(seller, amount * 2);
+        vm.startPrank(seller);
+        BASE.approve(address(ROUTER), type(uint256).max);
+        ROUTER.submitSellLimit(pair, price, amount * 2, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 1);
+        {
+            (uint256[] memory sellPrices, uint256[] memory buyPrices) = PAIR.ticks();
+            assertEq(0, sellPrices.length, "todo fix");
+            assertEq(1, buyPrices.length); // remain other order
+        }
+        assertEq(amount, BASE.balanceOf(seller)); // check return balance
+        assertEq(volume, QUOTE.balanceOf(seller)); // check match balance
+    }
 }

@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 import {ERC1967Proxy} from "@openzeppelin-contracts-5.2.0/proxy/ERC1967/ERC1967Proxy.sol";
 import {UUPSUpgradeable} from "@openzeppelin-contracts-5.2.0/proxy/utils/UUPSUpgradeable.sol";
 import {IERC20Metadata} from "@openzeppelin-contracts-5.2.0/token/ERC20/extensions/IERC20Metadata.sol";
+import {Create2} from "@openzeppelin-contracts-5.2.0/utils/Create2.sol";
 import {EnumerableMap} from "@openzeppelin-contracts-5.2.0/utils/structs/EnumerableMap.sol";
 
 import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/access/OwnableUpgradeable.sol";
@@ -101,19 +102,25 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
         return _allMarkets.get(quote) == market;
     }
 
-    function createMarket(address _owner, address _quote, address _feeCollector, uint256 _feeBps)
+    function createMarket(address _owner, address quote, address feeCollector, uint256 feeBps)
         external
         onlyOwner
         returns (address)
     {
-        IMarketInitializer market = IMarketInitializer(address(new ERC1967Proxy(marketImpl, hex"")));
-        market.initialize(_owner, ROUTER, _quote, pairImpl, _feeCollector, _feeBps);
+        bytes memory bytecode = abi.encodePacked(
+            type(ERC1967Proxy).creationCode,
+            abi.encode(
+                marketImpl,
+                abi.encodeCall(IMarketInitializer.initialize, (_owner, ROUTER, quote, pairImpl, feeCollector, feeBps))
+            )
+        );
+        bytes32 salt = keccak256(abi.encodePacked(quote));
+        address market = Create2.deploy(0, salt, bytecode);
 
-        address _market = address(market);
-        if (!_allMarkets.set(_quote, _market)) revert CrossDexAlreadyCreatedMarketQuote(_quote);
+        if (!_allMarkets.set(quote, market)) revert CrossDexAlreadyCreatedMarketQuote(quote);
 
-        emit MarketCreated(_quote, _market, _owner, _feeCollector);
-        return _market;
+        emit MarketCreated(quote, market, _owner, feeCollector);
+        return market;
     }
 
     function setTickSizeSetter(address setter) external onlyOwner {

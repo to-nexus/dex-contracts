@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 import {ERC1967Proxy} from "@openzeppelin-contracts-5.2.0/proxy/ERC1967/ERC1967Proxy.sol";
 import {UUPSUpgradeable} from "@openzeppelin-contracts-5.2.0/proxy/utils/UUPSUpgradeable.sol";
 import {IERC20Metadata} from "@openzeppelin-contracts-5.2.0/token/ERC20/extensions/IERC20Metadata.sol";
+import {Create2} from "@openzeppelin-contracts-5.2.0/utils/Create2.sol";
 import {EnumerableMap} from "@openzeppelin-contracts-5.2.0/utils/structs/EnumerableMap.sol";
 
 import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/access/OwnableUpgradeable.sol";
@@ -90,20 +91,25 @@ contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgr
         return _allPairs.get(base);
     }
 
-    function createPair(address base, uint256 tickSize, uint256 lotSize) external onlyOwner returns (address pair) {
+    function createPair(address base, uint256 tickSize, uint256 lotSize) external onlyOwner returns (address) {
         if (base == address(0) || base == address(QUOTE)) revert MarketInvalidBaseAddress(base);
         uint256 baseDecimals = IERC20Metadata(base).decimals();
         if (baseDecimals == 0) revert MarketInvalidBaseAddress(base);
         if (_allPairs.contains(base)) revert MarketAlreadyCreatedBaseAddress(base);
 
-        pair = address(
-            new ERC1967Proxy(pairImpl, abi.encodeCall(PairImpl.initialize, (ROUTER, QUOTE, base, tickSize, lotSize)))
+        bytes memory bytecode = abi.encodePacked(
+            type(ERC1967Proxy).creationCode,
+            abi.encode(pairImpl, abi.encodeCall(PairImpl.initialize, (ROUTER, QUOTE, base, tickSize, lotSize)))
         );
+        bytes32 salt = keccak256(abi.encodePacked(base));
+        address pair = Create2.deploy(0, salt, bytecode);
+
         if (pair == address(0)) revert MarketDeployPair();
         if (!_allPairs.set(base, pair)) revert MarketAlreadyCreatedBaseAddress(base);
 
         CROSS_DEX.pairCreated(pair);
         emit PairCreated(pair, base, block.timestamp);
+        return pair;
     }
 
     function setFeeCollector(address _feeCollector) external onlyOwner {
