@@ -21,7 +21,7 @@ contract DexWrapBaseTest is DEXBaseTest {
 
         vm.deal(seller, amount);
         vm.prank(seller);
-        ROUTER.limitSell{value: amount}(
+        ROUTER.submitSellLimit{value: amount}(
             address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
         );
 
@@ -30,27 +30,27 @@ contract DexWrapBaseTest is DEXBaseTest {
         vm.assertEq(0, payable(address(ROUTER)).balance);
         vm.assertEq(0, payable(address(PAIR)).balance);
 
-        vm.assertEq(0, WCROSSx.balanceOf(seller));
-        vm.assertEq(0, WCROSSx.balanceOf(buyer));
-        vm.assertEq(0, WCROSSx.balanceOf(address(ROUTER)));
-        vm.assertEq(amount, WCROSSx.balanceOf(address(PAIR)));
+        vm.assertEq(0, CROSS.balanceOf(seller));
+        vm.assertEq(0, CROSS.balanceOf(buyer));
+        vm.assertEq(0, CROSS.balanceOf(address(ROUTER)));
+        vm.assertEq(amount, CROSS.balanceOf(address(PAIR)));
 
         uint256 volume = Math.mulDiv(price, amount, BASE_DECIMALS);
         vm.prank(OWNER);
         QUOTE.transfer(buyer, volume);
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.marketBuy(address(PAIR), volume, 0);
+        ROUTER.submitBuyMarket(address(PAIR), volume, 0);
 
         vm.assertEq(0, payable(seller).balance);
         vm.assertEq(amount, payable(buyer).balance);
         vm.assertEq(0, payable(address(ROUTER)).balance);
         vm.assertEq(0, payable(address(PAIR)).balance);
 
-        vm.assertEq(0, WCROSSx.balanceOf(seller));
-        vm.assertEq(0, WCROSSx.balanceOf(buyer));
-        vm.assertEq(0, WCROSSx.balanceOf(address(ROUTER)));
-        vm.assertEq(0, WCROSSx.balanceOf(address(PAIR)));
+        vm.assertEq(0, CROSS.balanceOf(seller));
+        vm.assertEq(0, CROSS.balanceOf(buyer));
+        vm.assertEq(0, CROSS.balanceOf(address(ROUTER)));
+        vm.assertEq(0, CROSS.balanceOf(address(PAIR)));
     }
 
     // [WRAP BASE] create limit buy -> sell market
@@ -68,7 +68,7 @@ contract DexWrapBaseTest is DEXBaseTest {
         QUOTE.transfer(buyer, volume);
         vm.startPrank(buyer);
         QUOTE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitBuy(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        ROUTER.submitBuyLimit(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         vm.stopPrank();
 
         vm.assertEq(0, payable(seller).balance);
@@ -76,24 +76,24 @@ contract DexWrapBaseTest is DEXBaseTest {
         vm.assertEq(0, payable(address(ROUTER)).balance);
         vm.assertEq(0, payable(address(PAIR)).balance);
 
-        vm.assertEq(0, WCROSSx.balanceOf(seller));
-        vm.assertEq(0, WCROSSx.balanceOf(buyer));
-        vm.assertEq(0, WCROSSx.balanceOf(address(ROUTER)));
-        vm.assertEq(0, WCROSSx.balanceOf(address(PAIR)));
+        vm.assertEq(0, CROSS.balanceOf(seller));
+        vm.assertEq(0, CROSS.balanceOf(buyer));
+        vm.assertEq(0, CROSS.balanceOf(address(ROUTER)));
+        vm.assertEq(0, CROSS.balanceOf(address(PAIR)));
 
         vm.deal(seller, amount);
         vm.prank(seller);
-        ROUTER.marketSell{value: amount}(address(PAIR), amount, 0);
+        ROUTER.submitSellMarket{value: amount}(address(PAIR), amount, 0);
 
         vm.assertEq(0, payable(seller).balance);
         vm.assertEq(amount, payable(buyer).balance);
         vm.assertEq(0, payable(address(ROUTER)).balance);
         vm.assertEq(0, payable(address(PAIR)).balance);
 
-        vm.assertEq(0, WCROSSx.balanceOf(seller));
-        vm.assertEq(0, WCROSSx.balanceOf(buyer));
-        vm.assertEq(0, WCROSSx.balanceOf(address(ROUTER)));
-        vm.assertEq(0, WCROSSx.balanceOf(address(PAIR)));
+        vm.assertEq(0, CROSS.balanceOf(seller));
+        vm.assertEq(0, CROSS.balanceOf(buyer));
+        vm.assertEq(0, CROSS.balanceOf(address(ROUTER)));
+        vm.assertEq(0, CROSS.balanceOf(address(PAIR)));
     }
 
     // [WRAP QUOTE] create limit sell -> buy market
@@ -110,7 +110,7 @@ contract DexWrapBaseTest is DEXBaseTest {
         BASE.transfer(seller, amount);
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.limitSell(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+        ROUTER.submitSellLimit(address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
         vm.stopPrank();
 
         vm.assertEq(0, payable(seller).balance);
@@ -118,25 +118,25 @@ contract DexWrapBaseTest is DEXBaseTest {
         vm.assertEq(0, payable(address(ROUTER)).balance);
         vm.assertEq(0, payable(address(PAIR)).balance);
 
-        vm.assertEq(0, WCROSSx.balanceOf(seller));
-        vm.assertEq(0, WCROSSx.balanceOf(buyer));
-        vm.assertEq(0, WCROSSx.balanceOf(address(ROUTER)));
-        vm.assertEq(0, WCROSSx.balanceOf(address(PAIR)));
+        vm.assertEq(0, CROSS.balanceOf(seller));
+        vm.assertEq(0, CROSS.balanceOf(buyer));
+        vm.assertEq(0, CROSS.balanceOf(address(ROUTER)));
+        vm.assertEq(0, CROSS.balanceOf(address(PAIR)));
 
         uint256 volume = Math.mulDiv(price, amount, BASE_DECIMALS);
         vm.deal(buyer, volume);
         vm.prank(buyer);
-        ROUTER.marketBuy{value: volume}(address(PAIR), volume, 0);
+        ROUTER.submitBuyMarket{value: volume}(address(PAIR), volume, 0);
 
         vm.assertEq(volume, payable(seller).balance);
         vm.assertEq(0, payable(buyer).balance);
         vm.assertEq(0, payable(address(ROUTER)).balance);
         vm.assertEq(0, payable(address(PAIR)).balance);
 
-        vm.assertEq(0, WCROSSx.balanceOf(seller));
-        vm.assertEq(0, WCROSSx.balanceOf(buyer));
-        vm.assertEq(0, WCROSSx.balanceOf(address(ROUTER)));
-        vm.assertEq(0, WCROSSx.balanceOf(address(PAIR)));
+        vm.assertEq(0, CROSS.balanceOf(seller));
+        vm.assertEq(0, CROSS.balanceOf(buyer));
+        vm.assertEq(0, CROSS.balanceOf(address(ROUTER)));
+        vm.assertEq(0, CROSS.balanceOf(address(PAIR)));
     }
 
     // [WRAP QUOTE] create limit buy -> sell market
@@ -152,7 +152,7 @@ contract DexWrapBaseTest is DEXBaseTest {
         uint256 volume = Math.mulDiv(price, amount, BASE_DECIMALS);
         vm.deal(buyer, volume);
         vm.prank(buyer);
-        ROUTER.limitBuy{value: volume}(
+        ROUTER.submitBuyLimit{value: volume}(
             address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
         );
 
@@ -161,17 +161,17 @@ contract DexWrapBaseTest is DEXBaseTest {
         vm.assertEq(0, payable(address(ROUTER)).balance);
         vm.assertEq(0, payable(address(PAIR)).balance);
 
-        vm.assertEq(0, WCROSSx.balanceOf(seller));
-        vm.assertEq(0, WCROSSx.balanceOf(buyer));
-        vm.assertEq(0, WCROSSx.balanceOf(address(ROUTER)));
-        vm.assertEq(volume, WCROSSx.balanceOf(address(PAIR)));
+        vm.assertEq(0, CROSS.balanceOf(seller));
+        vm.assertEq(0, CROSS.balanceOf(buyer));
+        vm.assertEq(0, CROSS.balanceOf(address(ROUTER)));
+        vm.assertEq(volume, CROSS.balanceOf(address(PAIR)));
 
         vm.prank(OWNER);
         BASE.transfer(seller, amount);
 
         vm.startPrank(seller);
         BASE.approve(address(ROUTER), type(uint256).max);
-        ROUTER.marketSell(address(PAIR), amount, 0);
+        ROUTER.submitSellMarket(address(PAIR), amount, 0);
         vm.stopPrank();
 
         vm.assertEq(volume, payable(seller).balance);
@@ -179,10 +179,10 @@ contract DexWrapBaseTest is DEXBaseTest {
         vm.assertEq(0, payable(address(ROUTER)).balance);
         vm.assertEq(0, payable(address(PAIR)).balance);
 
-        vm.assertEq(0, WCROSSx.balanceOf(seller));
-        vm.assertEq(0, WCROSSx.balanceOf(buyer));
-        vm.assertEq(0, WCROSSx.balanceOf(address(ROUTER)));
-        vm.assertEq(0, WCROSSx.balanceOf(address(PAIR)));
+        vm.assertEq(0, CROSS.balanceOf(seller));
+        vm.assertEq(0, CROSS.balanceOf(buyer));
+        vm.assertEq(0, CROSS.balanceOf(address(ROUTER)));
+        vm.assertEq(0, CROSS.balanceOf(address(PAIR)));
     }
 
     // An EOA cannot hold WETH.sol in token form.
@@ -192,8 +192,8 @@ contract DexWrapBaseTest is DEXBaseTest {
         uint256 beforeBalance = OWNER.balance;
         assertNotEq(0, beforeBalance);
 
-        payable(address(WCROSSx)).sendValue(10);
-        assertEq(0, WCROSSx.balanceOf(OWNER));
+        payable(address(CROSS)).sendValue(10);
+        assertEq(0, CROSS.balanceOf(OWNER));
         assertEq(beforeBalance, OWNER.balance);
     }
 
@@ -208,13 +208,13 @@ contract DexWrapBaseTest is DEXBaseTest {
         vm.deal(seller, amount + 1);
         vm.prank(seller);
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidValue()"));
-        ROUTER.limitSell{value: amount + 1}(
+        ROUTER.submitSellLimit{value: amount + 1}(
             address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
         );
 
         vm.prank(seller);
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidValue()"));
-        ROUTER.marketSell{value: amount + 1}(address(PAIR), amount, 0);
+        ROUTER.submitSellMarket{value: amount + 1}(address(PAIR), amount, 0);
     }
 
     // Returns an error if msg.value is incorrect.
@@ -229,13 +229,13 @@ contract DexWrapBaseTest is DEXBaseTest {
         vm.deal(buyer, volume + 1);
         vm.prank(buyer);
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidValue()"));
-        ROUTER.limitBuy{value: volume + 1}(
+        ROUTER.submitBuyLimit{value: volume + 1}(
             address(PAIR), price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
         );
 
         vm.prank(buyer);
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidValue()"));
-        ROUTER.marketBuy{value: volume + 1}(address(PAIR), volume, 0);
+        ROUTER.submitBuyMarket{value: volume + 1}(address(PAIR), volume, 0);
     }
 
     modifier wrapBase() {
@@ -253,11 +253,11 @@ contract DexWrapBaseTest is DEXBaseTest {
         uint256 base_tick_size = 1e2;
 
         _deploy(18, 18, quote_tick_size, base_tick_size);
-        BASE = IERC20(address(WCROSSx));
+        BASE = IERC20(address(CROSS));
 
         vm.startPrank(OWNER);
         address pair =
-            MARKET.createPair(address(BASE), QUOTE_DECIMALS / quote_tick_size, BASE_DECIMALS / base_tick_size, FEE_BPS);
+            MARKET.createPair(address(BASE), QUOTE_DECIMALS / quote_tick_size, BASE_DECIMALS / base_tick_size);
 
         PAIR = PairImpl(pair);
         vm.stopPrank();
@@ -268,13 +268,13 @@ contract DexWrapBaseTest is DEXBaseTest {
         uint256 base_tick_size = 1e2;
 
         _deploy(18, 18, quote_tick_size, base_tick_size);
-        QUOTE = IERC20(address(WCROSSx));
+        QUOTE = IERC20(address(CROSS));
 
         vm.startPrank(OWNER);
-        address market = CROSS_DEX.createMarket(OWNER, FEE_COLLECTOR, address(QUOTE));
+        address market = CROSS_DEX.createMarket(OWNER, address(QUOTE), FEE_COLLECTOR, FEE_BPS);
         MARKET = MarketImpl(market);
         address pair =
-            MARKET.createPair(address(BASE), QUOTE_DECIMALS / quote_tick_size, BASE_DECIMALS / base_tick_size, FEE_BPS);
+            MARKET.createPair(address(BASE), QUOTE_DECIMALS / quote_tick_size, BASE_DECIMALS / base_tick_size);
         PAIR = PairImpl(pair);
         vm.stopPrank();
     }
