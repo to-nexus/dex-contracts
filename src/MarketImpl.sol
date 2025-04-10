@@ -51,6 +51,8 @@ contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgr
         address _feeCollector,
         uint256 _feeBPS
     ) external override initializer {
+        __Ownable_init(_owner);
+
         if (_owner == address(0)) revert MarketInvalidInitializeData("owner");
         if (_router == address(0)) revert MarketInvalidInitializeData("router");
         if (_quote == address(0)) revert MarketInvalidInitializeData("quote");
@@ -66,8 +68,6 @@ contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgr
 
         feeCollector = _feeCollector;
         feeBps = uint32(_feeBPS);
-
-        __Ownable_init(_owner);
     }
 
     function allPairs() external view returns (address[] memory bases, address[] memory pairs) {

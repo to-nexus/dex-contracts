@@ -74,6 +74,9 @@ contract CrossDexRouter is
         override
         initializer
     {
+        __Context_init();
+        __ReentrancyGuard_init();
+
         if (_findPrevPriceCount == 0) revert RouterInvalidInputData("findPrevPriceCount");
         if (_maxMatchCount == 0) revert RouterInvalidInputData("maxMatchCount");
         if (_cancelLimit == 0) revert RouterInvalidInputData("cancelLimit");
@@ -83,9 +86,6 @@ contract CrossDexRouter is
         findPrevPriceCount = _findPrevPriceCount;
         maxMatchCount = _maxMatchCount;
         cancelLimit = _cancelLimit;
-
-        __Context_init();
-        __ReentrancyGuard_init();
     }
 
     function isPair(address pair) public view override returns (bool) {

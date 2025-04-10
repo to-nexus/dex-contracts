@@ -57,6 +57,8 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
         address _marketImpl,
         address _pairImpl
     ) external initializer {
+        __Ownable_init(_owner);
+
         if (_routerImpl == address(0)) revert CrossDexInitializeData("routerImpl");
         if (_marketImpl == address(0)) revert CrossDexInitializeData("marketImpl");
         if (_pairImpl == address(0)) revert CrossDexInitializeData("pairImpl");
@@ -71,7 +73,6 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
             marketImpl = _marketImpl;
             pairImpl = _pairImpl;
         }
-        __Ownable_init(_owner);
     }
 
     function allMarkets() external view returns (address[] memory quotes, address[] memory markets) {

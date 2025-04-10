@@ -129,6 +129,8 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         uint256 _tickSize, // tick size for quote token
         uint256 _lotSize // lot size for base token
     ) external initializer {
+        __Pausable_init();
+
         if (router == address(0)) revert PairInvalidInitializeData("router");
         if (quote == address(0)) revert PairInvalidInitializeData("quote");
         if (base == address(0)) revert PairInvalidInitializeData("base");
@@ -146,8 +148,6 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         tickSize = _tickSize;
         lotSize = _lotSize;
         minTradeVolume = Math.mulDiv(_tickSize, _lotSize, DENOMINATOR);
-
-        __Pausable_init();
     }
 
     //  #    # # ###### #    #  ####
@@ -166,7 +166,7 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     }
 
     function accountReserves(address account) external view returns (uint256 base, uint256 quote) {
-        return (_accountReserves[account][0], _accountReserves[account][1]);
+        return (_accountReserves[account][uint8(OrderSide.SELL)], _accountReserves[account][uint8(OrderSide.BUY)]);
     }
 
     function ticks() external view returns (uint256[] memory sellPrices, uint256[] memory buyPrices) {
@@ -253,28 +253,31 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
             } else if (constraints == LimitConstraints.FILL_OR_KILL) {
                 revert PairFillOrKill(order.owner);
             } else {
-                if (isSellOrder) {
-                    if (prevPrice != 0 && order.price < prevPrice) {
-                        // If the price is lowerthan the previous price, it is not possible to register.
-                        revert PairInvalidPrevPrice(OrderSide.SELL, order.price, prevPrice);
-                    }
-                    _updateReserve(false, order.owner, order.amount, Math.tryAdd);
+                // previous price validation
+                if (
+                    prevPrice != 0
+                        && ((isSellOrder && order.price < prevPrice) || (!isSellOrder && order.price > prevPrice))
+                ) revert PairInvalidPrevPrice(order.side, order.price, prevPrice);
 
-                    order.feeBps = _feeBps(); // For sell orders, a fee is charged when acting as a maker.
-                    _allOrders[orderId] = order;
-                    _prices[uint8(OrderSide.SELL)].insert(order.price, prevPrice);
-                    // ASCList.push(_sellPrices, order.price, adjacent);
+                // update reserve
+                _updateReserve(
+                    (!isSellOrder),
+                    order.owner,
+                    (isSellOrder) ? order.amount : Math.mulDiv(order.price, order.amount, DENOMINATOR),
+                    Math.tryAdd
+                );
+
+                // update price
+                _prices[uint8(order.side)].insert(order.price, prevPrice);
+
+                // update order
+                _allOrders[orderId] = order;
+
+                if (isSellOrder) {
+                    // For sell orders, a fee is charged when acting as a maker.
+                    _allOrders[orderId].feeBps = _feeBps();
                     _sellOrders[order.price].push(orderId);
                 } else {
-                    if (prevPrice != 0 && order.price > prevPrice) {
-                        // If the price is higher than the previous price, it is not possible to register.
-                        revert PairInvalidPrevPrice(OrderSide.BUY, order.price, prevPrice);
-                    }
-                    _updateReserve(true, order.owner, Math.mulDiv(order.price, order.amount, DENOMINATOR), Math.tryAdd);
-
-                    order.feeBps = 0; // Buy orders have no fees.
-                    _allOrders[orderId] = order;
-                    _prices[uint8(OrderSide.BUY)].insert(order.price, prevPrice);
                     _buyOrders[order.price].push(orderId);
                 }
             }
@@ -310,7 +313,7 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         emit OrderClosed(orderId, CloseType.COMPLETED, block.timestamp);
     }
 
-    function cancelOrder(address caller, uint256[] memory orderIds) external override onlyRouter {
+    function cancelOrder(address caller, uint256[] calldata orderIds) external override onlyRouter {
         uint256 length = orderIds.length;
         for (uint256 i = 0; i < length;) {
             uint256 orderId = orderIds[i];
@@ -336,7 +339,7 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         private
         returns (bool, uint256)
     {
-        if (order.side != OrderSide.SELL) revert PairInvalidOrderSide(order.side);
+        if (order.side != OrderSide.SELL) revert PairInvalidOrderSide(OrderSide.BUY);
 
         // 1. Verify that the required tokens for the order have been deposited.
         if (BASE.balanceOf(address(this)) < baseReserve + order.amount) revert PairInvalidReserve(address(BASE));
@@ -363,7 +366,7 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         uint256 spendQuoteAmount, // Set this value if it is a Market Order.
         uint256 maxMatchCount
     ) private returns (bool, uint256) {
-        if (order.side != OrderSide.BUY) revert PairInvalidOrderSide(order.side);
+        if (order.side != OrderSide.BUY) revert PairInvalidOrderSide(OrderSide.SELL);
 
         // Verify the conditions of the entered quantity.
         uint256 quoteAmount;
@@ -539,9 +542,10 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         // Return the tokens held by the contract.
         if (isSellOrder) {
             _orders = _sellOrders[order.price];
-            if (order.amount != 0) {
-                BASE.safeTransfer(order.owner, order.amount);
-                _updateReserve(false, order.owner, order.amount, Math.trySub);
+            uint256 amount = order.amount;
+            if (amount != 0) {
+                BASE.safeTransfer(order.owner, amount);
+                _updateReserve(false, order.owner, amount, Math.trySub);
             }
         } else {
             _orders = _buyOrders[order.price];
@@ -637,10 +641,8 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         assembly {
             _latestPrice := tload(_matchedPriceSlot)
         }
-        if (_latestPrice != 0) {
-            matchedPrice = _latestPrice;
-            matchedAt = block.timestamp;
-        }
+        if (_latestPrice != 0 && _latestPrice != matchedPrice) matchedPrice = _latestPrice;
+        if (matchedAt != block.timestamp) matchedAt = block.timestamp;
     }
 
     //    ##   #    # ##### #    #  ####  #####  # ######   ##   ##### #  ####  #    #
@@ -676,7 +678,7 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         emit Skim(_msgSender(), address(erc20), to, amount);
     }
 
-    function emergencyCancelOrder(uint256[] memory orderIds) external whenPaused onlyOwner {
+    function emergencyCancelOrder(uint256[] calldata orderIds) external whenPaused onlyOwner {
         uint256 length = orderIds.length;
         for (uint256 i = 0; i < length;) {
             uint256 orderId = orderIds[i];
