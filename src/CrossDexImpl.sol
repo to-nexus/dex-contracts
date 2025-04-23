@@ -93,7 +93,9 @@ contract CrossDexImpl is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
 
     function checkTickSizeRoles(address account) external view override {
         // check account is tick size setter
-        if (tickSizeSetter != account) revert CrossDexUnauthorizedChangeTickSizes(account);
+        if (tickSizeSetter == address(0) || tickSizeSetter != account) {
+            revert CrossDexUnauthorizedChangeTickSizes(account);
+        }
     }
 
     function isMarket(address market) public view returns (bool) {
