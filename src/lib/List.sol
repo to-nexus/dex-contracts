@@ -81,14 +81,16 @@ library List {
             uint256 current = _ensureAdjacentForPush(_list, _adjacent);
             unchecked {
                 if (current < _data) {
-                    while (current != 0 && --_findMaxCount != 0) {
+                    while (current != 0 && _findMaxCount != 0) {
                         current = _list.nodes[current].next;
                         if (current > _data) return _list.nodes[current].prev;
+                        --_findMaxCount;
                     }
                 } else {
-                    while (current != 0 && --_findMaxCount != 0) {
+                    while (current != 0 && _findMaxCount != 0) {
                         current = _list.nodes[current].prev;
                         if (current < _data) return current;
+                        --_findMaxCount;
                     }
                 }
             }
