@@ -12,7 +12,7 @@ contract TestList is Test {
 
     function setUp() public {}
 
-    function test_poc() external {
+    function test_poc_asc() external {
         insert(20, 1);
         insert(30, 1);
         insert(25, 1);
@@ -21,6 +21,17 @@ contract TestList is Test {
         assertEq(values[0], 20);
         assertEq(values[1], 25);
         assertEq(values[2], 30);
+    }
+
+    function test_poc_desc() external {
+        insertDESC(20, 1);
+        insertDESC(30, 1);
+        insertDESC(25, 1);
+        uint256[] memory values = buy_list.values();
+        assertEq(values.length, 3);
+        assertEq(values[0], 30);
+        assertEq(values[1], 25);
+        assertEq(values[2], 20);
     }
 
     function testFuzz_poc_sell(uint256[] calldata values) external {
