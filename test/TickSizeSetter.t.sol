@@ -331,6 +331,241 @@ contract TickSizeSetterTest is DEXBaseTest {
         assertEq(market, address(0));
     }
 
+    function test_ticksize_set_size_formats() external {
+        _all_updates_execute(address(PAIR), 10 ** (quoteDecimals - 1), 1);
+        // gte ~ lt price | ticSize | lotSize
+        // -----------------------------------
+        // [0]      ~ 0.1     | 0.0001  | 100
+        // [1] 0.1  ~ 1       | 0.001   | 10
+        // [2] 1    ~ 10      | 0.01    | 1
+        // [3] 10   ~ 100     | 0.1     | 0.1
+        // [4] 100  ~ 1000    | 1       | 0.01
+        // [5] 1000 ~         | 10      | 0.001
+        {
+            // update size formats
+            TickSizeSetter.SizeFormat[] memory formats = new TickSizeSetter.SizeFormat[](6);
+            formats[0] = TickSizeSetter.SizeFormat({
+                minPriceUnit: 1,
+                minPriceScale: -1,
+                tickSizeUnit: 1,
+                tickSizeScale: -4,
+                lotSizeUnit: 1,
+                lotSizeScale: 2
+            });
+            formats[1] = TickSizeSetter.SizeFormat({
+                minPriceUnit: 1,
+                minPriceScale: 0,
+                tickSizeUnit: 1,
+                tickSizeScale: -3,
+                lotSizeUnit: 1,
+                lotSizeScale: 1
+            });
+            formats[2] = TickSizeSetter.SizeFormat({
+                minPriceUnit: 1,
+                minPriceScale: 1,
+                tickSizeUnit: 1,
+                tickSizeScale: -2,
+                lotSizeUnit: 1,
+                lotSizeScale: 0
+            });
+            formats[3] = TickSizeSetter.SizeFormat({
+                minPriceUnit: 1,
+                minPriceScale: 2,
+                tickSizeUnit: 1,
+                tickSizeScale: -1,
+                lotSizeUnit: 1,
+                lotSizeScale: -1
+            });
+            formats[4] = TickSizeSetter.SizeFormat({
+                minPriceUnit: 1,
+                minPriceScale: 3,
+                tickSizeUnit: 1,
+                tickSizeScale: 0,
+                lotSizeUnit: 1,
+                lotSizeScale: -2
+            });
+            formats[5] = TickSizeSetter.SizeFormat({
+                minPriceUnit: 0,
+                minPriceScale: 0,
+                tickSizeUnit: 1,
+                tickSizeScale: 1,
+                lotSizeUnit: 1,
+                lotSizeScale: -3
+            });
+            vm.startPrank(OWNER);
+            TICK_SIZE_SETTER.setSizeFormats(formats);
+            vm.stopPrank();
+        }
+        {
+            uint256 price;
+            uint256 index;
+            // call findPriceIndex to check if the size formats are correct
+            // gte
+            price = 10 ** (quoteDecimals - 1);
+            (index,) = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
+            assertEq(index, 1);
+
+            price = 10 ** (quoteDecimals);
+            (index,) = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
+            assertEq(index, 2);
+
+            price = 10 ** (quoteDecimals + 1);
+            (index,) = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
+            assertEq(index, 3);
+
+            price = 10 ** (quoteDecimals + 2);
+            (index,) = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
+            assertEq(index, 4);
+
+            price = 10 ** (quoteDecimals + 3);
+            (index,) = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
+            assertEq(index, 5);
+
+            // lt
+            price = 10 ** (quoteDecimals - 1) - 1;
+            (index,) = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
+            assertEq(index, 0);
+
+            price = 10 ** (quoteDecimals) - 1;
+            (index,) = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
+            assertEq(index, 1);
+
+            price = 10 ** (quoteDecimals + 1) - 1;
+            (index,) = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
+            assertEq(index, 2);
+
+            price = 10 ** (quoteDecimals + 2) - 1;
+            (index,) = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
+            assertEq(index, 3);
+
+            price = 10 ** (quoteDecimals + 3) - 1;
+            (index,) = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
+            assertEq(index, 4);
+        }
+        {
+            uint256 price;
+            uint256 index;
+
+            // gte
+            price = 10 ** (quoteDecimals - 1);
+            index = 1;
+            _all_updates_execute(address(PAIR), price, index);
+
+            price = 10 ** (quoteDecimals);
+            index = 2;
+            _all_updates_execute(address(PAIR), price, index);
+
+            price = 10 ** (quoteDecimals + 1);
+            index = 3;
+            _all_updates_execute(address(PAIR), price, index);
+
+            price = 10 ** (quoteDecimals + 2);
+            index = 4;
+            _all_updates_execute(address(PAIR), price, index);
+
+            price = 10 ** (quoteDecimals + 3);
+            index = 5;
+            _all_updates_execute(address(PAIR), price, index);
+
+            price = 10 ** (quoteDecimals + 4);
+            index = 5;
+            _all_updates_execute(address(PAIR), price, index);
+
+            // lt
+            price = (10 ** (quoteDecimals + 3)) - PAIR.tickSize();
+            index = 4;
+            _all_updates_execute(address(PAIR), price, index);
+
+            price = (10 ** (quoteDecimals + 2)) - PAIR.tickSize();
+            index = 3;
+            _all_updates_execute(address(PAIR), price, index);
+
+            price = (10 ** (quoteDecimals + 1)) - PAIR.tickSize();
+            index = 2;
+            _all_updates_execute(address(PAIR), price, index);
+
+            price = (10 ** (quoteDecimals)) - PAIR.tickSize();
+            index = 1;
+            _all_updates_execute(address(PAIR), price, index);
+
+            price = (10 ** (quoteDecimals - 1)) - PAIR.tickSize();
+            index = 0;
+            _all_updates_execute(address(PAIR), price, index);
+        }
+    }
+
+    function test_ticksize_set_size_formats_invalid() external {
+        // gte ~ lt price | ticSize | lotSize
+        // -----------------------------------
+        // [0]      ~ 0.1     | 0.0001  | 100
+        // [1] 0.1  ~ 1       | 0.001   | 10
+        // [2] 1    ~ 10      | 0.01    | 1
+        // [3] 10   ~ 100     | 0.1     | 0.1
+        // [4] 100  ~ 1000    | 1       | 0.01
+        // [5] 1000 ~         | 10      | 0.001
+        {
+            // update size formats
+            TickSizeSetter.SizeFormat[] memory formats = new TickSizeSetter.SizeFormat[](6);
+            formats[0] = TickSizeSetter.SizeFormat({
+                minPriceUnit: 1,
+                minPriceScale: -1,
+                tickSizeUnit: 1,
+                tickSizeScale: -4,
+                lotSizeUnit: 1,
+                lotSizeScale: 2
+            });
+            formats[1] = TickSizeSetter.SizeFormat({
+                minPriceUnit: 1,
+                minPriceScale: 0,
+                tickSizeUnit: 1,
+                tickSizeScale: -3,
+                lotSizeUnit: 1,
+                lotSizeScale: 1
+            });
+            formats[3] = TickSizeSetter.SizeFormat({
+                minPriceUnit: 1,
+                minPriceScale: 1,
+                tickSizeUnit: 1,
+                tickSizeScale: -2,
+                lotSizeUnit: 1,
+                lotSizeScale: 0
+            });
+            formats[2] = TickSizeSetter.SizeFormat({
+                minPriceUnit: 1,
+                minPriceScale: 2,
+                tickSizeUnit: 1,
+                tickSizeScale: -1,
+                lotSizeUnit: 1,
+                lotSizeScale: -1
+            });
+            formats[4] = TickSizeSetter.SizeFormat({
+                minPriceUnit: 1,
+                minPriceScale: 3,
+                tickSizeUnit: 1,
+                tickSizeScale: 0,
+                lotSizeUnit: 1,
+                lotSizeScale: -2
+            });
+            formats[5] = TickSizeSetter.SizeFormat({
+                minPriceUnit: 0,
+                minPriceScale: 0,
+                tickSizeUnit: 1,
+                tickSizeScale: 1,
+                lotSizeUnit: 1,
+                lotSizeScale: -3
+            });
+            vm.startPrank(OWNER);
+            vm.expectRevert(abi.encodeWithSignature("TickSizeSetterInvalidPrice(uint256)", 3));
+            TICK_SIZE_SETTER.setSizeFormats(formats);
+
+            TickSizeSetter.SizeFormat[] memory emptyFormats;
+            bytes32 field = bytes32("formats");
+            vm.expectRevert(abi.encodeWithSignature("TickSizeSetterZeroInput(bytes32)", field));
+            TICK_SIZE_SETTER.setSizeFormats(emptyFormats);
+            vm.stopPrank();
+        }
+    }
+
     function _make_market_pair(uint256 marketCount, uint256 pairCount, uint256 price) private {
         vm.startPrank(OWNER);
         for (; _allMarkets.length < marketCount;) {

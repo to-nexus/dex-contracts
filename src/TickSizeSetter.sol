@@ -26,7 +26,13 @@ contract TickSizeSetter is Ownable {
     using SafeCast for int256;
     using EnumerableSet for EnumerableSet.UintSet;
 
-    error TickSizeSetterInvalidInitializeData(bytes32 field);
+    error TickSizeSetterZeroInput(bytes32 field);
+    error TickSizeSetterInvalidPrice(uint256 index);
+    error TickSizeSetterNotResolvedDeciamls(uint8 decimals);
+    error TickSizeSetterInvalidAccess();
+
+    event UpdateIntervalChanged(uint256 interval);
+    event SizeFormatsChanged(SizeFormat[] formats);
 
     struct PairConfig {
         address quote;
@@ -37,15 +43,15 @@ contract TickSizeSetter is Ownable {
 
     struct SizeFormat {
         /// @dev
-        /// 0.1 일 경우 unit = 1, scale = -1
-        /// 5 일 경우 unit = 5, scale = 0
-        /// 10 일 경우 unit = 1, scale = 1
+        /// - 0.1 : unit = 1, scale = -1
+        /// - 5   : unit = 5, scale = 0
+        /// - 10  : unit = 1, scale = 1
         uint8 minPriceUnit;
-        int16 minPriceScale;
+        int8 minPriceScale;
         uint8 tickSizeUnit;
-        int16 tickSizeScale;
+        int8 tickSizeScale;
         uint8 lotSizeUnit;
-        int16 lotSizeScale;
+        int8 lotSizeScale;
     }
 
     struct ResolvedSize {
@@ -76,7 +82,7 @@ contract TickSizeSetter is Ownable {
     }
 
     constructor(address owner_, address _crossDex) Ownable(owner_) {
-        if (_crossDex == address(0)) revert TickSizeSetterInvalidInitializeData("crossDex");
+        if (_crossDex == address(0)) revert TickSizeSetterZeroInput("crossDex");
         CROSS_DEX = ICrossDex(_crossDex);
 
         // gte ~ lt price | ticSize | lotSize
@@ -183,7 +189,7 @@ contract TickSizeSetter is Ownable {
     {
         ResolvedSize[] memory resolved = resolvedSizes[quoteDecimals];
         uint256 length = resolved.length;
-        if (length == 0) revert();
+        if (length == 0) revert TickSizeSetterNotResolvedDeciamls(quoteDecimals);
         unchecked {
             // If the target value is greater than the price at index array - 1, the last tick must be used,
             // so there's no need to compare it — subtract 1 in advance.
@@ -310,7 +316,7 @@ contract TickSizeSetter is Ownable {
 
     function _tryUpdateTimestamp(address pair) private returns (bool) {
         uint256 updateTime = _getUpdateTimestamp();
-        if (updateTime == 0) revert();
+        if (updateTime == 0) revert TickSizeSetterInvalidAccess();
 
         bool ok = lastUpdateTimestamp[pair] < updateTime;
         if (ok) lastUpdateTimestamp[pair] = updateTime;
@@ -358,8 +364,50 @@ contract TickSizeSetter is Ownable {
         }
     }
 
-    function _calcValue(uint8 decimals, uint8 unit, int16 scale) private pure returns (uint256) {
+    function _calcValue(uint8 decimals, uint8 unit, int8 scale) private pure returns (uint256) {
         int256 _scale = SafeCast.toInt256(uint256(decimals)) + int256(scale);
         return unit * (10 ** _scale.toUint256());
+    }
+
+    function setUpdateInterval(uint256 interval) external onlyOwner {
+        if (interval == 0) revert TickSizeSetterZeroInput("interval");
+        updateInterval = interval;
+        emit UpdateIntervalChanged(interval);
+    }
+
+    function setSizeFormats(SizeFormat[] calldata formats) external onlyOwner {
+        uint256 length = formats.length;
+        if (length == 0) revert TickSizeSetterZeroInput("formats");
+
+        delete(sizeFormats);
+        uint256 beforePrice;
+
+        unchecked {
+            // To avoid validating the last price during setup—since it will always be used
+            // subtract 1 beforehand.
+            --length;
+        }
+        for (uint256 i = 0; i < length;) {
+            uint256 price = _calcValue(18, formats[i].minPriceUnit, formats[i].minPriceScale);
+            if (price <= beforePrice) revert TickSizeSetterInvalidPrice(i);
+            beforePrice = price;
+
+            sizeFormats.push(formats[i]);
+            unchecked {
+                ++i;
+            }
+        }
+        // Add the final value that was intentionally excluded earlier.
+        sizeFormats.push(formats[length]);
+
+        uint256 lenDecimals = _allDecimals.length();
+        for (uint256 i = 0; i < lenDecimals;) {
+            _resolveSize(SafeCast.toUint8(_allDecimals.at(i)));
+            unchecked {
+                ++i;
+            }
+        }
+
+        emit SizeFormatsChanged(formats);
     }
 }
