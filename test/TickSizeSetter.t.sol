@@ -10,7 +10,7 @@ contract TickSizeSetterTest is DEXBaseTest {
     uint8 baseDecimals;
 
     function setUp() external {
-        _deploy(18, 6, 1e2, 1e4);
+        _deploy(18, 6, 1e4, 1e4);
         vm.startPrank(OWNER);
         TICK_SIZE_SETTER = new TickSizeSetter(OWNER, address(CROSS_DEX));
         CROSS_DEX.setTickSizeSetter(address(TICK_SIZE_SETTER));
@@ -29,67 +29,67 @@ contract TickSizeSetterTest is DEXBaseTest {
 
         // gte
         price = 10 ** (quoteDecimals - 1);
-        index = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
+        (index,) = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
         assertEq(index, 1);
 
         price = 10 ** (quoteDecimals);
-        index = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
+        (index,) = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
         assertEq(index, 2);
 
         price = 10 ** (quoteDecimals + 1);
-        index = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
+        (index,) = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
         assertEq(index, 3);
 
         price = 10 ** (quoteDecimals + 1);
-        index = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, 5 * price);
+        (index,) = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, 5 * price);
         assertEq(index, 4);
 
         price = 10 ** (quoteDecimals + 2);
-        index = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
+        (index,) = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
         assertEq(index, 5);
 
         price = 10 ** (quoteDecimals + 2);
-        index = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, 5 * price);
+        (index,) = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, 5 * price);
         assertEq(index, 6);
 
         price = 10 ** (quoteDecimals + 3);
-        index = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
+        (index,) = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
         assertEq(index, 7);
 
         // lt
         price = 10 ** (quoteDecimals - 1) - 1;
-        index = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
+        (index,) = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
         assertEq(index, 0);
 
         price = 10 ** (quoteDecimals) - 1;
-        index = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
+        (index,) = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
         assertEq(index, 1);
 
         price = 10 ** (quoteDecimals + 1) - 1;
-        index = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
+        (index,) = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
         assertEq(index, 2);
 
         price = 10 ** (quoteDecimals + 1) - 1;
-        index = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, 5 * price);
+        (index,) = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, 5 * price);
         assertEq(index, 3);
 
         price = 10 ** (quoteDecimals + 2) - 1;
-        index = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
+        (index,) = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
         assertEq(index, 4);
 
         price = 10 ** (quoteDecimals + 2) - 1;
-        index = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, 5 * price);
+        (index,) = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, 5 * price);
         assertEq(index, 5);
 
         price = 10 ** (quoteDecimals + 3) - 1;
-        index = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
+        (index,) = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, price);
         assertEq(index, 6);
 
         // check 0 and max to ensure no overflow
-        index = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, 0);
+        (index,) = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, 0);
         assertEq(index, 0);
 
-        index = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, type(uint256).max);
+        (index,) = TICK_SIZE_SETTER.findPriceIndex(quoteDecimals, type(uint256).max);
         assertEq(index, 7);
     }
 
@@ -100,63 +100,268 @@ contract TickSizeSetterTest is DEXBaseTest {
         // gte
         price = 10 ** (quoteDecimals - 1);
         index = 1;
-        _check_ticksize_sinario(address(PAIR), price, index);
+        _all_updates_execute(address(PAIR), price, index);
 
         price = 10 ** (quoteDecimals);
         index = 2;
-        _check_ticksize_sinario(address(PAIR), price, index);
+        _all_updates_execute(address(PAIR), price, index);
 
         price = 10 ** (quoteDecimals + 1);
         index = 3;
-        _check_ticksize_sinario(address(PAIR), price, index);
+        _all_updates_execute(address(PAIR), price, index);
 
         price = 5 * (10 ** (quoteDecimals + 1));
         index = 4;
-        _check_ticksize_sinario(address(PAIR), price, index);
+        _all_updates_execute(address(PAIR), price, index);
 
         price = 10 ** (quoteDecimals + 2);
         index = 5;
-        _check_ticksize_sinario(address(PAIR), price, index);
+        _all_updates_execute(address(PAIR), price, index);
 
         price = 5 * (10 ** (quoteDecimals + 2));
         index = 6;
-        _check_ticksize_sinario(address(PAIR), price, index);
+        _all_updates_execute(address(PAIR), price, index);
 
         price = 10 ** (quoteDecimals + 3);
         index = 7;
-        _check_ticksize_sinario(address(PAIR), price, index);
+        _all_updates_execute(address(PAIR), price, index);
 
         // lt
         price = (10 ** (quoteDecimals + 3)) - PAIR.tickSize();
         index = 6;
-        _check_ticksize_sinario(address(PAIR), price, index);
+        _all_updates_execute(address(PAIR), price, index);
 
         price = (5 * (10 ** (quoteDecimals + 2))) - PAIR.tickSize();
         index = 5;
-        _check_ticksize_sinario(address(PAIR), price, index);
+        _all_updates_execute(address(PAIR), price, index);
 
         price = (10 ** (quoteDecimals + 2)) - PAIR.tickSize();
         index = 4;
-        _check_ticksize_sinario(address(PAIR), price, index);
+        _all_updates_execute(address(PAIR), price, index);
 
         price = (5 * (10 ** (quoteDecimals + 1))) - PAIR.tickSize();
         index = 3;
-        _check_ticksize_sinario(address(PAIR), price, index);
+        _all_updates_execute(address(PAIR), price, index);
 
         price = (10 ** (quoteDecimals + 1)) - PAIR.tickSize();
         index = 2;
-        _check_ticksize_sinario(address(PAIR), price, index);
+        _all_updates_execute(address(PAIR), price, index);
 
         price = (10 ** (quoteDecimals)) - PAIR.tickSize();
         index = 1;
-        _check_ticksize_sinario(address(PAIR), price, index);
+        _all_updates_execute(address(PAIR), price, index);
 
         price = (10 ** (quoteDecimals - 1)) - PAIR.tickSize();
         index = 0;
-        _check_ticksize_sinario(address(PAIR), price, index);
+        _all_updates_execute(address(PAIR), price, index);
     }
 
-    function _check_ticksize_sinario(address pair, uint256 price, uint256 expectIndex) private {
+    address[] private _allMarkets;
+    mapping(address market => address[]) private _allPairs;
+
+    function test_ticksize_all_updates_max_count_case1() external {
+        uint256 GAS_LIMIT = 4e6;
+        // With a gas limit of 4 million (4e6),
+        // up to 42 pairs can be updated in a single transaction.
+
+        _allMarkets.push(address(MARKET));
+        _allPairs[address(MARKET)].push(address(PAIR));
+
+        _make_market_pair(1, 42, 10 ** (quoteDecimals - 1));
+
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + TICK_SIZE_SETTER.updateInterval());
+        TICK_SIZE_SETTER.allUpdates{gas: GAS_LIMIT}();
+
+        (address market_, uint256 startIndex) = TICK_SIZE_SETTER.updatable();
+        assertTrue((market_ == address(0) && startIndex == 0));
+    }
+
+    function test_ticksize_all_updates_max_count_case2() external {
+        uint256 GAS_LIMIT = 4e6;
+        // With a gas limit of 4 million (4e6),
+        // up to 42 pairs can be updated in a single transaction.
+
+        _allMarkets.push(address(MARKET));
+        _allPairs[address(MARKET)].push(address(PAIR));
+
+        _make_market_pair(2, 21, 10 ** (quoteDecimals));
+
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + TICK_SIZE_SETTER.updateInterval());
+        TICK_SIZE_SETTER.allUpdates{gas: GAS_LIMIT}();
+
+        (address market_, uint256 startIndex) = TICK_SIZE_SETTER.updatable();
+        assertTrue((market_ == address(0) && startIndex == 0));
+    }
+
+    function test_ticksize_all_updates_max_count_case3() external {
+        uint256 GAS_LIMIT = 4e6;
+        // With a gas limit of 4 million (4e6),
+        // up to 40 pairs can be updated in a single transaction.
+
+        _allMarkets.push(address(MARKET));
+        _allPairs[address(MARKET)].push(address(PAIR));
+
+        _make_market_pair(4, 10, 10 ** (quoteDecimals + 1));
+
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + TICK_SIZE_SETTER.updateInterval());
+        TICK_SIZE_SETTER.allUpdates{gas: GAS_LIMIT}();
+
+        (address market_, uint256 startIndex) = TICK_SIZE_SETTER.updatable();
+        assertTrue((market_ == address(0) && startIndex == 0));
+    }
+
+    function test_ticksize_all_updates_max_count_case4() external {
+        uint256 GAS_LIMIT = 4e6;
+        // With a gas limit of 4 million (4e6),
+        // up to 40 pairs can be updated in a single transaction.
+
+        _allMarkets.push(address(MARKET));
+        _allPairs[address(MARKET)].push(address(PAIR));
+
+        _make_market_pair(10, 4, 5 * (10 ** (quoteDecimals + 1)));
+
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + TICK_SIZE_SETTER.updateInterval());
+        TICK_SIZE_SETTER.allUpdates{gas: GAS_LIMIT}();
+
+        (address market_, uint256 startIndex) = TICK_SIZE_SETTER.updatable();
+        assertTrue((market_ == address(0) && startIndex == 0));
+    }
+
+    function test_ticksize_all_updates_max_count_case5() external {
+        uint256 GAS_LIMIT = 4e6;
+        // With a gas limit of 4 million (4e6),
+        // up to 40 pairs can be updated in a single transaction.
+
+        _allMarkets.push(address(MARKET));
+        _allPairs[address(MARKET)].push(address(PAIR));
+
+        _make_market_pair(20, 2, (10 ** (quoteDecimals + 2)));
+
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + TICK_SIZE_SETTER.updateInterval());
+        TICK_SIZE_SETTER.allUpdates{gas: GAS_LIMIT}();
+
+        (address market_, uint256 startIndex) = TICK_SIZE_SETTER.updatable();
+        assertTrue((market_ == address(0) && startIndex == 0));
+    }
+
+    function test_ticksize_all_updates_max_count_case6() external {
+        uint256 GAS_LIMIT = 4e6;
+        // With a gas limit of 4 million (4e6),
+        // up to 39 pairs can be updated in a single transaction.
+
+        _allMarkets.push(address(MARKET));
+        _allPairs[address(MARKET)].push(address(PAIR));
+
+        _make_market_pair(39, 1, 5 * (10 ** (quoteDecimals + 2)));
+
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + TICK_SIZE_SETTER.updateInterval());
+        TICK_SIZE_SETTER.allUpdates{gas: GAS_LIMIT}();
+
+        (address market_, uint256 startIndex) = TICK_SIZE_SETTER.updatable();
+        assertTrue((market_ == address(0) && startIndex == 0));
+    }
+
+    function test_ticksize_all_updates_update() external {
+        uint256 GAS_LIMIT = 4e6;
+        _allMarkets.push(address(MARKET));
+        _allPairs[address(MARKET)].push(address(PAIR));
+
+        _make_market_pair(2, 42, 10 ** (quoteDecimals - 1));
+
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + TICK_SIZE_SETTER.updateInterval());
+        TICK_SIZE_SETTER.allUpdates{gas: GAS_LIMIT}();
+
+        (address market_, uint256 startIndex) = TICK_SIZE_SETTER.updatable();
+        assertFalse(market_ == address(0));
+
+        TICK_SIZE_SETTER.update(market_, startIndex, 0);
+        (market_,) = TICK_SIZE_SETTER.updatable();
+        assertTrue(market_ == address(0));
+    }
+
+    function test_ticksize_all_updates_update_repeat() external {
+        uint256 GAS_LIMIT = 4e6;
+        _allMarkets.push(address(MARKET));
+        _allPairs[address(MARKET)].push(address(PAIR));
+
+        _make_market_pair(3, 42, 10 ** (quoteDecimals - 1));
+
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + TICK_SIZE_SETTER.updateInterval());
+        TICK_SIZE_SETTER.allUpdates{gas: GAS_LIMIT}();
+
+        (address market_, uint256 startIndex) = TICK_SIZE_SETTER.updatable();
+        assertFalse(market_ == address(0));
+
+        TICK_SIZE_SETTER.update(market_, startIndex, 0);
+        (market_, startIndex) = TICK_SIZE_SETTER.updatable();
+        assertFalse(market_ == address(0));
+
+        TICK_SIZE_SETTER.update(market_, startIndex, 0);
+        (market_,) = TICK_SIZE_SETTER.updatable();
+        assertTrue(market_ == address(0));
+    }
+
+    function test_ticksize_update_count() external {
+        _allMarkets.push(address(MARKET));
+        _allPairs[address(MARKET)].push(address(PAIR));
+
+        _make_market_pair(1, 60, 10 ** (quoteDecimals - 1));
+
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + TICK_SIZE_SETTER.updateInterval());
+
+        uint256 updateTime = block.timestamp - (block.timestamp % TICK_SIZE_SETTER.updateInterval());
+        TICK_SIZE_SETTER.update(address(MARKET), 0, 30);
+        address pair = _allPairs[address(MARKET)][29];
+        assertEq(updateTime, TICK_SIZE_SETTER.lastUpdateTimestamp(pair));
+
+        pair = _allPairs[address(MARKET)][30];
+        assertNotEq(updateTime, TICK_SIZE_SETTER.lastUpdateTimestamp(pair));
+
+        TICK_SIZE_SETTER.update(address(MARKET), 30, 30);
+        (address market,) = TICK_SIZE_SETTER.updatable();
+        assertEq(market, address(0));
+    }
+
+    function _make_market_pair(uint256 marketCount, uint256 pairCount, uint256 price) private {
+        vm.startPrank(OWNER);
+        for (; _allMarkets.length < marketCount;) {
+            T20 erc20 = new T20("QUOTE", "QUOTE", quoteDecimals);
+            erc20.approve(address(ROUTER), type(uint256).max);
+            address market = CROSS_DEX.createMarket(OWNER, address(erc20), FEE_COLLECTOR, FEE_BPS);
+            _allMarkets.push(market);
+        }
+        vm.roll(block.number + 1);
+        for (uint256 i = 0; i < _allMarkets.length; i++) {
+            address market = _allMarkets[i];
+            address[] storage pairs = _allPairs[market];
+            for (; pairs.length < pairCount;) {
+                T20 erc20 = new T20("BASE", "BASE", baseDecimals);
+                erc20.approve(address(ROUTER), type(uint256).max);
+                address pair = MarketImpl(market).createPair(address(erc20), QUOTE_DECIMALS / 1e4, BASE_DECIMALS / 1e4);
+                pairs.push(pair);
+            }
+            vm.roll(block.number + 1);
+        }
+        for (uint256 i = 0; i < _allMarkets.length; i++) {
+            address market = _allMarkets[i];
+            address[] storage pairs = _allPairs[market];
+            for (uint256 j = 0; j < pairs.length; j++) {
+                _ensurePrice(pairs[j], price);
+            }
+        }
+        vm.stopPrank();
+    }
+
+    function _all_updates_execute(address pair, uint256 price, uint256 expectIndex) private {
         vm.startPrank(OWNER);
 
         (, uint256 tickSize,) = TICK_SIZE_SETTER.resolvedSizes(quoteDecimals, expectIndex);
@@ -165,7 +370,9 @@ contract TickSizeSetterTest is DEXBaseTest {
         _ensurePrice(pair, price);
         vm.warp(block.timestamp + updateInterval);
 
+        vm.startBroadcast();
         TICK_SIZE_SETTER.allUpdates();
+        vm.stopBroadcast();
 
         (uint256 tick, uint256 lot) = PAIR.tickSizes();
         assertEq(tick, tickSize, "tick size");

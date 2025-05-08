@@ -3,6 +3,8 @@ pragma solidity 0.8.28;
 
 import {Ownable} from "@openzeppelin-contracts-5.2.0/access/Ownable.sol";
 import {IERC20Metadata} from "@openzeppelin-contracts-5.2.0/token/ERC20/extensions/IERC20Metadata.sol";
+
+import {Math} from "@openzeppelin-contracts-5.2.0/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin-contracts-5.2.0/utils/math/SafeCast.sol";
 import {EnumerableSet} from "@openzeppelin-contracts-5.2.0/utils/structs/EnumerableSet.sol";
 
@@ -52,9 +54,9 @@ contract TickSizeSetter is Ownable {
         uint256 lotSize;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("crossdex.ticsizesetter.currentupdatetimestamp")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant CURRENT_UPDATE_TIMESTAMP =
-        0xfd0e5d4f9b88892d3b04349a0e2bc0d1359414c21932fcd7d5a523a6c0a5cd00;
+    // keccak256(abi.encode(uint256(keccak256("crossdex.ticsizesetter.updatetimestamp")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant UPDATE_TIMESTAMP = 0x1a8db8aa167eb2ca2f55ef3828434878b9cb4e58c445d6e5d19b7e05c83fb200;
+    uint256 private constant UPDATE_MIN_GAS_LEFT = 510_000;
 
     ICrossDex public immutable CROSS_DEX;
     uint256 public updateInterval = 86400; // 1 day
@@ -66,6 +68,12 @@ contract TickSizeSetter is Ownable {
 
     EnumerableSet.UintSet private _allDecimals;
     mapping(uint8 decimals => ResolvedSize[]) public resolvedSizes;
+
+    modifier updateTimestamp() {
+        _setUpdateTimestamp();
+        _;
+        _clearUpdateTimestamp();
+    }
 
     constructor(address owner_, address _crossDex) Ownable(owner_) {
         if (_crossDex == address(0)) revert TickSizeSetterInvalidInitializeData("crossDex");
@@ -168,21 +176,55 @@ contract TickSizeSetter is Ownable {
         return sizeFormats;
     }
 
-    function findPriceIndex(uint8 quoteDecimals, uint256 price) public view returns (uint256) {
+    function findPriceIndex(uint8 quoteDecimals, uint256 price)
+        public
+        view
+        returns (uint256 index, ResolvedSize memory)
+    {
         ResolvedSize[] memory resolved = resolvedSizes[quoteDecimals];
         uint256 length = resolved.length;
         if (length == 0) revert();
         unchecked {
+            // If the target value is greater than the price at index array - 1, the last tick must be used,
+            // so there's no need to compare it — subtract 1 in advance.
             --length;
 
+            // // Since the resolved array is expected to be short, a linear search is used.
             for (uint256 i = 0; i < length; ++i) {
-                if (price < resolved[i].minPrice) return i;
+                if (price < resolved[i].minPrice) return (i, resolved[i]);
             }
         }
-        return length;
+        return (length, resolved[length]);
     }
 
-    function allUpdates() public {
+    // Returns the earliest market and start index that require an update.
+    // If the market is returned as address(0), it means all pairs
+    // have already been updated for the current interval.
+    function updatable() external view returns (address, uint256) {
+        uint256 updateTime = block.timestamp - (block.timestamp % updateInterval);
+
+        (, address[] memory markets) = CROSS_DEX.allMarkets();
+        uint256 length = markets.length;
+        for (uint256 i = 0; i < length;) {
+            address market = markets[i];
+            (, address[] memory pairs) = IMarket(market).allPairs();
+            uint256 len = pairs.length;
+            for (uint256 index = 0; index < len;) {
+                address pair = pairs[index];
+                if (lastUpdateTimestamp[pair] != updateTime && IPair(pair).matchedPrice() != 0) return (market, index);
+                unchecked {
+                    ++index;
+                }
+            }
+            unchecked {
+                ++i;
+            }
+        }
+        return (address(0), 0);
+    }
+
+    // // Iterate over all pairs in the CrossDex contract and update their tick sizes.
+    function allUpdates() external updateTimestamp {
         (address[] memory quotes, address[] memory markets) = CROSS_DEX.allMarkets();
         uint256 length = markets.length;
         for (uint256 i = 0; i < length;) {
@@ -190,33 +232,47 @@ contract TickSizeSetter is Ownable {
             address quote = quotes[i];
             uint8 quoteDecimals = IERC20Metadata(quote).decimals();
             if (_allDecimals.add(quoteDecimals)) _resolveSize(quoteDecimals);
-            _update(market, 0, quote, quoteDecimals);
+            if (_update(market, 0, type(uint256).max, quote, quoteDecimals)) break;
             unchecked {
                 ++i;
             }
         }
-        _clearUpdateTimestamp();
     }
 
-    function update(address market, uint256 startIndex) external {
+    // As the number of pairs increases, allUpdates may run out of gas
+    // and stop midway without updating all pairs.
+    // This function updates tick sizes by iterating over pairs in the market starting
+    // from a specific pair.
+    function update(address market, uint256 startIndex, uint256 count) external updateTimestamp {
+        if (count == 0) count = type(uint256).max;
+
         address quote = IMarket(market).QUOTE();
         uint8 quoteDecimals = IERC20Metadata(quote).decimals();
         if (_allDecimals.add(quoteDecimals)) _resolveSize(quoteDecimals);
-        _update(market, startIndex, quote, quoteDecimals);
-        _clearUpdateTimestamp();
+        _update(market, startIndex, startIndex + count, quote, quoteDecimals);
     }
 
+    // // Forcefully update the tick size of a specific pair.
     function manualUpdate(address pair, uint256 lotSize, uint256 tickSize) external onlyOwner {
         // Logic to force update the tick size
         IPair(pair).setTickSize(lotSize, tickSize);
     }
 
-    function _update(address market, uint256 startIndex, address quote, uint8 quoteDecimals) private {
+    // Iterate over all pairs in the market and update those that have not been updated
+    // in the current interval and have a non-zero matchedPrice.
+    // Returns true if the loop exited early because of low remaining gas.
+    function _update(address market, uint256 startIndex, uint256 endIndex, address quote, uint8 quoteDecimals)
+        private
+        returns (bool)
+    {
         (address[] memory bases, address[] memory pairs) = IMarket(market).allPairs();
-        uint256 length = pairs.length;
+        uint256 length = Math.min(pairs.length, endIndex);
         for (uint256 i = startIndex; i < length;) {
-            address pair = pairs[i];
+            // Break the loop if the remaining gas is too low to avoid running out of gas
+            // and reverting the transaction.
+            if (gasleft() < UPDATE_MIN_GAS_LEFT) return true;
 
+            address pair = pairs[i];
             // check latest update timestamp each pair
             if (_tryUpdateTimestamp(pair)) {
                 address base = bases[i];
@@ -232,53 +288,53 @@ contract TickSizeSetter is Ownable {
                 uint256 tickSize;
                 uint256 lotSize;
 
-                // get pair price and index from resolvedSizes
                 uint256 price = IPair(pair).matchedPrice();
                 if (price != 0) {
-                    uint256 index = findPriceIndex(quoteDecimals, price);
+                    // get pair price and index from resolvedSizes
+                    (uint256 index, ResolvedSize memory resolved) = findPriceIndex(quoteDecimals, price);
+                    tickSize = resolved.tickSize;
 
-                    if (quoteDecimals == baseDecimals) {
-                        ResolvedSize memory resolved = resolvedSizes[quoteDecimals][index];
-                        tickSize = resolved.tickSize;
-                        lotSize = resolved.lotSize;
-                    } else {
-                        tickSize = resolvedSizes[quoteDecimals][index].tickSize;
-                        lotSize = resolvedSizes[baseDecimals][index].lotSize;
-                    }
+                    if (quoteDecimals == baseDecimals) lotSize = resolved.lotSize;
+                    else lotSize = resolvedSizes[baseDecimals][index].lotSize;
 
                     IPair(pair).setTickSize(lotSize, tickSize);
                 }
             }
+
             unchecked {
                 ++i;
             }
         }
+        return false;
     }
 
     function _tryUpdateTimestamp(address pair) private returns (bool) {
-        uint256 updateTime = _calcUpdateTimestamp();
+        uint256 updateTime = _getUpdateTimestamp();
+        if (updateTime == 0) revert();
+
         bool ok = lastUpdateTimestamp[pair] < updateTime;
         if (ok) lastUpdateTimestamp[pair] = updateTime;
         return ok;
     }
 
-    function _calcUpdateTimestamp() private returns (uint256) {
+    function _getUpdateTimestamp() private view returns (uint256) {
         uint256 updateTime;
         assembly {
-            updateTime := tload(CURRENT_UPDATE_TIMESTAMP)
-        }
-        if (updateTime == 0) {
-            updateTime = block.timestamp - (block.timestamp % updateInterval);
-            assembly {
-                tstore(CURRENT_UPDATE_TIMESTAMP, updateTime)
-            }
+            updateTime := tload(UPDATE_TIMESTAMP)
         }
         return updateTime;
     }
 
+    function _setUpdateTimestamp() private {
+        uint256 updateTime = block.timestamp - (block.timestamp % updateInterval);
+        assembly {
+            tstore(UPDATE_TIMESTAMP, updateTime)
+        }
+    }
+
     function _clearUpdateTimestamp() private {
         assembly {
-            tstore(CURRENT_UPDATE_TIMESTAMP, 0)
+            tstore(UPDATE_TIMESTAMP, 0)
         }
     }
 
