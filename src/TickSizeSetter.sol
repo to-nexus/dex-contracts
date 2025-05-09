@@ -4,23 +4,10 @@ pragma solidity 0.8.28;
 import {Ownable} from "@openzeppelin-contracts-5.2.0/access/Ownable.sol";
 import {IERC20Metadata} from "@openzeppelin-contracts-5.2.0/token/ERC20/extensions/IERC20Metadata.sol";
 
+import "./interfaces/IForTickSizeSetter.sol";
 import {Math} from "@openzeppelin-contracts-5.2.0/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin-contracts-5.2.0/utils/math/SafeCast.sol";
 import {EnumerableSet} from "@openzeppelin-contracts-5.2.0/utils/structs/EnumerableSet.sol";
-
-interface ICrossDex {
-    function allMarkets() external view returns (address[] memory, address[] memory);
-}
-
-interface IMarket {
-    function QUOTE() external view returns (address);
-    function allPairs() external view returns (address[] memory, address[] memory);
-}
-
-interface IPair {
-    function matchedPrice() external view returns (uint256);
-    function setTickSize(uint256 _lotSize, uint256 _tickSize) external;
-}
 
 contract TickSizeSetter is Ownable {
     using SafeCast for int256;
