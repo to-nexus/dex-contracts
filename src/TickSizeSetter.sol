@@ -169,6 +169,10 @@ contract TickSizeSetter is Ownable {
         return sizeFormats;
     }
 
+    function allDecimals() external view returns (uint256[] memory) {
+        return _allDecimals.values();
+    }
+
     function findPriceIndex(uint8 quoteDecimals, uint256 price)
         public
         view

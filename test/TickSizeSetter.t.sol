@@ -566,6 +566,58 @@ contract TickSizeSetterTest is DEXBaseTest {
         }
     }
 
+    function test_ticksize_set_size_formats_limit() external {
+        address market = address(MARKET);
+        address[] storage pairs = _allPairs[market];
+        // When there are 6 decimal places in total,
+        // with a gas limit of 4e6, formatting succeeds for up to 11 entries.
+
+        vm.startPrank(OWNER);
+        T20 erc20 = new T20("BASE", "BASE", 18);
+        erc20.approve(address(ROUTER), type(uint256).max);
+        address pair = MarketImpl(market).createPair(address(erc20), QUOTE_DECIMALS / 1e4, 10 ** 18 / 1e4);
+        pairs.push(pair);
+        erc20 = new T20("BASE", "BASE", 5);
+        erc20.approve(address(ROUTER), type(uint256).max);
+        pair = MarketImpl(market).createPair(address(erc20), QUOTE_DECIMALS / 1e4, 10 ** 5 / 1e4);
+        pairs.push(pair);
+        erc20 = new T20("BASE", "BASE", 6);
+        erc20.approve(address(ROUTER), type(uint256).max);
+        pair = MarketImpl(market).createPair(address(erc20), QUOTE_DECIMALS / 1e4, 10 ** 6 / 1e4);
+        pairs.push(pair);
+        erc20 = new T20("BASE", "BASE", 8);
+        erc20.approve(address(ROUTER), type(uint256).max);
+        pair = MarketImpl(market).createPair(address(erc20), QUOTE_DECIMALS / 1e4, 10 ** 8 / 1e4);
+        pairs.push(pair);
+        erc20 = new T20("BASE", "BASE", 12);
+        erc20.approve(address(ROUTER), type(uint256).max);
+        pair = MarketImpl(market).createPair(address(erc20), QUOTE_DECIMALS / 1e4, 10 ** 12 / 1e4);
+        pairs.push(pair);
+        erc20 = new T20("BASE", "BASE", 20);
+        erc20.approve(address(ROUTER), type(uint256).max);
+        pair = MarketImpl(market).createPair(address(erc20), QUOTE_DECIMALS / 1e4, 10 ** 20 / 1e4);
+        pairs.push(pair);
+
+        TICK_SIZE_SETTER.allUpdates();
+        uint256[] memory allDecimals = TICK_SIZE_SETTER.allDecimals();
+        assertEq(allDecimals.length, 6);
+
+        TickSizeSetter.SizeFormat[] memory formats = new TickSizeSetter.SizeFormat[](11);
+        for (uint256 i = 0; i < formats.length; i++) {
+            formats[i] = TickSizeSetter.SizeFormat({
+                minPriceUnit: 1 + uint8(i),
+                minPriceScale: -1,
+                tickSizeUnit: 1,
+                tickSizeScale: -4,
+                lotSizeUnit: 1,
+                lotSizeScale: 2
+            });
+        }
+        TICK_SIZE_SETTER.setSizeFormats{gas: 4e6}(formats);
+
+        vm.stopPrank();
+    }
+
     function _make_market_pair(uint256 marketCount, uint256 pairCount, uint256 price) private {
         vm.startPrank(OWNER);
         for (; _allMarkets.length < marketCount;) {
