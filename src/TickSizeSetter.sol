@@ -15,11 +15,14 @@ contract TickSizeSetter is Ownable {
 
     error TickSizeSetterZeroInput(bytes32 field);
     error TickSizeSetterInvalidPrice(uint256 index);
-    error TickSizeSetterNotResolvedDeciamls(uint8 decimals);
+    error TickSizeSetterNotResolvedDeciamls(address pair, uint8 decimals);
     error TickSizeSetterInvalidAccess();
+    error TickSizeSetterInvalidPair(address pair);
 
     event UpdateIntervalChanged(uint256 interval);
     event SizeFormatsChanged(SizeFormat[] formats);
+    event ResolvedSizesByPairUpdated(address pair, ResolvedSize[] sizes);
+    event ResolvedSizesByPairRemoved(address pair);
 
     struct PairConfig {
         address quote;
@@ -61,6 +64,7 @@ contract TickSizeSetter is Ownable {
 
     EnumerableSet.UintSet private _allDecimals;
     mapping(uint8 decimals => ResolvedSize[]) public resolvedSizes;
+    mapping(address pair => ResolvedSize[]) public resolvedSizesByPair;
 
     modifier updateTimestamp() {
         _setUpdateTimestamp();
@@ -173,25 +177,29 @@ contract TickSizeSetter is Ownable {
         return _allDecimals.values();
     }
 
-    function findPriceIndex(uint8 quoteDecimals, uint256 price)
-        public
-        view
-        returns (uint256 index, ResolvedSize memory)
-    {
-        ResolvedSize[] memory resolved = resolvedSizes[quoteDecimals];
-        uint256 length = resolved.length;
-        if (length == 0) revert TickSizeSetterNotResolvedDeciamls(quoteDecimals);
-        unchecked {
-            // If the target value is greater than the price at index array - 1, the last tick must be used,
-            // so there's no need to compare it — subtract 1 in advance.
-            --length;
+    function tickSizeByPrice(address pair, uint256 price) public view returns (uint256 tickSize, uint256 lotSize) {
+        PairConfig memory config = pairConfigs[pair];
 
-            // // Since the resolved array is expected to be short, a linear search is used.
-            for (uint256 i = 0; i < length; ++i) {
-                if (price < resolved[i].minPrice) return (i, resolved[i]);
+        if (resolvedSizesByPair[pair].length != 0) {
+            ResolvedSize[] memory resolved = resolvedSizesByPair[pair];
+            (bool found, uint256 index) = _findPriceIndex(resolved, price);
+            if (!found) revert TickSizeSetterNotResolvedDeciamls(pair, config.quoteDecimals);
+
+            tickSize = resolved[index].tickSize;
+            lotSize = resolved[index].lotSize;
+        } else {
+            ResolvedSize[] memory resolved = resolvedSizes[config.quoteDecimals];
+            (bool found, uint256 index) = _findPriceIndex(resolved, price);
+            if (!found) revert TickSizeSetterNotResolvedDeciamls(pair, config.quoteDecimals);
+
+            if (config.quoteDecimals == config.baseDecimals) {
+                tickSize = resolved[index].tickSize;
+                lotSize = resolved[index].lotSize;
+            } else {
+                tickSize = resolved[index].tickSize;
+                lotSize = resolvedSizes[config.baseDecimals][index].lotSize;
             }
         }
-        return (length, resolved[length]);
     }
 
     // Returns the earliest market and start index that require an update.
@@ -220,7 +228,7 @@ contract TickSizeSetter is Ownable {
         return (address(0), 0);
     }
 
-    // // Iterate over all pairs in the CrossDex contract and update their tick sizes.
+    // Iterate over all pairs in the CrossDex contract and update their tick sizes.
     function allUpdates() external updateTimestamp {
         (address[] memory quotes, address[] memory markets) = CROSS_DEX.allMarkets();
         uint256 length = markets.length;
@@ -247,6 +255,22 @@ contract TickSizeSetter is Ownable {
         uint8 quoteDecimals = IERC20Metadata(quote).decimals();
         if (_allDecimals.add(quoteDecimals)) _resolveSize(quoteDecimals);
         _update(market, startIndex, startIndex + count, quote, quoteDecimals);
+    }
+
+    function _findPriceIndex(ResolvedSize[] memory resolved, uint256 price) private pure returns (bool, uint256) {
+        uint256 length = resolved.length;
+        if (length == 0) return (false, 0);
+        unchecked {
+            // If the target value is greater than the price at index array - 1, the last tick must be used,
+            // so there's no need to compare it — subtract 1 in advance.
+            --length;
+
+            // // Since the resolved array is expected to be short, a linear search is used.
+            for (uint256 i = 0; i < length; ++i) {
+                if (price < resolved[i].minPrice) return (true, i);
+            }
+        }
+        return (true, length);
     }
 
     // Iterate over all pairs in the market and update those that have not been updated
@@ -276,19 +300,10 @@ contract TickSizeSetter is Ownable {
                         PairConfig({quote: quote, base: base, quoteDecimals: quoteDecimals, baseDecimals: baseDecimals});
                 }
 
-                uint256 tickSize;
-                uint256 lotSize;
-
                 IPair ipair = IPair(pair);
                 uint256 price = ipair.matchedPrice();
                 if (price != 0 && !ipair.paused()) {
-                    // get pair price and index from resolvedSizes
-                    (uint256 index, ResolvedSize memory resolved) = findPriceIndex(quoteDecimals, price);
-                    tickSize = resolved.tickSize;
-
-                    if (quoteDecimals == baseDecimals) lotSize = resolved.lotSize;
-                    else lotSize = resolvedSizes[baseDecimals][index].lotSize;
-
+                    (uint256 tickSize, uint256 lotSize) = tickSizeByPrice(pair, price);
                     (uint256 tick, uint256 lot) = ipair.tickSizes();
                     if (tick != tickSize || lot != lotSize) ipair.setTickSize(lotSize, tickSize);
                 }
@@ -356,6 +371,11 @@ contract TickSizeSetter is Ownable {
         return unit * (10 ** _scale.toUint256());
     }
 
+    function _checkPair(address pair) private view {
+        if (pair == address(0)) revert TickSizeSetterZeroInput("pair");
+        if (!CROSS_DEX.isMarket(CROSS_DEX.pairToMarket(pair))) revert TickSizeSetterInvalidPair(pair);
+    }
+
     function setUpdateInterval(uint256 interval) external onlyOwner {
         if (interval == 0) revert TickSizeSetterZeroInput("interval");
         updateInterval = interval;
@@ -396,5 +416,39 @@ contract TickSizeSetter is Ownable {
         }
 
         emit SizeFormatsChanged(formats);
+    }
+
+    function setResolvedSizesByPair(address pair, ResolvedSize[] calldata sizes) external onlyOwner {
+        _checkPair(pair);
+
+        uint256 length = sizes.length;
+        if (length == 0) revert TickSizeSetterZeroInput("sizes");
+
+        delete (resolvedSizesByPair[pair]);
+        ResolvedSize[] storage resolved = resolvedSizesByPair[pair];
+
+        uint256 beforePrice;
+        unchecked {
+            // To avoid validating the last price during setup—since it will always be used
+            // subtract 1 beforehand.
+            --length;
+
+            for (uint256 i = 0; i < length; ++i) {
+                if (sizes[i].minPrice <= beforePrice) revert TickSizeSetterInvalidPrice(i);
+                beforePrice = sizes[i].minPrice;
+
+                resolved.push(sizes[i]);
+            }
+            resolved.push(sizes[length]);
+        }
+        emit ResolvedSizesByPairUpdated(pair, sizes);
+    }
+
+    function removeResolvedSizesByPair(address pair) external onlyOwner {
+        _checkPair(pair);
+
+        if (resolvedSizesByPair[pair].length == 0) revert TickSizeSetterInvalidPair(pair);
+        delete( resolvedSizesByPair[pair]);
+        emit ResolvedSizesByPairRemoved(pair);
     }
 }
