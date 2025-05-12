@@ -356,12 +356,6 @@ contract TickSizeSetter is Ownable {
         return unit * (10 ** _scale.toUint256());
     }
 
-    // Forcefully update the tick size of a specific pair.
-    function manualUpdate(address pair, uint256 lotSize, uint256 tickSize) external onlyOwner {
-        // Logic to force update the tick size
-        IPair(pair).setTickSize(lotSize, tickSize);
-    }
-
     function setUpdateInterval(uint256 interval) external onlyOwner {
         if (interval == 0) revert TickSizeSetterZeroInput("interval");
         updateInterval = interval;
