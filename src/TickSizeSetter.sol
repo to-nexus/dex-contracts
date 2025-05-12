@@ -49,7 +49,7 @@ contract TickSizeSetter is Ownable {
 
     // keccak256(abi.encode(uint256(keccak256("crossdex.ticsizesetter.updatetimestamp")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant UPDATE_TIMESTAMP = 0x1a8db8aa167eb2ca2f55ef3828434878b9cb4e58c445d6e5d19b7e05c83fb200;
-    uint256 private constant UPDATE_MIN_GAS_LEFT = 510_000;
+    uint256 private constant UPDATE_MIN_GAS_LEFT = 515_000;
 
     ICrossDex public immutable CROSS_DEX;
     uint256 public updateInterval = 86400; // 1 day
@@ -249,12 +249,6 @@ contract TickSizeSetter is Ownable {
         _update(market, startIndex, startIndex + count, quote, quoteDecimals);
     }
 
-    // // Forcefully update the tick size of a specific pair.
-    function manualUpdate(address pair, uint256 lotSize, uint256 tickSize) external onlyOwner {
-        // Logic to force update the tick size
-        IPair(pair).setTickSize(lotSize, tickSize);
-    }
-
     // Iterate over all pairs in the market and update those that have not been updated
     // in the current interval and have a non-zero matchedPrice.
     // Returns true if the loop exited early because of low remaining gas.
@@ -285,8 +279,9 @@ contract TickSizeSetter is Ownable {
                 uint256 tickSize;
                 uint256 lotSize;
 
-                uint256 price = IPair(pair).matchedPrice();
-                if (price != 0) {
+                IPair ipair = IPair(pair);
+                uint256 price = ipair.matchedPrice();
+                if (price != 0 && !ipair.paused()) {
                     // get pair price and index from resolvedSizes
                     (uint256 index, ResolvedSize memory resolved) = findPriceIndex(quoteDecimals, price);
                     tickSize = resolved.tickSize;
@@ -294,7 +289,8 @@ contract TickSizeSetter is Ownable {
                     if (quoteDecimals == baseDecimals) lotSize = resolved.lotSize;
                     else lotSize = resolvedSizes[baseDecimals][index].lotSize;
 
-                    IPair(pair).setTickSize(lotSize, tickSize);
+                    (uint256 tick, uint256 lot) = ipair.tickSizes();
+                    if (tick != tickSize || lot != lotSize) ipair.setTickSize(lotSize, tickSize);
                 }
             }
 
@@ -358,6 +354,12 @@ contract TickSizeSetter is Ownable {
     function _calcValue(uint8 decimals, uint8 unit, int8 scale) private pure returns (uint256) {
         int256 _scale = SafeCast.toInt256(uint256(decimals)) + int256(scale);
         return unit * (10 ** _scale.toUint256());
+    }
+
+    // Forcefully update the tick size of a specific pair.
+    function manualUpdate(address pair, uint256 lotSize, uint256 tickSize) external onlyOwner {
+        // Logic to force update the tick size
+        IPair(pair).setTickSize(lotSize, tickSize);
     }
 
     function setUpdateInterval(uint256 interval) external onlyOwner {

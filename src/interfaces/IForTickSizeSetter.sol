@@ -14,5 +14,7 @@ interface IMarket {
 
 interface IPair {
     function matchedPrice() external view returns (uint256);
+    function paused() external view returns (bool);
+    function tickSizes() external view returns (uint256 tick, uint256 lot);
     function setTickSize(uint256 _lotSize, uint256 _tickSize) external;
 }
