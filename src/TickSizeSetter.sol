@@ -76,12 +76,12 @@ contract TickSizeSetter is Ownable {
         if (_crossDex == address(0)) revert TickSizeSetterZeroInput("crossDex");
         CROSS_DEX = ICrossDex(_crossDex);
 
-        // gte ~ lt price | ticSize | lotSize
+        // gte ~ lt price | tickSize | lotSize
         // -----------------------------------
         //      ~ 0.1     | 0.0001  | 1
         // 0.1  ~ 1       | 0.001   | 1
         // 1    ~ 10      | 0.01    | 1
-        // 10   ~ 50      | 0.1     | 1
+        // 10   ~ 50      | 0.1     | 0.5
         // 50   ~ 100     | 0.5     | 0.1
         // 100  ~ 500     | 1       | 0.01
         // 500  ~ 1000    | 5       | 0.001
@@ -89,81 +89,81 @@ contract TickSizeSetter is Ownable {
         sizeFormats.push(
             SizeFormat({
                 minPriceUnit: 1,
-                minPriceScale: -1,
+                minPriceScale: -1, // 0.1
                 tickSizeUnit: 1,
-                tickSizeScale: -4,
+                tickSizeScale: -4, // 0.0001
                 lotSizeUnit: 1,
-                lotSizeScale: 0
+                lotSizeScale: 0 // 1
             })
         );
         sizeFormats.push(
             SizeFormat({
                 minPriceUnit: 1,
-                minPriceScale: 0,
+                minPriceScale: 0, // 1
                 tickSizeUnit: 1,
-                tickSizeScale: -3,
+                tickSizeScale: -3, // 0.001
                 lotSizeUnit: 1,
-                lotSizeScale: 0
+                lotSizeScale: 0 // 1
             })
         );
         sizeFormats.push(
             SizeFormat({
                 minPriceUnit: 1,
-                minPriceScale: 1,
+                minPriceScale: 1, // 10
                 tickSizeUnit: 1,
-                tickSizeScale: -2,
+                tickSizeScale: -2, // 0.01
                 lotSizeUnit: 1,
-                lotSizeScale: 0
+                lotSizeScale: 0 // 1
             })
         );
         sizeFormats.push(
             SizeFormat({
                 minPriceUnit: 5,
-                minPriceScale: 1,
+                minPriceScale: 1, // 50
                 tickSizeUnit: 1,
-                tickSizeScale: -1,
+                tickSizeScale: -1, // 0.1
                 lotSizeUnit: 5,
-                lotSizeScale: -1
+                lotSizeScale: -1 // 0.5
             })
         );
         sizeFormats.push(
             SizeFormat({
                 minPriceUnit: 1,
-                minPriceScale: 2,
+                minPriceScale: 2, // 100
                 tickSizeUnit: 5,
-                tickSizeScale: -1,
+                tickSizeScale: -1, // 0.5
                 lotSizeUnit: 1,
-                lotSizeScale: -1
+                lotSizeScale: -1 // 0.1
             })
         );
         sizeFormats.push(
             SizeFormat({
                 minPriceUnit: 5,
-                minPriceScale: 2,
+                minPriceScale: 2, // 500
                 tickSizeUnit: 1,
-                tickSizeScale: 0,
+                tickSizeScale: 0, // 1
                 lotSizeUnit: 1,
-                lotSizeScale: -2
+                lotSizeScale: -2 // 0.01
             })
         );
         sizeFormats.push(
             SizeFormat({
                 minPriceUnit: 1,
-                minPriceScale: 3,
+                minPriceScale: 3, // 1000
                 tickSizeUnit: 5,
-                tickSizeScale: 0,
+                tickSizeScale: 0, // 5
                 lotSizeUnit: 1,
-                lotSizeScale: -3
+                lotSizeScale: -3 // 0.001
             })
         );
         sizeFormats.push(
             SizeFormat({
                 minPriceUnit: 0,
-                minPriceScale: 0,
+                minPriceScale: 0, // ~~~
                 tickSizeUnit: 1,
-                tickSizeScale: 2,
+                tickSizeScale: 2, // 100
                 lotSizeUnit: 1,
-                lotSizeScale: -4
+                lotSizeScale: -4 // 0.0001
             })
         );
         _resolveSize(18);
