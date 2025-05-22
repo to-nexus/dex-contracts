@@ -1263,7 +1263,15 @@ contract DEXCheckTest is DEXBaseTest {
 
     function test_check_slot_current_update_time() external pure {
         bytes32 _current_update_time = keccak256(
-            abi.encode(uint256(keccak256("crossdex.ticsizesetter.updatetimestamp")) - 1)
+            abi.encode(uint256(keccak256("crossdex.ticksizesetter.updatetimestamp")) - 1)
+        ) & ~bytes32(uint256(0xff));
+
+        console.logBytes32(_current_update_time);
+    }
+
+    function test_check_slot_current_price_time() external pure {
+        bytes32 _current_update_time = keccak256(
+            abi.encode(uint256(keccak256("crossdex.ticksizesetter.pricetimestamp")) - 1)
         ) & ~bytes32(uint256(0xff));
 
         console.logBytes32(_current_update_time);

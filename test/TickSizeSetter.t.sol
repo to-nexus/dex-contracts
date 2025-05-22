@@ -19,7 +19,7 @@ contract TickSizeSetterTest is DEXBaseTest {
         vm.stopPrank();
         quoteDecimals = IERC20Metadata(address(QUOTE)).decimals();
         baseDecimals = IERC20Metadata(address(BASE)).decimals();
-        vm.warp(86400);
+        vm.warp(86400 * 2);
         TICK_SIZE_SETTER.allUpdates();
     }
 
@@ -226,6 +226,45 @@ contract TickSizeSetterTest is DEXBaseTest {
         _all_updates_execute(address(PAIR), price, index);
     }
 
+    function test_ticksize_matched_price_at(uint32 _warp) external {
+        vm.warp(block.timestamp + _warp);
+
+        vm.startPrank(OWNER);
+        QUOTE.approve(address(ROUTER), type(uint256).max);
+        BASE.approve(address(ROUTER), type(uint256).max);
+
+        uint256 price = _toQuote(1);
+        uint256 amount = _toBase(1);
+        uint256 priceStep = price / 10;
+
+        // sell orders
+        for (uint256 i = 0; i < 10; i++) {
+            ROUTER.submitSellLimit(
+                address(PAIR),
+                price + (priceStep * i),
+                amount,
+                IPair.LimitConstraints.GOOD_TILL_CANCEL,
+                _searchPrices,
+                0
+            );
+            // The latest price is not updated because the orders are not matched.
+            assertEq(0, PAIR.matchedPrice());
+        }
+
+        // buy orders
+
+        uint256 priceTime = TICK_SIZE_SETTER.calcTimestamp(block.timestamp);
+        for (uint256 i = 0; i < 10; i++) {
+            uint256 _price = price + (priceStep * i);
+            ROUTER.submitBuyLimit(
+                address(PAIR), _price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+            );
+            // The latest price is updated because the orders are matched.
+            assertEq(_price, PAIR.matchedPrice());
+            assertEq(_price, ROUTER.matchedPriceAt(address(PAIR), priceTime));
+        }
+    }
+
     address[] private _allMarkets;
     mapping(address market => address[]) private _allPairs;
 
@@ -300,12 +339,12 @@ contract TickSizeSetterTest is DEXBaseTest {
     function test_ticksize_all_updates_max_count_case1() external {
         uint256 GAS_LIMIT = 4e6;
         // With a gas limit of 4 million (4e6),
-        // up to 38 pairs can be updated in a single transaction.
+        // up to 36 pairs can be updated in a single transaction.
 
         _allMarkets.push(address(MARKET));
         _allPairs[address(MARKET)].push(address(PAIR));
 
-        _make_market_pair(1, 38, 10 ** (quoteDecimals - 1));
+        _make_market_pair(1, 36, 10 ** (quoteDecimals - 1));
 
         vm.roll(block.number + 1);
         vm.warp(block.timestamp + TICK_SIZE_SETTER.updateInterval());
@@ -318,12 +357,12 @@ contract TickSizeSetterTest is DEXBaseTest {
     function test_ticksize_all_updates_max_count_case2() external {
         uint256 GAS_LIMIT = 4e6;
         // With a gas limit of 4 million (4e6),
-        // up to 38 pairs can be updated in a single transaction.
+        // up to 34 pairs can be updated in a single transaction.
 
         _allMarkets.push(address(MARKET));
         _allPairs[address(MARKET)].push(address(PAIR));
 
-        _make_market_pair(2, 19, 10 ** (quoteDecimals));
+        _make_market_pair(2, 17, 10 ** (quoteDecimals));
 
         vm.roll(block.number + 1);
         vm.warp(block.timestamp + TICK_SIZE_SETTER.updateInterval());
@@ -336,12 +375,12 @@ contract TickSizeSetterTest is DEXBaseTest {
     function test_ticksize_all_updates_max_count_case3() external {
         uint256 GAS_LIMIT = 4e6;
         // With a gas limit of 4 million (4e6),
-        // up to 36 pairs can be updated in a single transaction.
+        // up to 34 pairs can be updated in a single transaction.
 
         _allMarkets.push(address(MARKET));
         _allPairs[address(MARKET)].push(address(PAIR));
 
-        _make_market_pair(18, 2, (10 ** (quoteDecimals + 2)));
+        _make_market_pair(17, 2, (10 ** (quoteDecimals + 2)));
 
         vm.roll(block.number + 1);
         vm.warp(block.timestamp + TICK_SIZE_SETTER.updateInterval());
@@ -354,12 +393,12 @@ contract TickSizeSetterTest is DEXBaseTest {
     function test_ticksize_all_updates_max_count_case4() external {
         uint256 GAS_LIMIT = 4e6;
         // With a gas limit of 4 million (4e6),
-        // up to 36 pairs can be updated in a single transaction.
+        // up to 33 pairs can be updated in a single transaction.
 
         _allMarkets.push(address(MARKET));
         _allPairs[address(MARKET)].push(address(PAIR));
 
-        _make_market_pair(36, 1, 5 * (10 ** (quoteDecimals + 2)));
+        _make_market_pair(33, 1, 5 * (10 ** (quoteDecimals + 2)));
 
         vm.roll(block.number + 1);
         vm.warp(block.timestamp + TICK_SIZE_SETTER.updateInterval());
@@ -374,7 +413,7 @@ contract TickSizeSetterTest is DEXBaseTest {
         _allMarkets.push(address(MARKET));
         _allPairs[address(MARKET)].push(address(PAIR));
 
-        _make_market_pair(2, 38, 10 ** (quoteDecimals - 1));
+        _make_market_pair(2, 36, 10 ** (quoteDecimals - 1));
 
         vm.roll(block.number + 1);
         vm.warp(block.timestamp + TICK_SIZE_SETTER.updateInterval());
@@ -393,7 +432,7 @@ contract TickSizeSetterTest is DEXBaseTest {
         _allMarkets.push(address(MARKET));
         _allPairs[address(MARKET)].push(address(PAIR));
 
-        _make_market_pair(3, 38, 10 ** (quoteDecimals - 1));
+        _make_market_pair(3, 36, 10 ** (quoteDecimals - 1));
 
         vm.roll(block.number + 1);
         vm.warp(block.timestamp + TICK_SIZE_SETTER.updateInterval());
