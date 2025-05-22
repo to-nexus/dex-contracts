@@ -12,6 +12,7 @@ import {EnumerableSet} from "@openzeppelin-contracts-5.2.0/utils/structs/Enumera
 contract TickSizeSetter is Ownable {
     using SafeCast for int256;
     using EnumerableSet for EnumerableSet.UintSet;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     error TickSizeSetterZeroInput(bytes32 field);
     error TickSizeSetterInvalidPrice(uint256 index);
@@ -20,6 +21,8 @@ contract TickSizeSetter is Ownable {
     error TickSizeSetterInvalidPair(address pair);
 
     event UpdateIntervalChanged(uint256 interval);
+    event AddSkipPair(address indexed pair);
+    event RemoveSkipPair(address indexed pair);
     event SizeFormatsChanged(SizeFormat[] formats);
     event ResolvedSizesByPairUpdated(address pair, ResolvedSize[] sizes);
     event ResolvedSizesByPairRemoved(address pair);
@@ -55,10 +58,14 @@ contract TickSizeSetter is Ownable {
     uint256 private constant UPDATE_MIN_GAS_LEFT = 515_000;
 
     ICrossDex public immutable CROSS_DEX;
+    address public immutable ROUTER;
+
     uint256 public updateInterval = 86400; // 1 day
 
     mapping(address pair => PairConfig) public pairConfigs;
     mapping(address pair => uint256) public lastUpdateTimestamp;
+
+    EnumerableSet.AddressSet private _skipPairs;
 
     SizeFormat[] public sizeFormats;
 
@@ -171,6 +178,10 @@ contract TickSizeSetter is Ownable {
 
     function getSizeFormats() external view returns (SizeFormat[] memory) {
         return sizeFormats;
+    }
+
+    function allSkipPairs() external view returns (address[] memory) {
+        return _skipPairs.values();
     }
 
     function allDecimals() external view returns (uint256[] memory) {
@@ -289,7 +300,7 @@ contract TickSizeSetter is Ownable {
 
             address pair = pairs[i];
             // check latest update timestamp each pair
-            if (_tryUpdateTimestamp(pair)) {
+            if (!_skipPairs.contains(pair) && _tryUpdateTimestamp(pair)) {
                 address base = bases[i];
                 uint8 baseDecimals = pairConfigs[pair].baseDecimals;
                 // set pair config if not set
@@ -374,6 +385,17 @@ contract TickSizeSetter is Ownable {
     function _checkPair(address pair) private view {
         if (pair == address(0)) revert TickSizeSetterZeroInput("pair");
         if (!CROSS_DEX.isMarket(CROSS_DEX.pairToMarket(pair))) revert TickSizeSetterInvalidPair(pair);
+    }
+
+    function forceUpdate(address pair, uint256 lotSize, uint256 tickSize) external onlyOwner {
+        _checkPair(pair);
+        IPair(pair).setTickSize(lotSize, tickSize);
+        if (_skipPairs.add(pair)) emit AddSkipPair(pair);
+    }
+
+    function removeSkipPair(address pair) external onlyOwner {
+        if (!_skipPairs.remove(pair)) revert TickSizeSetterInvalidPair(pair);
+        emit RemoveSkipPair(pair);
     }
 
     function setUpdateInterval(uint256 interval) external onlyOwner {
