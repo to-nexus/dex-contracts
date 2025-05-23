@@ -229,20 +229,19 @@ contract TickSizeSetter is Ownable {
         uint256 priceTime = updateTime - updateInterval;
 
         (, address[] memory markets) = CROSS_DEX.allMarkets();
-        uint256 length = markets.length;
-        for (uint256 i = 0; i < length;) {
-            address market = markets[i];
-            (, address[] memory pairs) = IMarketForTickSizeSetter(market).allPairs();
-            uint256 len = pairs.length;
-            for (uint256 index = 0; index < len;) {
-                address pair = pairs[index];
-                if (lastUpdateTimestamp[pair] != updateTime && _getPrice(pair, priceTime) != 0) return (market, index);
-                unchecked {
-                    ++index;
+        uint256 mLen = markets.length;
+        unchecked {
+            for (uint256 i = 0; i < mLen; ++i) {
+                address market = markets[i];
+                (, address[] memory pairs) = IMarketForTickSizeSetter(market).allPairs();
+                uint256 pLen = pairs.length;
+                for (uint256 index = 0; index < pLen; ++index) {
+                    address pair = pairs[index];
+                    if (_skipPairs.contains(pair)) continue;
+                    if (lastUpdateTimestamp[pair] != updateTime && _getPrice(pair, priceTime) != 0) {
+                        return (market, index);
+                    }
                 }
-            }
-            unchecked {
-                ++i;
             }
         }
         return (address(0), 0);
