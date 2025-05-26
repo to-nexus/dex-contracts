@@ -218,7 +218,7 @@ contract TickSizeSetter is Ownable {
     function calcTimestamp(uint256 timestamp) public view returns (uint256) {
         uint256 mod = timestamp % updateInterval;
         if (mod == 0) return timestamp;
-        return timestamp - (timestamp % updateInterval);
+        return timestamp - (mod);
     }
 
     // Returns the earliest market and start index that require an update.
