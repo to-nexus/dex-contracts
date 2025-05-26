@@ -215,6 +215,11 @@ contract TickSizeSetter is Ownable {
         }
     }
 
+    function getPrice(address pair, uint256 timestamp) external view returns (uint256) {
+        if (timestamp == 0) timestamp = block.timestamp - updateInterval;
+        return _getPrice(pair, calcTimestamp(timestamp));
+    }
+
     function calcTimestamp(uint256 timestamp) public view returns (uint256) {
         uint256 mod = timestamp % updateInterval;
         if (mod == 0) return timestamp;
