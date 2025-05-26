@@ -474,7 +474,7 @@ contract TickSizeSetterTest is DEXBaseTest {
 
     function test_ticksize_set_size_formats() external {
         _all_updates_execute(address(PAIR), 10 ** (quoteDecimals - 1), 1);
-        // gte ~ lt price | ticSize | lotSize
+        // gte ~ lt price | tickSize | lotSize
         // -----------------------------------
         // [0]      ~ 0.1     | 0.0001  | 100
         // [1] 0.1  ~ 1       | 0.001   | 10
@@ -680,7 +680,7 @@ contract TickSizeSetterTest is DEXBaseTest {
     }
 
     function test_ticksize_set_size_formats_invalid() external {
-        // gte ~ lt price | ticSize | lotSize
+        // gte ~ lt price | tickSize | lotSize
         // -----------------------------------
         // [0]      ~ 0.1     | 0.0001  | 100
         // [1] 0.1  ~ 1       | 0.001   | 10
@@ -839,7 +839,7 @@ contract TickSizeSetterTest is DEXBaseTest {
             TICK_SIZE_SETTER.setResolvedSizesByPair(targetPair, sizes);
         }
 
-        // gte ~ lt price | ticSize | lotSize
+        // gte ~ lt price | tickSize | lotSize
         // -----------------------------------
         // [0]       ~ 100   | 4   | 4
         // [1] 100   ~ 1000  | 40  | 40
