@@ -7,17 +7,16 @@ import {SafeERC20} from "@openzeppelin-contracts-5.2.0/token/ERC20/utils/SafeERC
 import {Address} from "@openzeppelin-contracts-5.2.0/utils/Address.sol";
 import {Math} from "@openzeppelin-contracts-5.2.0/utils/math/Math.sol";
 import {EnumerableSet} from "@openzeppelin-contracts-5.2.0/utils/structs/EnumerableSet.sol";
-
 import {ContextUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/utils/ContextUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from
     "@openzeppelin-contracts-upgradeable-5.2.0/utils/ReentrancyGuardUpgradeable.sol";
 
 import {WETH} from "./WETH.sol";
-
 import {ICrossDex} from "./interfaces/ICrossDex.sol";
 import {IOwnable} from "./interfaces/IOwnable.sol";
 import {IPair} from "./interfaces/IPair.sol";
 import {IRouter, IRouterInitializer} from "./interfaces/IRouter.sol";
+import {IPairForTickSizeSetter, ITickSizeSetter} from "./interfaces/ITickSizeSetter.sol";
 import {IWETH} from "./interfaces/IWETH.sol";
 
 contract CrossDexRouter is
@@ -48,11 +47,12 @@ contract CrossDexRouter is
     uint256 public maxMatchCount;
     uint256 public cancelLimit;
 
-    uint256[45] private __gap;
+    mapping(address pair => mapping(uint256 timestamp => uint256)) private _matchedPriceAt;
+    uint256[44] private __gap;
 
-    modifier checkValue() {
+    modifier afterSubmit(address pair) {
         _;
-        if (address(this).balance != 0) revert RouterInvalidValue();
+        _afterSubmit(pair);
     }
 
     modifier validPair(address pair) {
@@ -96,6 +96,11 @@ contract CrossDexRouter is
         return IOwnable(CROSS_DEX).owner();
     }
 
+    function matchedPriceAt(address pair, uint256 timestamp) external view returns (uint256) {
+        if (!isPair(pair)) return 0;
+        return _matchedPriceAt[pair][_calcTimestamp(timestamp)];
+    }
+
     function submitSellLimit(
         address pair,
         uint256 price,
@@ -103,7 +108,7 @@ contract CrossDexRouter is
         IPair.LimitConstraints constraints,
         uint256[2] memory adjacent,
         uint256 _maxMatchCount
-    ) external payable nonReentrant validPair(pair) checkValue returns (uint256) {
+    ) external payable nonReentrant validPair(pair) afterSubmit(pair) returns (uint256) {
         address _owner = _msgSender();
         IPair _pair = IPair(pair);
         IPair.Config memory info = _pair.getConfig();
@@ -125,15 +130,15 @@ contract CrossDexRouter is
         IPair.LimitConstraints constraints,
         uint256[2] calldata adjacent,
         uint256 _maxMatchCount
-    ) external payable nonReentrant validPair(pair) checkValue returns (uint256) {
+    ) external payable nonReentrant validPair(pair) afterSubmit(pair) returns (uint256) {
         address _owner = _msgSender();
         IPair _pair = IPair(pair);
         IPair.Config memory info = _pair.getConfig();
         uint256 prevPrice = _pair.findPrevPrice(IPair.OrderSide.BUY, price, adjacent, findPrevPriceCount);
 
         uint256 volume = Math.mulDiv(price, amount, info.DENOMINATOR);
-        if (address(info.QUOTE) == address(CROSS)) CROSS.mintTo{value: volume}(pair);
-        else info.QUOTE.safeTransferFrom(_owner, address(pair), volume);
+        if (address(info.QUOTE) == address(CROSS)) CROSS.mintTo{value: volume}(address(_pair));
+        else info.QUOTE.safeTransferFrom(_owner, pair, volume);
 
         IPair.Order memory order =
             IPair.Order({side: IPair.OrderSide.BUY, owner: _owner, feeBps: 0, price: price, amount: amount});
@@ -145,7 +150,7 @@ contract CrossDexRouter is
         payable
         nonReentrant
         validPair(pair)
-        checkValue
+        afterSubmit(pair)
     {
         address _owner = _msgSender();
         IPair.Config memory info = IPair(pair).getConfig();
@@ -164,7 +169,7 @@ contract CrossDexRouter is
         payable
         nonReentrant
         validPair(pair)
-        checkValue
+        afterSubmit(pair)
     {
         address _owner = _msgSender();
         IPair.Config memory info = IPair(pair).getConfig();
@@ -206,6 +211,22 @@ contract CrossDexRouter is
         if (_cancelLimit == 0) revert RouterInvalidInputData("cancelLimit");
         emit CancelLimitChanged(cancelLimit, _cancelLimit);
         cancelLimit = _cancelLimit;
+    }
+
+    function _afterSubmit(address pair) private {
+        if (address(this).balance != 0) revert RouterInvalidValue();
+        _updateMatchedPriceAt(pair);
+    }
+
+    function _updateMatchedPriceAt(address pair) private {
+        uint256 price = IPairForTickSizeSetter(pair).matchedPrice();
+        _matchedPriceAt[pair][_calcTimestamp(block.timestamp)] = price;
+    }
+
+    function _calcTimestamp(uint256 timestamp) private view returns (uint256) {
+        address tickSizeSetter = ICrossDex(CROSS_DEX).tickSizeSetter();
+        if (tickSizeSetter == address(0)) return timestamp;
+        return ITickSizeSetter(tickSizeSetter).calcTimestamp(timestamp);
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
