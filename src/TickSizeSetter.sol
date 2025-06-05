@@ -57,7 +57,7 @@ contract TickSizeSetter is Ownable {
     bytes32 private constant UPDATE_TIMESTAMP = 0x72e6793f966897c43b0e33775d05baa76ff9110155a84246f9453c16d5d68200;
     // keccak256(abi.encode(uint256(keccak256("crossdex.ticksizesetter.pricetimestamp")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant PRICE_TIMESTAMP = 0x41a83abda80d11e65ee82cd8e180c62e956a7775c30101f5415ca33e35d07000;
-    uint256 private constant UPDATE_MIN_GAS_LEFT = 515_000;
+    uint256 private constant UPDATE_MIN_GAS_LEFT = 600_000;
 
     ICrossDexForTickSizeSetter public immutable CROSS_DEX;
     IRouterForTickSizeSetter public immutable ROUTER;
@@ -90,10 +90,8 @@ contract TickSizeSetter is Ownable {
         //      ~ 0.1     | 0.0001  | 1
         // 0.1  ~ 1       | 0.001   | 1
         // 1    ~ 10      | 0.01    | 1
-        // 10   ~ 50      | 0.1     | 0.5
-        // 50   ~ 100     | 0.5     | 0.1
-        // 100  ~ 500     | 1       | 0.01
-        // 500  ~ 1000    | 5       | 0.001
+        // 10   ~ 100     | 0.1     | 0.01
+        // 100  ~ 1000    | 1       | 0.001
         // 1000 ~         | 10      | 0.0001
         sizeFormats.push(
             SizeFormat({
@@ -127,30 +125,10 @@ contract TickSizeSetter is Ownable {
         );
         sizeFormats.push(
             SizeFormat({
-                minPriceUnit: 5,
-                minPriceScale: 1, // 50
-                tickSizeUnit: 1,
-                tickSizeScale: -1, // 0.1
-                lotSizeUnit: 5,
-                lotSizeScale: -1 // 0.5
-            })
-        );
-        sizeFormats.push(
-            SizeFormat({
                 minPriceUnit: 1,
                 minPriceScale: 2, // 100
-                tickSizeUnit: 5,
-                tickSizeScale: -1, // 0.5
-                lotSizeUnit: 1,
-                lotSizeScale: -1 // 0.1
-            })
-        );
-        sizeFormats.push(
-            SizeFormat({
-                minPriceUnit: 5,
-                minPriceScale: 2, // 500
                 tickSizeUnit: 1,
-                tickSizeScale: 0, // 1
+                tickSizeScale: -1, // 0.1
                 lotSizeUnit: 1,
                 lotSizeScale: -2 // 0.01
             })
@@ -159,8 +137,8 @@ contract TickSizeSetter is Ownable {
             SizeFormat({
                 minPriceUnit: 1,
                 minPriceScale: 3, // 1000
-                tickSizeUnit: 5,
-                tickSizeScale: 0, // 5
+                tickSizeUnit: 1,
+                tickSizeScale: 0, // 1
                 lotSizeUnit: 1,
                 lotSizeScale: -3 // 0.001
             })
@@ -170,7 +148,7 @@ contract TickSizeSetter is Ownable {
                 minPriceUnit: 0,
                 minPriceScale: 0, // ~~~
                 tickSizeUnit: 1,
-                tickSizeScale: 2, // 100
+                tickSizeScale: 1, // 10
                 lotSizeUnit: 1,
                 lotSizeScale: -4 // 0.0001
             })

@@ -32,7 +32,7 @@ contract TickSizeSetterTest is DEXBaseTest {
         uint256 expectIndex;
 
         // gte
-        price = 10 ** (quoteDecimals - 1);
+        price = 10 ** (quoteDecimals - 1); // 0.1
         expectIndex = 1;
         (tickSize, lotSize) = TICK_SIZE_SETTER.tickSizeByPrice(address(PAIR), price);
         (, callTick,) = TICK_SIZE_SETTER.resolvedSizes(quoteDecimals, expectIndex);
@@ -40,7 +40,7 @@ contract TickSizeSetterTest is DEXBaseTest {
         assertEq(callTick, tickSize);
         assertEq(callLot, lotSize);
 
-        price = 10 ** (quoteDecimals);
+        price = 10 ** (quoteDecimals); // 1
         expectIndex = 2;
         (tickSize, lotSize) = TICK_SIZE_SETTER.tickSizeByPrice(address(PAIR), price);
         (, callTick,) = TICK_SIZE_SETTER.resolvedSizes(quoteDecimals, expectIndex);
@@ -48,7 +48,7 @@ contract TickSizeSetterTest is DEXBaseTest {
         assertEq(callTick, tickSize);
         assertEq(callLot, lotSize);
 
-        price = 10 ** (quoteDecimals + 1);
+        price = 10 ** (quoteDecimals + 1); // 10
         expectIndex = 3;
         (tickSize, lotSize) = TICK_SIZE_SETTER.tickSizeByPrice(address(PAIR), price);
         (, callTick,) = TICK_SIZE_SETTER.resolvedSizes(quoteDecimals, expectIndex);
@@ -56,7 +56,7 @@ contract TickSizeSetterTest is DEXBaseTest {
         assertEq(callTick, tickSize);
         assertEq(callLot, lotSize);
 
-        price = 5 * (10 ** (quoteDecimals + 1));
+        price = 10 ** (quoteDecimals + 2); // 100
         expectIndex = 4;
         (tickSize, lotSize) = TICK_SIZE_SETTER.tickSizeByPrice(address(PAIR), price);
         (, callTick,) = TICK_SIZE_SETTER.resolvedSizes(quoteDecimals, expectIndex);
@@ -64,24 +64,8 @@ contract TickSizeSetterTest is DEXBaseTest {
         assertEq(callTick, tickSize);
         assertEq(callLot, lotSize);
 
-        price = 10 ** (quoteDecimals + 2);
+        price = 10 ** (quoteDecimals + 3); // 1000
         expectIndex = 5;
-        (tickSize, lotSize) = TICK_SIZE_SETTER.tickSizeByPrice(address(PAIR), price);
-        (, callTick,) = TICK_SIZE_SETTER.resolvedSizes(quoteDecimals, expectIndex);
-        (,, callLot) = TICK_SIZE_SETTER.resolvedSizes(baseDecimals, expectIndex);
-        assertEq(callTick, tickSize);
-        assertEq(callLot, lotSize);
-
-        price = 5 * (10 ** (quoteDecimals + 2));
-        expectIndex = 6;
-        (tickSize, lotSize) = TICK_SIZE_SETTER.tickSizeByPrice(address(PAIR), price);
-        (, callTick,) = TICK_SIZE_SETTER.resolvedSizes(quoteDecimals, expectIndex);
-        (,, callLot) = TICK_SIZE_SETTER.resolvedSizes(baseDecimals, expectIndex);
-        assertEq(callTick, tickSize);
-        assertEq(callLot, lotSize);
-
-        price = 10 ** (quoteDecimals + 3);
-        expectIndex = 7;
         (tickSize, lotSize) = TICK_SIZE_SETTER.tickSizeByPrice(address(PAIR), price);
         (, callTick,) = TICK_SIZE_SETTER.resolvedSizes(quoteDecimals, expectIndex);
         (,, callLot) = TICK_SIZE_SETTER.resolvedSizes(baseDecimals, expectIndex);
@@ -89,7 +73,7 @@ contract TickSizeSetterTest is DEXBaseTest {
         assertEq(callLot, lotSize);
 
         // lt
-        price = 10 ** (quoteDecimals - 1) - 1;
+        price = 10 ** (quoteDecimals - 1) - 1; // 0.1 - 0.0000000000000000001
         expectIndex = 0;
         (tickSize, lotSize) = TICK_SIZE_SETTER.tickSizeByPrice(address(PAIR), price);
         (, callTick,) = TICK_SIZE_SETTER.resolvedSizes(quoteDecimals, expectIndex);
@@ -97,7 +81,7 @@ contract TickSizeSetterTest is DEXBaseTest {
         assertEq(callTick, tickSize);
         assertEq(callLot, lotSize);
 
-        price = 10 ** (quoteDecimals) - 1;
+        price = 10 ** (quoteDecimals) - 1; // 1 - 0.0000000000000000001
         expectIndex = 1;
         (tickSize, lotSize) = TICK_SIZE_SETTER.tickSizeByPrice(address(PAIR), price);
         (, callTick,) = TICK_SIZE_SETTER.resolvedSizes(quoteDecimals, expectIndex);
@@ -105,7 +89,7 @@ contract TickSizeSetterTest is DEXBaseTest {
         assertEq(callTick, tickSize);
         assertEq(callLot, lotSize);
 
-        price = 10 ** (quoteDecimals + 1) - 1;
+        price = 10 ** (quoteDecimals + 1) - 1; // 10 - 0.0000000000000000001
         expectIndex = 2;
         (tickSize, lotSize) = TICK_SIZE_SETTER.tickSizeByPrice(address(PAIR), price);
         (, callTick,) = TICK_SIZE_SETTER.resolvedSizes(quoteDecimals, expectIndex);
@@ -113,7 +97,7 @@ contract TickSizeSetterTest is DEXBaseTest {
         assertEq(callTick, tickSize);
         assertEq(callLot, lotSize);
 
-        price = 5 * (10 ** (quoteDecimals + 1)) - 1;
+        price = 10 ** (quoteDecimals + 2) - 1; // 100 - 0.0000000000000000001
         expectIndex = 3;
         (tickSize, lotSize) = TICK_SIZE_SETTER.tickSizeByPrice(address(PAIR), price);
         (, callTick,) = TICK_SIZE_SETTER.resolvedSizes(quoteDecimals, expectIndex);
@@ -121,24 +105,8 @@ contract TickSizeSetterTest is DEXBaseTest {
         assertEq(callTick, tickSize);
         assertEq(callLot, lotSize);
 
-        price = 10 ** (quoteDecimals + 2) - 1;
+        price = 10 ** (quoteDecimals + 3) - 1; // 1000 - 0.0000000000000000001
         expectIndex = 4;
-        (tickSize, lotSize) = TICK_SIZE_SETTER.tickSizeByPrice(address(PAIR), price);
-        (, callTick,) = TICK_SIZE_SETTER.resolvedSizes(quoteDecimals, expectIndex);
-        (,, callLot) = TICK_SIZE_SETTER.resolvedSizes(baseDecimals, expectIndex);
-        assertEq(callTick, tickSize);
-        assertEq(callLot, lotSize);
-
-        price = 5 * (10 ** (quoteDecimals + 2)) - 1;
-        expectIndex = 5;
-        (tickSize, lotSize) = TICK_SIZE_SETTER.tickSizeByPrice(address(PAIR), price);
-        (, callTick,) = TICK_SIZE_SETTER.resolvedSizes(quoteDecimals, expectIndex);
-        (,, callLot) = TICK_SIZE_SETTER.resolvedSizes(baseDecimals, expectIndex);
-        assertEq(callTick, tickSize);
-        assertEq(callLot, lotSize);
-
-        price = 10 ** (quoteDecimals + 3) - 1;
-        expectIndex = 6;
         (tickSize, lotSize) = TICK_SIZE_SETTER.tickSizeByPrice(address(PAIR), price);
         (, callTick,) = TICK_SIZE_SETTER.resolvedSizes(quoteDecimals, expectIndex);
         (,, callLot) = TICK_SIZE_SETTER.resolvedSizes(baseDecimals, expectIndex);
@@ -155,7 +123,7 @@ contract TickSizeSetterTest is DEXBaseTest {
         assertEq(callLot, lotSize);
 
         price = type(uint256).max;
-        expectIndex = 7;
+        expectIndex = 5;
         (tickSize, lotSize) = TICK_SIZE_SETTER.tickSizeByPrice(address(PAIR), price);
         (, callTick,) = TICK_SIZE_SETTER.resolvedSizes(quoteDecimals, expectIndex);
         (,, callLot) = TICK_SIZE_SETTER.resolvedSizes(baseDecimals, expectIndex);
@@ -163,53 +131,38 @@ contract TickSizeSetterTest is DEXBaseTest {
         assertEq(callLot, lotSize);
     }
 
-    function test_ticksize_all_updates() external {
+    function test_ticksize_all_updates1() external {
+        vm.warp(block.timestamp + 30 days);
         uint256 index;
         uint256 price;
 
         // gte
-        price = 10 ** (quoteDecimals - 1);
+        price = 10 ** (quoteDecimals - 1); // 0.1
         index = 1;
         _all_updates_execute(address(PAIR), price, index);
 
-        price = 10 ** (quoteDecimals);
+        price = 10 ** (quoteDecimals); // 1
         index = 2;
         _all_updates_execute(address(PAIR), price, index);
 
-        price = 10 ** (quoteDecimals + 1);
+        price = 10 ** (quoteDecimals + 1); // 10
         index = 3;
         _all_updates_execute(address(PAIR), price, index);
 
-        price = 5 * (10 ** (quoteDecimals + 1));
+        price = 10 ** (quoteDecimals + 2); // 100
         index = 4;
         _all_updates_execute(address(PAIR), price, index);
 
-        price = 10 ** (quoteDecimals + 2);
+        price = 10 ** (quoteDecimals + 3); // 1000
         index = 5;
-        _all_updates_execute(address(PAIR), price, index);
-
-        price = 5 * (10 ** (quoteDecimals + 2));
-        index = 6;
-        _all_updates_execute(address(PAIR), price, index);
-
-        price = 10 ** (quoteDecimals + 3);
-        index = 7;
         _all_updates_execute(address(PAIR), price, index);
 
         // lt
         price = (10 ** (quoteDecimals + 3)) - PAIR.tickSize();
-        index = 6;
-        _all_updates_execute(address(PAIR), price, index);
-
-        price = (5 * (10 ** (quoteDecimals + 2))) - PAIR.tickSize();
-        index = 5;
-        _all_updates_execute(address(PAIR), price, index);
-
-        price = (10 ** (quoteDecimals + 2)) - PAIR.tickSize();
         index = 4;
         _all_updates_execute(address(PAIR), price, index);
 
-        price = (5 * (10 ** (quoteDecimals + 1))) - PAIR.tickSize();
+        price = 10 ** (quoteDecimals + 2) - PAIR.tickSize();
         index = 3;
         _all_updates_execute(address(PAIR), price, index);
 
@@ -217,7 +170,7 @@ contract TickSizeSetterTest is DEXBaseTest {
         index = 2;
         _all_updates_execute(address(PAIR), price, index);
 
-        price = (10 ** (quoteDecimals)) - PAIR.tickSize();
+        price = (10 ** (quoteDecimals + 0)) - PAIR.tickSize();
         index = 1;
         _all_updates_execute(address(PAIR), price, index);
 
@@ -787,7 +740,7 @@ contract TickSizeSetterTest is DEXBaseTest {
         uint256[] memory allDecimals = TICK_SIZE_SETTER.allDecimals();
         assertEq(allDecimals.length, 6);
 
-        TickSizeSetter.SizeFormat[] memory formats = new TickSizeSetter.SizeFormat[](11);
+        TickSizeSetter.SizeFormat[] memory formats = new TickSizeSetter.SizeFormat[](10);
         for (uint256 i = 0; i < formats.length; i++) {
             formats[i] = TickSizeSetter.SizeFormat({
                 minPriceUnit: 1 + uint8(i),
@@ -948,17 +901,17 @@ contract TickSizeSetterTest is DEXBaseTest {
         (tickSize, lotSize) = PAIR.tickSizes();
         (, callTick,) = TICK_SIZE_SETTER.resolvedSizes(quoteDecimals, 2);
         (,, callLot) = TICK_SIZE_SETTER.resolvedSizes(baseDecimals, 2);
-        assertEq(callTick, tickSize, "[remove] address(PAIR) tick size");
-        assertEq(callLot, lotSize, "[remove] address(PAIR) lot size");
+        assertEq(callTick, tickSize, "[remove] 0 address(PAIR) tick size");
+        assertEq(callLot, lotSize, "[remove] 0 address(PAIR) lot size");
 
         (tickSize, lotSize) = PairImpl(targetPair).tickSizes();
         assertNotEq(tickSize, sizes[2].tickSize, "[remove] 1 targetPair tick size");
         assertNotEq(lotSize, sizes[2].lotSize, "[remove] 1 targetPair lot size");
 
-        (, callTick,) = TICK_SIZE_SETTER.resolvedSizes(quoteDecimals, 7);
-        (,, callLot) = TICK_SIZE_SETTER.resolvedSizes(baseDecimals, 7);
-        assertEq(callTick, tickSize, "[remove] address(PAIR) tick size");
-        assertEq(callLot, lotSize, "[remove] address(PAIR) lot size");
+        (, callTick,) = TICK_SIZE_SETTER.resolvedSizes(quoteDecimals, 5);
+        (,, callLot) = TICK_SIZE_SETTER.resolvedSizes(baseDecimals, 5);
+        assertEq(callTick, tickSize, "[remove] 2 address(PAIR) tick size");
+        assertEq(callLot, lotSize, "[remove] 2 address(PAIR) lot size");
     }
 
     function _make_market_pair(uint256 marketCount, uint256 pairCount, uint256 price) private {
