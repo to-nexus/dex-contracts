@@ -89,7 +89,7 @@ contract TickSizeSetter is Ownable {
         // -----------------------------------
         //      ~ 0.1     | 0.0001  | 1
         // 0.1  ~ 1       | 0.001   | 1
-        // 1    ~ 10      | 0.01    | 1
+        // 1    ~ 10      | 0.01    | 0.1
         // 10   ~ 100     | 0.1     | 0.01
         // 100  ~ 1000    | 1       | 0.001
         // 1000 ~         | 10      | 0.0001
@@ -120,7 +120,7 @@ contract TickSizeSetter is Ownable {
                 tickSizeUnit: 1,
                 tickSizeScale: -2, // 0.01
                 lotSizeUnit: 1,
-                lotSizeScale: 0 // 1
+                lotSizeScale: -1 // 0.1
             })
         );
         sizeFormats.push(
