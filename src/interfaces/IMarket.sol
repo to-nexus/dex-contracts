@@ -18,3 +18,7 @@ interface IMarket {
     function feeCollector() external view returns (address);
     function checkTickSizeRoles(address account) external view;
 }
+
+interface IMarketInitializerV2 is IMarketInitializer {
+    function updatePairImpl(address) external;
+}
