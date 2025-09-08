@@ -25,7 +25,8 @@ contract V2CrossDexImpl is ICrossDexV2, UUPSUpgradeable, OwnableUpgradeable {
     error CrossDexInvalidTickSizeSetter(address current, address input);
 
     event MarketCreated(address indexed quote, address indexed market, address indexed owner, address fee_collector);
-    event UpdatePairImpl(address indexed before, address indexed current);
+    event MarketImplUpdated(address indexed before, address indexed current);
+    event PairImplUpdated(address indexed before, address indexed current);
     event TickSizeSetterSet(address indexed before, address indexed current);
 
     address payable public ROUTER; // immutable
@@ -84,9 +85,12 @@ contract V2CrossDexImpl is ICrossDexV2, UUPSUpgradeable, OwnableUpgradeable {
         }
     }
 
-    function reinitialize(address _newPairImpl) external reinitializer(2) onlyOwner {
+    function reinitialize(address _newMarketImpl, address _newPairImpl) external reinitializer(2) onlyOwner {
+        if (_newMarketImpl == address(0)) revert CrossDexInitializeData("marketImpl");
         if (_newPairImpl == address(0)) revert CrossDexInitializeData("pairImpl");
-        emit UpdatePairImpl(pairImpl, _newPairImpl);
+        emit MarketImplUpdated(marketImpl, _newMarketImpl);
+        emit PairImplUpdated(pairImpl, _newPairImpl);
+        marketImpl = _newMarketImpl;
         pairImpl = _newPairImpl;
     }
 
@@ -154,19 +158,16 @@ contract V2CrossDexImpl is ICrossDexV2, UUPSUpgradeable, OwnableUpgradeable {
         pairToMarket[pair] = _msgSender();
     }
 
+    function updateMarketImpl(address _newMarketImpl) external onlyOwner {
+        if (_newMarketImpl == address(0)) revert CrossDexInitializeData("marketImpl");
+        emit MarketImplUpdated(marketImpl, _newMarketImpl);
+        marketImpl = _newMarketImpl;
+    }
+
     function updatePairImpl(address _newPairImpl) external onlyOwner {
         if (_newPairImpl == address(0)) revert CrossDexInitializeData("pairImpl");
-        emit UpdatePairImpl(pairImpl, _newPairImpl);
+        emit PairImplUpdated(pairImpl, _newPairImpl);
         pairImpl = _newPairImpl;
-
-        uint256 length = _allMarkets.length();
-        for (uint256 i = 0; i < length;) {
-            (, address market) = _allMarkets.at(i);
-            IMarketInitializerV2(market).updatePairImpl(_newPairImpl);
-            unchecked {
-                ++i;
-            }
-        }
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}

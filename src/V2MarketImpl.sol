@@ -128,8 +128,7 @@ contract V2MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUp
         feeBps = uint32(_feeBps);
     }
 
-    function updatePairImpl(address _newPairImpl) external {
-        if (_msgSender() != address(CROSS_DEX)) _checkOwner();
+    function updatePairImpl(address _newPairImpl) external onlyOwner {
         if (_newPairImpl == address(0)) revert MarketInvalidInitializeData("pairImpl");
         pairImpl = _newPairImpl;
     }
