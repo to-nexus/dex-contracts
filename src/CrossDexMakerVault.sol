@@ -13,19 +13,33 @@ contract CrossDexMakerVault {
 
     receive() external payable {}
 
-    function claim(address[] memory erc20s) external {
-        // send all ERC20 tokens to the account
+    function balanceOf(address[] memory erc20s) external view returns (uint256[] memory, uint256) {
         uint256 length = erc20s.length;
+        uint256[] memory balances = new uint256[](length);
+        address vault = address(this);
         unchecked {
             for (uint256 i = 0; i < length; ++i) {
                 IERC20 erc20 = IERC20(erc20s[i]);
-                uint256 _balance = erc20.balanceOf(address(this));
+                balances[i] = erc20.balanceOf(vault);
+            }
+        }
+        return (balances, vault.balance);
+    }
+
+    function claim(address[] memory erc20s) external {
+        // send all ERC20 tokens to the account
+        uint256 length = erc20s.length;
+        address vault = address(this);
+        unchecked {
+            for (uint256 i = 0; i < length; ++i) {
+                IERC20 erc20 = IERC20(erc20s[i]);
+                uint256 _balance = erc20.balanceOf(vault);
                 if (_balance != 0) SafeERC20.safeTransfer(erc20, ACCOUNT, _balance);
             }
         }
         {
             // send all ETH to the account
-            uint256 _balance = address(this).balance;
+            uint256 _balance = vault.balance;
             if (_balance != 0) Address.sendValue(ACCOUNT, _balance);
         }
     }
