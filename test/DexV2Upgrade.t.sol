@@ -6,9 +6,9 @@ import {UUPSUpgradeable} from "@openzeppelin-contracts-5.2.0/proxy/utils/UUPSUpg
 
 import {CrossDexMakerVault} from "../src/CrossDexMakerVault.sol";
 import {CrossDexMakerVaultFactory} from "../src/CrossDexMakerVaultFactory.sol";
+import {CrossDexRouter} from "../src/CrossDexRouter.sol";
 
 import {V2CrossDexImpl} from "../src/V2CrossDexImpl.sol";
-import {V2CrossDexRouter} from "../src/V2CrossDexRouter.sol";
 import {V2MarketImpl} from "../src/V2MarketImpl.sol";
 import {V2PairImpl} from "../src/V2PairImpl.sol";
 
@@ -16,7 +16,6 @@ contract DEXTradeTest is DEXBaseTest {
     CrossDexMakerVaultFactory public makerVaultFactory;
 
     address public v2CrossDexImpl;
-    address public v2CrossDexRouter;
     address public v2MarketImpl;
     address public v2PairImpl;
 
@@ -28,44 +27,32 @@ contract DEXTradeTest is DEXBaseTest {
 
         // 2. deploy v2Logics
         v2CrossDexImpl = address(new V2CrossDexImpl());
-        v2CrossDexRouter = address(new V2CrossDexRouter());
         v2MarketImpl = address(new V2MarketImpl());
         v2PairImpl = address(new V2PairImpl());
 
         // 3. upgrade CrossDexImpl
         vm.prank(OWNER);
         UUPSUpgradeable(address(CROSS_DEX)).upgradeToAndCall(
-            v2CrossDexImpl, abi.encodeCall(V2CrossDexImpl.reinitialize, (v2MarketImpl, v2PairImpl))
+            v2CrossDexImpl, abi.encodeCall(V2CrossDexImpl.reinitialize, (v2MarketImpl, v2PairImpl, _makerVaultFactory))
         );
 
-        // 4. upgrade CrossDexRouter
-        vm.prank(OWNER);
-        UUPSUpgradeable(address(ROUTER)).upgradeToAndCall(
-            v2CrossDexRouter, abi.encodeCall(V2CrossDexRouter.reinitialize, (_makerVaultFactory))
-        );
-
-        // 5. upgrade MarketImpl
+        // 4. upgrade MarketImpl
         vm.prank(OWNER);
         UUPSUpgradeable(address(MARKET)).upgradeToAndCall(v2MarketImpl, abi.encodeCall(V2MarketImpl.reinitialize, ()));
 
-        // 6. upgrade PairImpl
+        // 5. upgrade PairImpl
         vm.prank(OWNER);
-        UUPSUpgradeable(address(PAIR)).upgradeToAndCall(v2PairImpl, "");
+        UUPSUpgradeable(address(PAIR)).upgradeToAndCall(v2PairImpl, abi.encodeCall(V2PairImpl.reinitialize, ()));
     }
 
     function test_initial_status() external view {
         // check impl address
         V2CrossDexImpl crossDex = V2CrossDexImpl(address(CROSS_DEX));
-        assertEq(v2MarketImpl, crossDex.marketImpl());
-        assertEq(v2PairImpl, crossDex.pairImpl());
-        // check maker vault factory
-        V2CrossDexRouter router = V2CrossDexRouter(address(ROUTER));
-        assertEq(address(makerVaultFactory), router.MAKER_VAULT_FACTORY());
-        // check maker vault
-        address user1 = address(bytes20("user1"));
-        address vault = makerVaultFactory.makerVaultAddress(user1);
-        assertEq(vault, router.makerVaultAddress(user1));
-        assertEq(vault, makerVaultFactory.makerVaultAddress(user1));
+        assertEq(v2MarketImpl, crossDex.marketImpl(), "marketImpl");
+        assertEq(v2PairImpl, crossDex.pairImpl(), "pairImpl");
+        assertEq(
+            address(V2PairImpl(address(PAIR)).makerVaultFactory()), address(makerVaultFactory), "makerVaultFactory"
+        );
     }
 
     function test_create_vault() external {

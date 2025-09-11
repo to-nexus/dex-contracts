@@ -9,4 +9,5 @@ interface ICrossDex {
 
 interface ICrossDexV2 is ICrossDex {
     function pairImpl() external view returns (address);
+    function MAKER_VAULT_FACTORY() external view returns (address);
 }

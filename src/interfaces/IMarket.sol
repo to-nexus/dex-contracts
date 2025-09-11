@@ -19,6 +19,6 @@ interface IMarket {
     function checkTickSizeRoles(address account) external view;
 }
 
-interface IMarketInitializerV2 is IMarketInitializer {
-    function updatePairImpl(address) external;
+interface IMarketV2 is IMarket {
+    function CROSS_DEX() external view returns (address);
 }

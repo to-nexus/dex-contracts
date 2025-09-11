@@ -9,10 +9,11 @@ import {Math} from "@openzeppelin-contracts-5.2.0/utils/math/Math.sol";
 
 import {PausableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/utils/PausableUpgradeable.sol";
 
-import {IMarket} from "./interfaces/IMarket.sol";
+import {ICrossDexV2} from "./interfaces/ICrossDex.sol";
+import {ICrossDexMakerVaultFactory} from "./interfaces/ICrossDexMakerVaultFactory.sol";
+import {IMarketV2} from "./interfaces/IMarket.sol";
 import {IOwnable} from "./interfaces/IOwnable.sol";
 import {IPair} from "./interfaces/IPair.sol";
-import {IRouterV2} from "./interfaces/IRouter.sol";
 import {List} from "./lib/List.sol";
 
 contract V2PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
@@ -96,7 +97,8 @@ contract V2PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     mapping(uint256 orderId => Order) private _allOrders;
     mapping(address account => uint256[2]) private _accountReserves; // 0: sell (BASE), 1: buy (QUOTE)
 
-    uint256[32] private __gap;
+    ICrossDexMakerVaultFactory public makerVaultFactory; // immutable
+    uint256[31] private __gap;
 
     modifier onlyOwner() {
         // The Pair is the same as the Owner of the Market.
@@ -128,7 +130,8 @@ contract V2PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         address quote,
         address base,
         uint256 _tickSize, // tick size for quote token
-        uint256 _lotSize // lot size for base token
+        uint256 _lotSize, // lot size for base token
+        address _makerVaultAddress
     ) external initializer {
         __Pausable_init();
 
@@ -137,6 +140,7 @@ contract V2PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         if (base == address(0)) revert PairInvalidInitializeData("base");
         if (_tickSize == 0) revert PairInvalidInitializeData("tickSize");
         if (_lotSize == 0) revert PairInvalidInitializeData("lotSize");
+        if (_makerVaultAddress == address(0)) revert PairInvalidInitializeData("makerVaultAddress");
 
         MARKET = _msgSender();
         ROUTER = router;
@@ -149,6 +153,13 @@ contract V2PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         tickSize = _tickSize;
         lotSize = _lotSize;
         minTradeVolume = Math.mulDiv(_tickSize, _lotSize, DENOMINATOR);
+        makerVaultFactory = ICrossDexMakerVaultFactory(_makerVaultAddress);
+    }
+
+    function reinitialize() external reinitializer(2) {
+        address _makerVaultFactory = ICrossDexV2(IMarketV2(MARKET).CROSS_DEX()).MAKER_VAULT_FACTORY();
+        if (_makerVaultFactory == address(0)) revert PairInvalidInitializeData("makerVaultFactory");
+        makerVaultFactory = ICrossDexMakerVaultFactory(_makerVaultFactory);
     }
 
     //  #    # # ###### #    #  ####
@@ -422,7 +433,7 @@ contract V2PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
                     _matchOrderAmount(orderId, order, targetId, target, price, _orders);
 
                 // Trade executed.
-                base.safeTransfer(IRouterV2(ROUTER).makerVaultAddress(targetOwner), tradeAmount);
+                base.safeTransfer(makerVaultFactory.ensureMakerVault(targetOwner), tradeAmount);
 
                 // Update information.
                 uint256 tradeQuoteAmount = Math.mulDiv(price, tradeAmount, DENOMINATOR);
@@ -483,7 +494,7 @@ contract V2PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
                 // Trade executed. ( Calculate using the fee rate at the time the seller registered the sale.)
                 _exchangeQuote(
                     targetId,
-                    IRouterV2(ROUTER).makerVaultAddress(targetOwner),
+                    makerVaultFactory.ensureMakerVault(targetOwner),
                     tradeQuoteAmount,
                     _feeCollector(),
                     targetFeeBps
@@ -617,7 +628,7 @@ contract V2PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     }
 
     function _cacheFeeInfos() private {
-        IMarket market = IMarket(MARKET);
+        IMarketV2 market = IMarketV2(MARKET);
         (address feeCollector, uint32 feeBps) = (market.feeCollector(), market.feeBps());
         assembly {
             tstore(_feeCollectorSlot, feeCollector)
@@ -660,7 +671,7 @@ contract V2PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     //  #    #  ####    #   #    #  ####  #    # # ###### #    #   #   #  ####  #    #
 
     function setTickSize(uint256 _lotSize, uint256 _tickSize) external {
-        IMarket(MARKET).checkTickSizeRoles(_msgSender());
+        IMarketV2(MARKET).checkTickSizeRoles(_msgSender());
 
         if (_tickSize == 0) revert PairInvalidInitializeData("tickSize");
         if (_lotSize == 0) revert PairInvalidInitializeData("lotSize");

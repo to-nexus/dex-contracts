@@ -10,8 +10,8 @@ import {EnumerableMap} from "@openzeppelin-contracts-5.2.0/utils/structs/Enumera
 import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/access/OwnableUpgradeable.sol";
 
 import {ICrossDexV2} from "./interfaces/ICrossDex.sol";
-import {IMarketInitializerV2} from "./interfaces/IMarket.sol";
-import {IRouterInitializerV2, IRouterV2} from "./interfaces/IRouter.sol";
+import {IMarketInitializer} from "./interfaces/IMarket.sol";
+import {IRouter, IRouterInitializer} from "./interfaces/IRouter.sol";
 
 import {WETH} from "./WETH.sol";
 
@@ -38,8 +38,9 @@ contract V2CrossDexImpl is ICrossDexV2, UUPSUpgradeable, OwnableUpgradeable {
     mapping(address pair => address) public override pairToMarket;
 
     address public tickSizeSetter;
+    address public override MAKER_VAULT_FACTORY; // immutable [v2] added
 
-    uint256[44] private __gap;
+    uint256[43] private __gap;
 
     modifier onlyMarket() {
         if (!isMarket(_msgSender())) revert CrossDexInvalidMarketAddress(_msgSender());
@@ -69,29 +70,33 @@ contract V2CrossDexImpl is ICrossDexV2, UUPSUpgradeable, OwnableUpgradeable {
 
         {
             // deploy router
-            ERC1967Proxy proxy = new ERC1967Proxy(
-                _routerImpl,
-                abi.encodeCall(
-                    IRouterInitializerV2.initialize,
-                    (_findPrevPriceCount, _maxMatchCount, _cancelLimit, _makerVaultFactory)
-                )
-            );
+            ERC1967Proxy proxy = new ERC1967Proxy(_routerImpl, hex"");
             ROUTER = payable(address(proxy));
+            IRouterInitializer(ROUTER).initialize(_findPrevPriceCount, _maxMatchCount, _cancelLimit);
         }
         {
             // deploy market & pair logic contracts
             marketImpl = _marketImpl;
             pairImpl = _pairImpl;
+            MAKER_VAULT_FACTORY = _makerVaultFactory;
         }
     }
 
-    function reinitialize(address _newMarketImpl, address _newPairImpl) external reinitializer(2) onlyOwner {
+    function reinitialize(address _newMarketImpl, address _newPairImpl, address _makerVaultFactory)
+        external
+        reinitializer(2)
+        onlyOwner
+    {
         if (_newMarketImpl == address(0)) revert CrossDexInitializeData("marketImpl");
         if (_newPairImpl == address(0)) revert CrossDexInitializeData("pairImpl");
+        if (_makerVaultFactory == address(0)) revert CrossDexInitializeData("makerVaultFactory");
+
         emit MarketImplUpdated(marketImpl, _newMarketImpl);
         emit PairImplUpdated(pairImpl, _newPairImpl);
+
         marketImpl = _newMarketImpl;
         pairImpl = _newPairImpl;
+        MAKER_VAULT_FACTORY = _makerVaultFactory;
     }
 
     function allMarkets() external view returns (address[] memory quotes, address[] memory markets) {
@@ -118,7 +123,9 @@ contract V2CrossDexImpl is ICrossDexV2, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     function isMarket(address market) public view returns (bool) {
-        address quote = IMarketInitializerV2(market).QUOTE();
+        (bool success, bytes memory data) = market.staticcall(abi.encodeCall(IMarketInitializer.QUOTE, ()));
+        if (!success) return false;
+        address quote = abi.decode(data, (address));
         return _allMarkets.get(quote) == market;
     }
 
@@ -131,9 +138,7 @@ contract V2CrossDexImpl is ICrossDexV2, UUPSUpgradeable, OwnableUpgradeable {
             type(ERC1967Proxy).creationCode,
             abi.encode(
                 marketImpl,
-                abi.encodeCall(
-                    IMarketInitializerV2(marketImpl).initialize, (_owner, ROUTER, quote, pairImpl, feeCollector, feeBps)
-                )
+                abi.encodeCall(IMarketInitializer.initialize, (_owner, ROUTER, quote, pairImpl, feeCollector, feeBps))
             )
         );
         bytes32 salt = keccak256(abi.encodePacked(quote));

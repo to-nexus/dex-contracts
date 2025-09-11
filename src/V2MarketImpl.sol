@@ -71,7 +71,9 @@ contract V2MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUp
     }
 
     function reinitialize() external reinitializer(2) onlyOwner {
-        pairImpl = CROSS_DEX.pairImpl();
+        address _pairImpl = CROSS_DEX.pairImpl();
+        if (_pairImpl == address(0)) revert MarketInvalidInitializeData("pairImpl");
+        pairImpl = _pairImpl;
     }
 
     function allPairs() external view returns (address[] memory bases, address[] memory pairs) {
@@ -103,7 +105,12 @@ contract V2MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUp
 
         bytes memory bytecode = abi.encodePacked(
             type(ERC1967Proxy).creationCode,
-            abi.encode(pairImpl, abi.encodeCall(V2PairImpl.initialize, (ROUTER, QUOTE, base, tickSize, lotSize)))
+            abi.encode(
+                pairImpl,
+                abi.encodeCall(
+                    V2PairImpl.initialize, (ROUTER, QUOTE, base, tickSize, lotSize, CROSS_DEX.MAKER_VAULT_FACTORY())
+                )
+            )
         );
         bytes32 salt = keccak256(abi.encodePacked(base));
         address pair = Create2.deploy(0, salt, bytecode);
