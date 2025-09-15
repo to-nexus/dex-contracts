@@ -10,13 +10,13 @@ import {Math} from "@openzeppelin-contracts-5.2.0/utils/math/Math.sol";
 import {PausableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/utils/PausableUpgradeable.sol";
 
 import {ICrossDexV2} from "./interfaces/ICrossDex.sol";
-import {ICrossDexMakerVaultFactory} from "./interfaces/ICrossDexMakerVaultFactory.sol";
+import {IMakerVaultFactory} from "./interfaces/IMakerVaultFactory.sol";
 import {IMarketV2} from "./interfaces/IMarket.sol";
 import {IOwnable} from "./interfaces/IOwnable.sol";
 import {IPair} from "./interfaces/IPair.sol";
 import {List} from "./lib/List.sol";
 
-contract V2PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
+contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     using SafeERC20 for IERC20;
     using Math for uint256;
     using List for List.U256;
@@ -97,7 +97,7 @@ contract V2PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     mapping(uint256 orderId => Order) private _allOrders;
     mapping(address account => uint256[2]) private _accountReserves; // 0: sell (BASE), 1: buy (QUOTE)
 
-    ICrossDexMakerVaultFactory public makerVaultFactory; // immutable
+    IMakerVaultFactory public makerVaultFactory; // immutable
     uint256[31] private __gap;
 
     modifier onlyOwner() {
@@ -153,13 +153,13 @@ contract V2PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         tickSize = _tickSize;
         lotSize = _lotSize;
         minTradeVolume = Math.mulDiv(_tickSize, _lotSize, DENOMINATOR);
-        makerVaultFactory = ICrossDexMakerVaultFactory(_makerVaultAddress);
+        makerVaultFactory = IMakerVaultFactory(_makerVaultAddress);
     }
 
     function reinitialize() external reinitializer(2) {
         address _makerVaultFactory = ICrossDexV2(IMarketV2(MARKET).CROSS_DEX()).MAKER_VAULT_FACTORY();
         if (_makerVaultFactory == address(0)) revert PairInvalidInitializeData("makerVaultFactory");
-        makerVaultFactory = ICrossDexMakerVaultFactory(_makerVaultFactory);
+        makerVaultFactory = IMakerVaultFactory(_makerVaultFactory);
     }
 
     //  #    # # ###### #    #  ####

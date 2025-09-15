@@ -3,13 +3,13 @@ pragma solidity 0.8.28;
 
 import {Create2} from "@openzeppelin-contracts-5.2.0/utils/Create2.sol";
 
-import {CrossDexMakerVault} from "./CrossDexMakerVault.sol";
-import {ICrossDexMakerVaultFactory} from "./interfaces/ICrossDexMakerVaultFactory.sol";
+import {IMakerVaultFactory} from "../interfaces/IMakerVaultFactory.sol";
+import {MakerVault} from "./MakerVault.sol";
 
-contract CrossDexMakerVaultFactory is ICrossDexMakerVaultFactory {
+contract MakerVaultFactory is IMakerVaultFactory {
     event Created(address indexed account, address vault);
 
-    bytes public constant MAKER_VAULT_BYTECODE = type(CrossDexMakerVault).creationCode;
+    bytes public constant MAKER_VAULT_BYTECODE = type(MakerVault).creationCode;
 
     function makerVaultAddress(address account) public view override returns (address) {
         bytes32 salt = bytes32(bytes20(account));

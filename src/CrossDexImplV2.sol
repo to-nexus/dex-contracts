@@ -15,7 +15,7 @@ import {IRouter, IRouterInitializer} from "./interfaces/IRouter.sol";
 
 import {WETH} from "./WETH.sol";
 
-contract V2CrossDexImpl is ICrossDexV2, UUPSUpgradeable, OwnableUpgradeable {
+contract CrossDexImplV2 is ICrossDexV2, UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableMap for EnumerableMap.AddressToAddressMap;
 
     error CrossDexInitializeData(bytes32);

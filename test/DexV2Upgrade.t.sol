@@ -4,54 +4,54 @@ pragma solidity ^0.8.13;
 import "./DEXBase.t.sol";
 import {UUPSUpgradeable} from "@openzeppelin-contracts-5.2.0/proxy/utils/UUPSUpgradeable.sol";
 
-import {CrossDexMakerVault} from "../src/CrossDexMakerVault.sol";
-import {CrossDexMakerVaultFactory} from "../src/CrossDexMakerVaultFactory.sol";
 import {CrossDexRouter} from "../src/CrossDexRouter.sol";
+import {MakerVault} from "../src/maker_vaults/MakerVault.sol";
+import {MakerVaultFactory} from "../src/maker_vaults/MakerVaultFactory.sol";
 
-import {V2CrossDexImpl} from "../src/V2CrossDexImpl.sol";
-import {V2MarketImpl} from "../src/V2MarketImpl.sol";
-import {V2PairImpl} from "../src/V2PairImpl.sol";
+import {CrossDexImplV2} from "../src/CrossDexImplV2.sol";
+import {MarketImplV2} from "../src/MarketImplV2.sol";
+import {PairImplV2} from "../src/PairImplV2.sol";
 
 contract DEXTradeTest is DEXBaseTest {
-    CrossDexMakerVaultFactory public makerVaultFactory;
+    MakerVaultFactory public makerVaultFactory;
 
-    address public v2CrossDexImpl;
-    address public v2MarketImpl;
-    address public v2PairImpl;
+    address public crossDexImplV2;
+    address public marketImplV2;
+    address public pairImplV2;
 
     function setUp() external {
         _deploy(18, 18, 1e2, 1e6);
         // 1. deploy market vault factory
-        makerVaultFactory = new CrossDexMakerVaultFactory();
+        makerVaultFactory = new MakerVaultFactory();
         address _makerVaultFactory = address(makerVaultFactory);
 
         // 2. deploy v2Logics
-        v2CrossDexImpl = address(new V2CrossDexImpl());
-        v2MarketImpl = address(new V2MarketImpl());
-        v2PairImpl = address(new V2PairImpl());
+        crossDexImplV2 = address(new CrossDexImplV2());
+        marketImplV2 = address(new MarketImplV2());
+        pairImplV2 = address(new PairImplV2());
 
         // 3. upgrade CrossDexImpl
         vm.prank(OWNER);
         UUPSUpgradeable(address(CROSS_DEX)).upgradeToAndCall(
-            v2CrossDexImpl, abi.encodeCall(V2CrossDexImpl.reinitialize, (v2MarketImpl, v2PairImpl, _makerVaultFactory))
+            crossDexImplV2, abi.encodeCall(CrossDexImplV2.reinitialize, (marketImplV2, pairImplV2, _makerVaultFactory))
         );
 
         // 4. upgrade MarketImpl
         vm.prank(OWNER);
-        UUPSUpgradeable(address(MARKET)).upgradeToAndCall(v2MarketImpl, abi.encodeCall(V2MarketImpl.reinitialize, ()));
+        UUPSUpgradeable(address(MARKET)).upgradeToAndCall(marketImplV2, abi.encodeCall(MarketImplV2.reinitialize, ()));
 
         // 5. upgrade PairImpl
         vm.prank(OWNER);
-        UUPSUpgradeable(address(PAIR)).upgradeToAndCall(v2PairImpl, abi.encodeCall(V2PairImpl.reinitialize, ()));
+        UUPSUpgradeable(address(PAIR)).upgradeToAndCall(pairImplV2, abi.encodeCall(PairImplV2.reinitialize, ()));
     }
 
     function test_initial_status() external view {
         // check impl address
-        V2CrossDexImpl crossDex = V2CrossDexImpl(address(CROSS_DEX));
-        assertEq(v2MarketImpl, crossDex.marketImpl(), "marketImpl");
-        assertEq(v2PairImpl, crossDex.pairImpl(), "pairImpl");
+        CrossDexImplV2 crossDex = CrossDexImplV2(address(CROSS_DEX));
+        assertEq(marketImplV2, crossDex.marketImpl(), "marketImpl");
+        assertEq(pairImplV2, crossDex.pairImpl(), "pairImpl");
         assertEq(
-            address(V2PairImpl(address(PAIR)).makerVaultFactory()), address(makerVaultFactory), "makerVaultFactory"
+            address(PairImplV2(address(PAIR)).makerVaultFactory()), address(makerVaultFactory), "makerVaultFactory"
         );
     }
 
@@ -60,7 +60,7 @@ contract DEXTradeTest is DEXBaseTest {
         address vault = makerVaultFactory.makerVaultAddress(user1);
 
         vm.expectEmit();
-        emit CrossDexMakerVaultFactory.Created(user1, vault);
+        emit MakerVaultFactory.Created(user1, vault);
         makerVaultFactory.ensureMakerVault(user1);
     }
 
@@ -110,7 +110,7 @@ contract DEXTradeTest is DEXBaseTest {
         address[] memory tokens = new address[](2);
         tokens[0] = address(BASE);
         tokens[1] = address(QUOTE);
-        CrossDexMakerVault(payable(user1Vault)).claim(tokens);
+        MakerVault(payable(user1Vault)).claim(tokens, true);
         // check user1 balance (quote token)
         assertEq(BASE.balanceOf(user1), 0);
         assertEq(QUOTE.balanceOf(user1), _toQuote(1000));
@@ -229,11 +229,11 @@ contract DEXTradeTest is DEXBaseTest {
         address[] memory tokens = new address[](2);
         tokens[0] = address(BASE);
         tokens[1] = address(QUOTE);
-        CrossDexMakerVault(payable(user1Vault)).claim(tokens);
-        CrossDexMakerVault(payable(user2Vault)).claim(tokens);
-        CrossDexMakerVault(payable(user3Vault)).claim(tokens);
-        CrossDexMakerVault(payable(user4Vault)).claim(tokens);
-        CrossDexMakerVault(payable(user5Vault)).claim(tokens);
+        MakerVault(payable(user1Vault)).claim(tokens, true);
+        MakerVault(payable(user2Vault)).claim(tokens, true);
+        MakerVault(payable(user3Vault)).claim(tokens, true);
+        MakerVault(payable(user4Vault)).claim(tokens, true);
+        MakerVault(payable(user5Vault)).claim(tokens, true);
         // check user1 balance (quote token)
         assertEq(BASE.balanceOf(user1), 0);
         assertEq(QUOTE.balanceOf(user1), _toQuote(1000));

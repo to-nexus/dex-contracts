@@ -9,11 +9,11 @@ import {EnumerableMap} from "@openzeppelin-contracts-5.2.0/utils/structs/Enumera
 
 import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/access/OwnableUpgradeable.sol";
 
-import {V2PairImpl} from "./V2PairImpl.sol";
+import {PairImplV2} from "./PairImplV2.sol";
 import {ICrossDexV2} from "./interfaces/ICrossDex.sol";
 import {IMarket, IMarketInitializer} from "./interfaces/IMarket.sol";
 
-contract V2MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
+contract MarketImplV2 is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableMap for EnumerableMap.AddressToAddressMap;
 
     error MarketInvalidInitializeData(bytes32);
@@ -108,7 +108,7 @@ contract V2MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUp
             abi.encode(
                 pairImpl,
                 abi.encodeCall(
-                    V2PairImpl.initialize, (ROUTER, QUOTE, base, tickSize, lotSize, CROSS_DEX.MAKER_VAULT_FACTORY())
+                    PairImplV2.initialize, (ROUTER, QUOTE, base, tickSize, lotSize, CROSS_DEX.MAKER_VAULT_FACTORY())
                 )
             )
         );
