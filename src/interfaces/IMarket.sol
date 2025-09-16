@@ -18,3 +18,7 @@ interface IMarket {
     function feeCollector() external view returns (address);
     function checkTickSizeRoles(address account) external view;
 }
+
+interface IMarketV2 is IMarket {
+    function CROSS_DEX() external view returns (address);
+}

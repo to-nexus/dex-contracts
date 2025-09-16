@@ -6,3 +6,8 @@ interface ICrossDex {
     function checkTickSizeRoles(address account) external view;
     function pairCreated(address pair) external;
 }
+
+interface ICrossDexV2 is ICrossDex {
+    function pairImpl() external view returns (address);
+    function MAKER_VAULT_FACTORY() external view returns (address);
+}
