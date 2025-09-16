@@ -156,7 +156,7 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         makerVaultFactory = IMakerVaultFactory(_makerVaultAddress);
     }
 
-    function reinitialize() external reinitializer(2) {
+    function reinitialize() external reinitializer(2) onlyOwner {
         address _makerVaultFactory = ICrossDexV2(IMarketV2(MARKET).CROSS_DEX()).MAKER_VAULT_FACTORY();
         if (_makerVaultFactory == address(0)) revert PairInvalidInitializeData("makerVaultFactory");
         makerVaultFactory = IMakerVaultFactory(_makerVaultFactory);
