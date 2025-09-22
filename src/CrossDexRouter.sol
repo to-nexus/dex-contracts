@@ -36,6 +36,7 @@ contract CrossDexRouter is
     error RouterInvalidPairAddress(address);
     error RouterInvalidValue();
     error RouterCancelLimitExceeded(uint256 length, uint256 limit);
+    error RouterOnlyZeroCodeAccount(address account);
 
     event FindPrevPriceCountChanged(uint256 indexed before, uint256 indexed current);
     event MaxMatchCountChanged(uint256 indexed before, uint256 indexed current);
@@ -62,6 +63,11 @@ contract CrossDexRouter is
 
     modifier onlyOwner() {
         if (_msgSender() != owner()) revert OwnableUnauthorizedAccount(_msgSender());
+        _;
+    }
+
+    modifier onlyZeroCodeAccount() {
+        _checkZeroCodeAccount(_msgSender());
         _;
     }
 
@@ -103,7 +109,7 @@ contract CrossDexRouter is
         IPair.LimitConstraints constraints,
         uint256[2] memory adjacent,
         uint256 _maxMatchCount
-    ) external payable nonReentrant validPair(pair) checkValue returns (uint256) {
+    ) external payable nonReentrant onlyZeroCodeAccount validPair(pair) checkValue returns (uint256) {
         address _owner = _msgSender();
         IPair _pair = IPair(pair);
         IPair.Config memory info = _pair.getConfig();
@@ -125,7 +131,7 @@ contract CrossDexRouter is
         IPair.LimitConstraints constraints,
         uint256[2] calldata adjacent,
         uint256 _maxMatchCount
-    ) external payable nonReentrant validPair(pair) checkValue returns (uint256) {
+    ) external payable nonReentrant onlyZeroCodeAccount validPair(pair) checkValue returns (uint256) {
         address _owner = _msgSender();
         IPair _pair = IPair(pair);
         IPair.Config memory info = _pair.getConfig();
@@ -144,6 +150,7 @@ contract CrossDexRouter is
         external
         payable
         nonReentrant
+        onlyZeroCodeAccount
         validPair(pair)
         checkValue
     {
@@ -163,6 +170,7 @@ contract CrossDexRouter is
         external
         payable
         nonReentrant
+        onlyZeroCodeAccount
         validPair(pair)
         checkValue
     {
@@ -206,6 +214,10 @@ contract CrossDexRouter is
         if (_cancelLimit == 0) revert RouterInvalidInputData("cancelLimit");
         emit CancelLimitChanged(cancelLimit, _cancelLimit);
         cancelLimit = _cancelLimit;
+    }
+
+    function _checkZeroCodeAccount(address account) private view {
+        if (account == address(0) || account.code.length != 0) revert RouterOnlyZeroCodeAccount(account);
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}

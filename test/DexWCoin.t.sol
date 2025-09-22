@@ -199,7 +199,7 @@ contract DexWrapBaseTest is DEXBaseTest {
 
     // Returns an error if msg.value is incorrect.
     function test_wrap_exception_case1() external wrapBase {
-        address seller = address(0x1);
+        address seller = address(bytes20("SELLER"));
         vm.label(seller, "seller");
 
         uint256 price = _toQuote(1);
