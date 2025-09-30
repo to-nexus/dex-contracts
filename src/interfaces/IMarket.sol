@@ -18,3 +18,11 @@ interface IMarket {
     function feeCollector() external view returns (address);
     function checkTickSizeRoles(address account) external view;
 }
+
+interface IMarketV2 {
+    function makerFeeBps() external view returns (uint32);
+    function takerFeeBps() external view returns (uint32);
+    function feeCollector() external view returns (address);
+    function getMarketFees() external view returns (uint32 makerFee, uint32 takerFee);
+    function checkTickSizeRoles(address account) external view;
+}
