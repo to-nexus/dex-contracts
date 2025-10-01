@@ -236,11 +236,6 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         return _resolveEffectiveFees();
     }
 
-    function setPairFees(uint32 makerFeeBps, uint32 takerFeeBps) external onlyOwner {
-        emit PairFeesUpdated(makerFeeBps, takerFeeBps);
-        feeConfig = FeeConfig({makerFeeBps: makerFeeBps, takerFeeBps: takerFeeBps});
-    }
-
     //  ###### #    # ######  ####  #    # ##### ######  ####
     //  #       #  #  #      #    # #    #   #   #      #
     //  #####    ##   #####  #      #    #   #   #####   ####
@@ -446,7 +441,7 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
 
                 // Update the settled quantity.
                 // For sell order matching buy order: sell order is taker, buy order is maker
-                (address targetOwner, uint256 tradeAmount, uint32 targetFeeBps) =
+                (address targetOwner, uint256 tradeAmount,) =
                     _matchOrderAmount(orderId, order, targetId, target, price, _orders);
 
                 // Trade executed.
@@ -459,7 +454,7 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
                 if (order.amount == 0 || --maxMatchCount == 0) {
                     if (_orders.empty()) {
                         // Although the `while` loop has not yet ended,
-                        // if `order` and the last `target.amount` in `orders` are the same,
+                        // if `cOrder` and the last `target.amount` in `orders` are the same,
                         // `_orders` may be empty.
                         if (!_buyPrices.remove(price)) revert PairUnknownPrices(OrderSide.BUY, price);
                     }
@@ -639,11 +634,6 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         }
     }
 
-    function _resolveEffectiveFees() private view returns (uint32 makerFeeBps, uint32 takerFeeBps) {
-        makerFeeBps = feeConfig.makerFeeBps >= 10000 ? IMarketV2(MARKET).makerFeeBps() : feeConfig.makerFeeBps;
-        takerFeeBps = feeConfig.takerFeeBps >= 10000 ? IMarketV2(MARKET).takerFeeBps() : feeConfig.takerFeeBps;
-    }
-
     function _cacheFeeInfos() private {
         IMarketV2 market = IMarketV2(MARKET);
         address feeCollector = market.feeCollector();
@@ -654,6 +644,11 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
             tstore(_makerFeeBpsSlot, makerFeeBps)
             tstore(_takerFeeBpsSlot, takerFeeBps)
         }
+    }
+
+    function _resolveEffectiveFees() private view returns (uint32 makerFeeBps, uint32 takerFeeBps) {
+        makerFeeBps = feeConfig.makerFeeBps >= 10000 ? IMarketV2(MARKET).makerFeeBps() : feeConfig.makerFeeBps;
+        takerFeeBps = feeConfig.takerFeeBps >= 10000 ? IMarketV2(MARKET).takerFeeBps() : feeConfig.takerFeeBps;
     }
 
     function _makerFeeBps() private view returns (uint32 feeBps) {
@@ -707,6 +702,11 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         lotSize = _lotSize;
         tickSize = _tickSize;
         minTradeVolume = Math.mulDiv(_tickSize, _lotSize, DENOMINATOR);
+    }
+
+    function setPairFees(uint32 makerFeeBps, uint32 takerFeeBps) external onlyOwner {
+        emit PairFeesUpdated(makerFeeBps, takerFeeBps);
+        feeConfig = FeeConfig({makerFeeBps: makerFeeBps, takerFeeBps: takerFeeBps});
     }
 
     function skim(IERC20 erc20, address to, uint256 amount) external onlyOwner {

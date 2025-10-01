@@ -52,8 +52,8 @@ contract MarketImplV2 is IMarketV2, IMarketInitializer, UUPSUpgradeable, Ownable
         address _quote,
         address _pairImpl,
         address _feeCollector,
-        uint256 feeBps
-    ) external initializer {
+        uint256 _feeBPS
+    ) external override initializer {
         __Ownable_init(_owner);
 
         if (_owner == address(0)) revert MarketInvalidInitializeData("owner");
@@ -61,7 +61,7 @@ contract MarketImplV2 is IMarketV2, IMarketInitializer, UUPSUpgradeable, Ownable
         if (_quote == address(0)) revert MarketInvalidInitializeData("quote");
         if (_pairImpl == address(0)) revert MarketInvalidInitializeData("pairImpl");
         if (_feeCollector == address(0)) revert MarketInvalidInitializeData("feeCollector");
-        if (feeBps > 10000) revert MarketInvalidInitializeData("feeBps");
+        if (_feeBPS > 10000) revert MarketInvalidInitializeData("feeBps");
 
         deployed = block.number;
         CROSS_DEX = ICrossDex(_msgSender());
@@ -70,7 +70,7 @@ contract MarketImplV2 is IMarketV2, IMarketInitializer, UUPSUpgradeable, Ownable
         pairImpl = _pairImpl;
 
         feeCollector = _feeCollector;
-        makerFeeBps = takerFeeBps = uint32(feeBps);
+        makerFeeBps = takerFeeBps = uint32(_feeBPS);
     }
 
     function allPairs() external view returns (address[] memory bases, address[] memory pairs) {
