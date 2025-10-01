@@ -70,9 +70,9 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     // keccak256(abi.encode(uint256(keccak256("crossdex.pair.feecollector")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant _feeCollectorSlot = 0xd6aa07baf8485abf9d26fecf4c935d75b50a73e678db02b944bd3ac875982300;
     // keccak256(abi.encode(uint256(keccak256("crossdex.pair.makerfeebps")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant _makerFeeBpsSlot = 0x1d2ff3fa6980aeeebca4e94965520da48983006e9b1115c1c853cbb10d943d00;
+    bytes32 private constant _makerFeeBpsSlot = 0x34a65dcc4257b81ae0d7b69652d9ac8fc0d1385b9c0c258389347dbe63d48900;
     // keccak256(abi.encode(uint256(keccak256("crossdex.pair.takerfeebps")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant _takerFeeBpsSlot = 0x9a3c5c5e2c8f7f8e5d4c3b2a1f9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a2f1e;
+    bytes32 private constant _takerFeeBpsSlot = 0xdcdef59a7ade0fb958007dc81e46c626a6740faa820068065f96482df5c1a900;
 
     address public MARKET; // immutable
     address public ROUTER; // immutable
