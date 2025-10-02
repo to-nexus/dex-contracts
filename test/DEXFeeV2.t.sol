@@ -306,7 +306,7 @@ contract DEXFeeV2Test is Test {
     // Test backward compatibility with market fee updates
     function test_pairV2_market_fee_propagation() external {
         // Keep pair fees at default (10000 = use market fees)
-        (uint32 makerFeeBps, uint256 takerFeeBps) = PAIR.getPairFees();
+        (uint32 makerFeeBps, uint32 takerFeeBps) = PAIR.getPairFees();
         assertEq(makerFeeBps, (uint32(10000)), "Pair should use market fees");
         assertEq(takerFeeBps, (uint32(10000)), "Pair should use market fees");
 
