@@ -11,7 +11,7 @@ import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/acce
 
 import {PairImplV2} from "./PairImplV2.sol";
 import {ICrossDex} from "./interfaces/ICrossDex.sol";
-import {IMarketInitializer, IMarketV2, NO_FEE_BPS} from "./interfaces/IMarket.sol";
+import {BPS_DENOMINATOR, IMarketInitializer, IMarketV2, NO_FEE_BPS} from "./interfaces/IMarket.sol";
 
 contract MarketImplV2 is IMarketV2, IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableMap for EnumerableMap.AddressToAddressMap;
@@ -61,7 +61,7 @@ contract MarketImplV2 is IMarketV2, IMarketInitializer, UUPSUpgradeable, Ownable
         if (_quote == address(0)) revert MarketInvalidInitializeData("quote");
         if (_pairImpl == address(0)) revert MarketInvalidInitializeData("pairImpl");
         if (_feeCollector == address(0)) revert MarketInvalidInitializeData("feeCollector");
-        if (_feeBPS > 10000) revert MarketInvalidInitializeData("feeBps");
+        if (_feeBPS >= BPS_DENOMINATOR) revert MarketInvalidInitializeData("feeBps");
 
         deployed = block.number;
         CROSS_DEX = ICrossDex(_msgSender());
@@ -131,8 +131,12 @@ contract MarketImplV2 is IMarketV2, IMarketInitializer, UUPSUpgradeable, Ownable
     }
 
     function setMarketFees(uint32 _makerFeeBps, uint32 _takerFeeBps) external onlyOwner {
-        if (_makerFeeBps != NO_FEE_BPS && _makerFeeBps >= 10000) revert MarketInvalidInitializeData("makerFeeBps");
-        if (_takerFeeBps != NO_FEE_BPS && _takerFeeBps >= 10000) revert MarketInvalidInitializeData("takerFeeBps");
+        if (_makerFeeBps != NO_FEE_BPS && _makerFeeBps >= BPS_DENOMINATOR) {
+            revert MarketInvalidInitializeData("makerFeeBps");
+        }
+        if (_takerFeeBps != NO_FEE_BPS && _takerFeeBps >= BPS_DENOMINATOR) {
+            revert MarketInvalidInitializeData("takerFeeBps");
+        }
 
         emit MarketFeesUpdated(_makerFeeBps, _takerFeeBps);
         makerFeeBps = _makerFeeBps; // feeBps represents maker fee

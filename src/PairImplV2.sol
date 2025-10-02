@@ -9,7 +9,7 @@ import {Math} from "@openzeppelin-contracts-5.2.0/utils/math/Math.sol";
 
 import {PausableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/utils/PausableUpgradeable.sol";
 
-import {IMarketV2, NO_FEE_BPS} from "./interfaces/IMarket.sol";
+import {BPS_DENOMINATOR, IMarketV2, NO_FEE_BPS} from "./interfaces/IMarket.sol";
 import {IOwnable} from "./interfaces/IOwnable.sol";
 import {IPair} from "./interfaces/IPair.sol";
 import {List} from "./lib/List.sol";
@@ -625,7 +625,7 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         if (feeBps == 0) {
             QUOTE.safeTransfer(_owner, amount);
         } else {
-            uint256 fee = Math.mulDiv(amount, feeBps, 10000);
+            uint256 fee = Math.mulDiv(amount, feeBps, BPS_DENOMINATOR);
             uint256 value = amount - fee;
             emit FeeCollect(orderId, _owner, amount, feeCollector, feeBps, fee, value);
 
@@ -706,8 +706,12 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     }
 
     function setPairFees(uint32 makerFeeBps, uint32 takerFeeBps) external onlyOwner {
-        if (makerFeeBps != NO_FEE_BPS && makerFeeBps >= 10000) revert PairInvalidInitializeData("makerFeeBps");
-        if (takerFeeBps != NO_FEE_BPS && takerFeeBps >= 10000) revert PairInvalidInitializeData("takerFeeBps");
+        if (makerFeeBps >= BPS_DENOMINATOR && makerFeeBps != NO_FEE_BPS) {
+            revert PairInvalidInitializeData("makerFeeBps");
+        }
+        if (takerFeeBps >= BPS_DENOMINATOR && takerFeeBps != NO_FEE_BPS) {
+            revert PairInvalidInitializeData("takerFeeBps");
+        }
 
         emit PairFeesUpdated(makerFeeBps, takerFeeBps);
         feeConfig = FeeConfig({makerFeeBps: makerFeeBps, takerFeeBps: takerFeeBps});

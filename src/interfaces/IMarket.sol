@@ -20,6 +20,7 @@ interface IMarket {
 }
 
 uint32 constant NO_FEE_BPS = type(uint32).max; // Special value to indicate "use market fee"
+uint32 constant BPS_DENOMINATOR = 10000; // Basis points denominator (100%)
 
 interface IMarketV2 {
     function makerFeeBps() external view returns (uint32);
