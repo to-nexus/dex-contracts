@@ -19,6 +19,8 @@ interface IMarket {
     function checkTickSizeRoles(address account) external view;
 }
 
+uint32 constant NO_FEE_BPS = type(uint32).max;
+
 interface IMarketV2 {
     function makerFeeBps() external view returns (uint32);
     function takerFeeBps() external view returns (uint32);

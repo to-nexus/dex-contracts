@@ -9,7 +9,7 @@ import {Math} from "@openzeppelin-contracts-5.2.0/utils/math/Math.sol";
 
 import {PausableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/utils/PausableUpgradeable.sol";
 
-import {IMarketV2} from "./interfaces/IMarket.sol";
+import {IMarketV2, NO_FEE_BPS} from "./interfaces/IMarket.sol";
 import {IOwnable} from "./interfaces/IOwnable.sol";
 import {IPair} from "./interfaces/IPair.sol";
 import {List} from "./lib/List.sol";
@@ -647,8 +647,8 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     }
 
     function _resolveEffectiveFees() private view returns (uint32 makerFeeBps, uint32 takerFeeBps) {
-        makerFeeBps = feeConfig.makerFeeBps >= 10000 ? IMarketV2(MARKET).makerFeeBps() : feeConfig.makerFeeBps;
-        takerFeeBps = feeConfig.takerFeeBps >= 10000 ? IMarketV2(MARKET).takerFeeBps() : feeConfig.takerFeeBps;
+        makerFeeBps = feeConfig.makerFeeBps == NO_FEE_BPS ? IMarketV2(MARKET).makerFeeBps() : feeConfig.makerFeeBps;
+        takerFeeBps = feeConfig.takerFeeBps == NO_FEE_BPS ? IMarketV2(MARKET).takerFeeBps() : feeConfig.takerFeeBps;
     }
 
     function _makerFeeBps() private view returns (uint32 feeBps) {
@@ -705,6 +705,9 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     }
 
     function setPairFees(uint32 makerFeeBps, uint32 takerFeeBps) external onlyOwner {
+        if (makerFeeBps != NO_FEE_BPS && makerFeeBps >= 10000) revert PairInvalidInitializeData("makerFeeBps");
+        if (takerFeeBps != NO_FEE_BPS && takerFeeBps >= 10000) revert PairInvalidInitializeData("takerFeeBps");
+
         emit PairFeesUpdated(makerFeeBps, takerFeeBps);
         feeConfig = FeeConfig({makerFeeBps: makerFeeBps, takerFeeBps: takerFeeBps});
     }

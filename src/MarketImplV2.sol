@@ -11,7 +11,7 @@ import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/acce
 
 import {PairImplV2} from "./PairImplV2.sol";
 import {ICrossDex} from "./interfaces/ICrossDex.sol";
-import {IMarketInitializer, IMarketV2} from "./interfaces/IMarket.sol";
+import {IMarketInitializer, IMarketV2, NO_FEE_BPS} from "./interfaces/IMarket.sol";
 
 contract MarketImplV2 is IMarketV2, IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableMap for EnumerableMap.AddressToAddressMap;
@@ -131,8 +131,8 @@ contract MarketImplV2 is IMarketV2, IMarketInitializer, UUPSUpgradeable, Ownable
     }
 
     function setMarketFees(uint32 _makerFeeBps, uint32 _takerFeeBps) external onlyOwner {
-        if (_makerFeeBps > 10000) revert MarketInvalidInitializeData("makerFeeBPS");
-        if (_takerFeeBps > 10000) revert MarketInvalidInitializeData("takerFeeBPS");
+        if (_makerFeeBps != NO_FEE_BPS && _makerFeeBps >= 10000) revert MarketInvalidInitializeData("makerFeeBPS");
+        if (_takerFeeBps != NO_FEE_BPS && _takerFeeBps >= 10000) revert MarketInvalidInitializeData("takerFeeBPS");
 
         emit MarketFeesUpdated(_makerFeeBps, _takerFeeBps);
         makerFeeBps = _makerFeeBps; // feeBps represents maker fee
