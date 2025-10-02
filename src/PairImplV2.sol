@@ -647,8 +647,9 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     }
 
     function _resolveEffectiveFees() private view returns (uint32 makerFeeBps, uint32 takerFeeBps) {
-        makerFeeBps = feeConfig.makerFeeBps == NO_FEE_BPS ? IMarketV2(MARKET).makerFeeBps() : feeConfig.makerFeeBps;
-        takerFeeBps = feeConfig.takerFeeBps == NO_FEE_BPS ? IMarketV2(MARKET).takerFeeBps() : feeConfig.takerFeeBps;
+        IMarketV2 market = IMarketV2(MARKET);
+        makerFeeBps = feeConfig.makerFeeBps == NO_FEE_BPS ? market.makerFeeBps() : feeConfig.makerFeeBps;
+        takerFeeBps = feeConfig.takerFeeBps == NO_FEE_BPS ? market.takerFeeBps() : feeConfig.takerFeeBps;
     }
 
     function _makerFeeBps() private view returns (uint32 feeBps) {

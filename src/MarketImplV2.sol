@@ -131,8 +131,8 @@ contract MarketImplV2 is IMarketV2, IMarketInitializer, UUPSUpgradeable, Ownable
     }
 
     function setMarketFees(uint32 _makerFeeBps, uint32 _takerFeeBps) external onlyOwner {
-        if (_makerFeeBps != NO_FEE_BPS && _makerFeeBps >= 10000) revert MarketInvalidInitializeData("makerFeeBPS");
-        if (_takerFeeBps != NO_FEE_BPS && _takerFeeBps >= 10000) revert MarketInvalidInitializeData("takerFeeBPS");
+        if (_makerFeeBps != NO_FEE_BPS && _makerFeeBps >= 10000) revert MarketInvalidInitializeData("makerFeeBps");
+        if (_takerFeeBps != NO_FEE_BPS && _takerFeeBps >= 10000) revert MarketInvalidInitializeData("takerFeeBps");
 
         emit MarketFeesUpdated(_makerFeeBps, _takerFeeBps);
         makerFeeBps = _makerFeeBps; // feeBps represents maker fee
