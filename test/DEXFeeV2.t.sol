@@ -12,7 +12,7 @@ import {MarketImplV2} from "../src/MarketImplV2.sol";
 import {PairImplV2} from "../src/PairImplV2.sol";
 import {WETH} from "../src/WETH.sol";
 
-import {IMarketV2} from "../src/interfaces/IMarket.sol";
+import {IMarketV2, NO_FEE_BPS} from "../src/interfaces/IMarket.sol";
 import {IPair} from "../src/interfaces/IPair.sol";
 
 import {T20} from "./mock/T20.sol";
@@ -95,13 +95,13 @@ contract DEXFeeV2Test is Test {
             // Set market-level taker fee (different from maker fee)
             MARKET.setMarketFees(uint32(MARKET_MAKER_FEE), uint32(MARKET_TAKER_FEE));
 
-            // create pair with default fees (10000 = use market fees)
+            // create pair with default fees (NO_FEE_BPS = use market fees)
             address pair = MARKET.createPair(
                 address(BASE),
                 QUOTE_DECIMALS / quote_tick_size,
                 BASE_DECIMALS / base_tick_size,
-                10000, // use market maker fee
-                10000 // use market taker fee
+                NO_FEE_BPS, // use market maker fee
+                NO_FEE_BPS // use market taker fee
             );
             PAIR = PairImplV2(pair);
         }
@@ -147,8 +147,8 @@ contract DEXFeeV2Test is Test {
     // Test PairImplV2 initialization with default fees (use market fees)
     function test_pairV2_initialization_with_market_fees() external {
         (uint32 pairMakerFee, uint32 pairTakerFee) = PAIR.getPairFees();
-        assertEq(pairMakerFee, 10000, "Pair maker fee should be 10000 (use market)");
-        assertEq(pairTakerFee, 10000, "Pair taker fee should be 10000 (use market)");
+        assertEq(pairMakerFee, NO_FEE_BPS, "Pair maker fee should be NO_FEE_BPS (use market)");
+        assertEq(pairTakerFee, NO_FEE_BPS, "Pair taker fee should be NO_FEE_BPS (use market)");
 
         (uint32 effectiveMakerFee, uint32 effectiveTakerFee) = PAIR.getEffectiveFees();
         assertEq(effectiveMakerFee, MARKET_MAKER_FEE, "Effective maker fee should use market fee");
@@ -185,10 +185,10 @@ contract DEXFeeV2Test is Test {
         assertEq(effectiveTakerFee, pairTakerFee, "Effective taker fee should use pair fee");
     }
 
-    // Test fee resolution: pair fees >= 10000 should use market fees
+    // Test fee resolution: pair fees == NO_FEE_BPS should use market fees
     function test_pairV2_fee_resolution_fallback_to_market() external {
         vm.prank(OWNER);
-        PAIR.setPairFees(10000, 15000); // Both >= 10000, should use market fees
+        PAIR.setPairFees(NO_FEE_BPS, NO_FEE_BPS); // Both == NO_FEE_BPS, should use market fees
 
         (uint32 effectiveMakerFee, uint32 effectiveTakerFee) = PAIR.getEffectiveFees();
         assertEq(effectiveMakerFee, MARKET_MAKER_FEE, "Should fallback to market maker fee");
@@ -305,10 +305,10 @@ contract DEXFeeV2Test is Test {
 
     // Test backward compatibility with market fee updates
     function test_pairV2_market_fee_propagation() external {
-        // Keep pair fees at default (10000 = use market fees)
+        // Keep pair fees at default (NO_FEE_BPS = use market fees)
         (uint32 makerFeeBps, uint32 takerFeeBps) = PAIR.getPairFees();
-        assertEq(makerFeeBps, (uint32(10000)), "Pair should use market fees");
-        assertEq(takerFeeBps, (uint32(10000)), "Pair should use market fees");
+        assertEq(makerFeeBps, NO_FEE_BPS, "Pair should use market fees");
+        assertEq(takerFeeBps, NO_FEE_BPS, "Pair should use market fees");
 
         // Update market fees
         uint32 newMakerFee = 50; // 0.5%

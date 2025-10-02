@@ -92,12 +92,12 @@ contract DEXUpgradeV2Test is DEXFeeV2Test {
         assertEq(pairMakerFee, 9999, "Should accept maximum valid fee");
         assertEq(pairTakerFee, 9999, "Should accept maximum valid fee");
 
-        // Test boundary value exactly at 10000
+        // Test boundary value exactly at NO_FEE_BPS
         vm.prank(OWNER);
-        PAIR.setPairFees(10000, 9999);
+        PAIR.setPairFees(NO_FEE_BPS, 9999);
 
         (uint32 effectiveMakerFee, uint32 effectiveTakerFee) = PAIR.getEffectiveFees();
-        assertEq(effectiveMakerFee, MARKET_MAKER_FEE, "10000 should fallback to market fee");
+        assertEq(effectiveMakerFee, MARKET_MAKER_FEE, "NO_FEE_BPS should fallback to market fee");
         assertEq(effectiveTakerFee, 9999, "9999 should use pair fee");
     }
 
