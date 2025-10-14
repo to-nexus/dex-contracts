@@ -50,3 +50,22 @@ interface IPair {
     function submitMarketOrder(Order memory order, uint256 spendAmount, uint256 maxMatchCount) external;
     function cancelOrder(address caller, uint256[] memory orderIds) external;
 }
+
+interface IPairV2 is IPair {
+    struct FeeConfig {
+        uint32 sellerMakerFeeBps; // Seller Maker fee (BPS)
+        uint32 sellerTakerFeeBps; // Seller Taker fee (BPS)
+        uint32 buyerMakerFeeBps; // Buyer Maker fee (BPS)
+        uint32 buyerTakerFeeBps; // Buyer Taker fee (BPS)
+    }
+
+    function feeConfig()
+        external
+        view
+        returns (uint32 sellerMakerFeeBps, uint32 sellerTakerFeeBps, uint32 buyerMakerFeeBps, uint32 buyerTakerFeeBps);
+
+    function getEffectiveFees()
+        external
+        view
+        returns (uint32 sellerMakerFeeBps, uint32 sellerTakerFeeBps, uint32 buyerMakerFeeBps, uint32 buyerTakerFeeBps);
+}

@@ -11,10 +11,10 @@ import {PausableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/uti
 
 import {BPS_DENOMINATOR, IMarketV2, NO_FEE_BPS} from "./interfaces/IMarket.sol";
 import {IOwnable} from "./interfaces/IOwnable.sol";
-import {IPair} from "./interfaces/IPair.sol";
+import {IPairV2} from "./interfaces/IPair.sol";
 import {List} from "./lib/List.sol";
 
-contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
+contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     using SafeERC20 for IERC20;
     using Math for uint256;
     using List for List.U256;
@@ -56,23 +56,16 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         uint256 value
     );
     event TickSizeUpdated(uint256 beforeLotSize, uint256 newLotSize, uint256 beforeTickSize, uint256 newTickSize);
-    event PairFeesUpdated(uint32 indexed makerFee, uint32 indexed takerFee);
+    event PairFeesUpdated(uint32 sellerMakerFee, uint32 sellerTakerFee, uint32 buyerMakerFee, uint32 buyerTakerFee);
     event Skim(address indexed caller, address indexed erc20, address indexed to, uint256 amount);
-
-    struct FeeConfig {
-        uint32 makerFeeBps; // Maker fee (BPS)
-        uint32 takerFeeBps; // Taker fee (BPS)
-    }
 
     // slots
     // keccak256(abi.encode(uint256(keccak256("crossdex.pair.matchedprice")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant _matchedPriceSlot = 0xfd0e5d4f9b88892d3b04349a0e2bc0d1359414c21932fcd7d5a523a6c0a5cd00;
     // keccak256(abi.encode(uint256(keccak256("crossdex.pair.feecollector")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant _feeCollectorSlot = 0xd6aa07baf8485abf9d26fecf4c935d75b50a73e678db02b944bd3ac875982300;
-    // keccak256(abi.encode(uint256(keccak256("crossdex.pair.makerfeebps")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant _makerFeeBpsSlot = 0x34a65dcc4257b81ae0d7b69652d9ac8fc0d1385b9c0c258389347dbe63d48900;
-    // keccak256(abi.encode(uint256(keccak256("crossdex.pair.takerfeebps")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant _takerFeeBpsSlot = 0xdcdef59a7ade0fb958007dc81e46c626a6740faa820068065f96482df5c1a900;
+    // keccak256(abi.encode(uint256(keccak256("crossdex.pair.feebps")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant _feeBpsSlot = 0x1d2ff3fa6980aeeebca4e94965520da48983006e9b1115c1c853cbb10d943d00;
 
     address public MARKET; // immutable
     address public ROUTER; // immutable
@@ -93,9 +86,6 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     uint256 public lotSize;
     uint256 public minTradeVolume; // [QUOTE] Math.mulDiv(_tickSize, _lotSize, DENOMINATOR);
 
-    // Pair-specific fee configuration
-    FeeConfig public feeConfig;
-
     // orders
     uint256 private _orderIdCounter;
     List.U256[2] private _prices; // 0: sell, 1: buy (IPair.OrderSide)
@@ -103,6 +93,9 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     mapping(uint256 price => List.U256) private _buyOrders; //  price => buy order id list (For the same price, orders will be stored in chronological order.)
     mapping(uint256 orderId => Order) private _allOrders;
     mapping(address account => uint256[2]) private _accountReserves; // 0: sell (BASE), 1: buy (QUOTE)
+
+    // Pair-specific fee configuration
+    FeeConfig public feeConfig;
 
     uint256[31] private __gap;
 
@@ -137,8 +130,7 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         address base,
         uint256 _tickSize, // tick size for quote token
         uint256 _lotSize, // lot size for base token
-        uint32 _makerFeeBps, // maker fee for this pair
-        uint32 _takerFeeBps // taker fee for this pair
+        bytes memory feeData // 4개 수수료를 인코딩한 데이터
     ) external initializer {
         __Pausable_init();
 
@@ -160,8 +152,10 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         lotSize = _lotSize;
         minTradeVolume = Math.mulDiv(_tickSize, _lotSize, DENOMINATOR);
 
-        // Initialize pair-specific fee configuration
-        feeConfig = FeeConfig({makerFeeBps: _makerFeeBps, takerFeeBps: _takerFeeBps});
+        // 4가지 수수료 디코딩
+        (uint32 sellerMakerFeeBps_, uint32 sellerTakerFeeBps_, uint32 buyerMakerFeeBps_, uint32 buyerTakerFeeBps_) =
+            abi.decode(feeData, (uint32, uint32, uint32, uint32));
+        _setFeeBps(sellerMakerFeeBps_, sellerTakerFeeBps_, buyerMakerFeeBps_, buyerTakerFeeBps_);
     }
 
     //  #    # # ###### #    #  ####
@@ -227,13 +221,16 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         }
     }
 
-    // Fee management functions
-    function getPairFees() external view returns (uint32 makerFee, uint32 takerFee) {
-        return (feeConfig.makerFeeBps, feeConfig.takerFeeBps);
-    }
-
-    function getEffectiveFees() external view returns (uint32 makerFee, uint32 takerFee) {
-        return _resolveEffectiveFees();
+    function getEffectiveFees()
+        external
+        view
+        returns (uint32 sellerMakerFeeBps, uint32 sellerTakerFeeBps, uint32 buyerMakerFeeBps, uint32 buyerTakerFeeBps)
+    {
+        FeeConfig memory feeInfos = _resolveEffectiveFees();
+        sellerMakerFeeBps = feeInfos.sellerMakerFeeBps;
+        sellerTakerFeeBps = feeInfos.sellerTakerFeeBps;
+        buyerMakerFeeBps = feeInfos.buyerMakerFeeBps;
+        buyerTakerFeeBps = feeInfos.buyerTakerFeeBps;
     }
 
     //  ###### #    # ######  ####  #    # ##### ######  ####
@@ -298,9 +295,10 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
 
                 if (isSellOrder) {
                     // For sell orders, a fee is charged when acting as a maker.
-                    _allOrders[orderId].feeBps = _makerFeeBps();
+                    _allOrders[orderId].feeBps = _sellerMakerFeeBps();
                     _sellOrders[order.price].push(orderId);
                 } else {
+                    _allOrders[orderId].feeBps = _buyerMakerFeeBps();
                     _buyOrders[order.price].push(orderId);
                 }
             }
@@ -375,9 +373,9 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
 
         // 3. Immediately transfer the proceeds from the trade to the seller.
         if (earnQuoteAmount != 0) {
-            (address feeCollector, uint32 feeBps) = (_feeCollector(), _takerFeeBps());
+            (address feeCollector, uint32 feeBps) = (_feeCollector(), _sellerTakerFeeBps());
             quoteReserve -= earnQuoteAmount;
-            uint256 fee = _exchangeQuote(orderId, order.owner, earnQuoteAmount, feeCollector, feeBps);
+            uint256 fee = _exchangeSellOrder(orderId, order.owner, earnQuoteAmount, feeCollector, feeBps);
             if (fee != 0) QUOTE.safeTransfer(feeCollector, fee);
         }
 
@@ -398,43 +396,56 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         else quoteAmount = Math.mulDiv(order.price, order.amount, DENOMINATOR);
 
         // 1. Verify that the required tokens for the order have been deposited.
-        (bool ok, uint256 skimQuoteAmount) = Math.trySub(QUOTE.balanceOf(address(this)), quoteReserve + quoteAmount);
+        uint256 quoteBalance = QUOTE.balanceOf(address(this));
+        (bool ok, uint256 skimQuoteAmount) = Math.trySub(quoteBalance, quoteReserve + quoteAmount);
         if (!ok) revert PairInvalidReserve(address(QUOTE));
         emit OrderCreated(order.owner, orderId, order.side, order.price, order.amount, block.timestamp);
 
         // 2. If there are immediately tradable orders, execute the trade.
         //    For a BUY order, search from the cheapest price in the SELL list
         //    and only match with sell orders that have a price equal to or lower than the input price.
-        (bool done, uint256 buyBaseAmount) = _matchBuyOrder(orderId, order, spendQuoteAmount, maxMatchCount);
+        (bool done, uint256 buyBaseAmount, uint256 useQuoteAmount) =
+            _matchBuyOrder(orderId, order, spendQuoteAmount, maxMatchCount);
 
         // 3. Transfer the immediately settled BASE tokens.
         if (buyBaseAmount != 0) {
             baseReserve -= buyBaseAmount;
-            // Purchased tokens are not subject to fees.
-            BASE.safeTransfer(order.owner, buyBaseAmount);
+            uint256 fee = _exchangeBuyOrder(
+                orderId, order.owner, buyBaseAmount, useQuoteAmount, _feeCollector(), _sellerTakerFeeBps()
+            );
+            if (fee != 0) {
+                quoteReserve -= fee;
+                QUOTE.safeTransfer(_feeCollector(), fee);
+            }
         }
 
         return (done, skimQuoteAmount);
     }
 
+    struct MatchSellCache {
+        uint256 price;
+        uint256 earnQuoteAmount;
+        uint256 totalFee;
+    }
+
     // For a SELL order, search from the most expensive price in the BUY list
     // and only execute trades where order.price is equal to or lower than the buy order price.
+    /// @return done Whether the order has been completely matched or the maxMatchCount has reached 0.
+    /// @return earnQuoteAmount The amount of QUOTE earned from the sale.
     function _matchSellOrder(uint256 orderId, Order memory order, uint256 maxMatchCount)
         private
         setLatest
-        returns (bool done, uint256 earnQuoteAmount)
+        returns (bool, uint256)
     {
-        // (done) Whether the order has been completely matched or the maxMatchCount has reached 0.
-        // (earnQuoteAmount) The amount of Quote earned from the sale.
-
+        MatchSellCache memory cache = MatchSellCache({price: 0, earnQuoteAmount: 0, totalFee: 0});
         // cache storage immutables to memory
         IERC20 base = BASE;
         List.U256 storage _buyPrices = _prices[uint8(OrderSide.BUY)];
         while (!_buyPrices.empty()) {
-            uint256 price = _buyPrices.at(0);
-            if (price < order.price) break;
-            List.U256 storage _orders = _buyOrders[price];
-            _cacheLatestPrice(price);
+            cache.price = _buyPrices.at(0);
+            if (cache.price < order.price) break;
+            List.U256 storage _orders = _buyOrders[cache.price];
+            _cacheLatestPrice(cache.price);
 
             while (List.length(_orders) != 0) {
                 uint256 targetId = _orders.at(0);
@@ -442,65 +453,74 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
 
                 // Update the settled quantity.
                 // For sell order matching buy order: sell order is taker, buy order is maker
-                (address targetOwner, uint256 tradeAmount,) =
-                    _matchOrderAmount(orderId, order, targetId, target, price, _orders);
+                (address targetOwner, uint256 tradeAmount, uint32 targetFeeBps) =
+                    _matchOrderAmount(orderId, order, targetId, target, cache.price, _orders);
+                uint256 tradeQuoteAmount = Math.mulDiv(cache.price, tradeAmount, DENOMINATOR);
 
                 // Trade executed.
                 base.safeTransfer(targetOwner, tradeAmount);
+                cache.totalFee += _exchangeBuyOrder(
+                    targetId, targetOwner, tradeAmount, tradeQuoteAmount, _feeCollector(), targetFeeBps
+                );
 
                 // Update information.
-                uint256 tradeQuoteAmount = Math.mulDiv(price, tradeAmount, DENOMINATOR);
-                earnQuoteAmount += tradeQuoteAmount;
+                cache.earnQuoteAmount += tradeQuoteAmount;
                 _accountReserves[targetOwner][1] -= tradeQuoteAmount; // The `earnQuoteAmount` is processed in a single step, so `_updateReserve()` is not used here.
                 if (order.amount == 0 || --maxMatchCount == 0) {
                     if (_orders.empty()) {
                         // Although the `while` loop has not yet ended,
                         // if `cOrder` and the last `target.amount` in `orders` are the same,
                         // `_orders` may be empty.
-                        if (!_buyPrices.remove(price)) revert PairUnknownPrices(OrderSide.BUY, price);
+                        if (!_buyPrices.remove(cache.price)) revert PairUnknownPrices(OrderSide.BUY, cache.price);
                     }
-                    return (true, earnQuoteAmount);
+                    if (cache.totalFee != 0) QUOTE.safeTransfer(_feeCollector(), cache.totalFee);
+                    return (true, cache.earnQuoteAmount);
                 }
             }
             // Reaching this point means that all orders at the given `price` have been matched,
             // so remove `price` from `_buyPrices`.
-            if (!_buyPrices.remove(price)) revert PairUnknownPrices(OrderSide.BUY, price);
+            if (!_buyPrices.remove(cache.price)) revert PairUnknownPrices(OrderSide.BUY, cache.price);
         }
-        return (false, earnQuoteAmount);
+        if (cache.totalFee != 0) QUOTE.safeTransfer(_feeCollector(), cache.totalFee);
+        return (false, cache.earnQuoteAmount);
     }
 
     // avoid stack too deep `_matchBuyOrder function`
     struct MatchBuyCache {
+        uint256 price;
+        uint256 matchedBaseAmount;
         uint256 useQuoteAmount;
         uint256 totalFee;
     }
 
     // For a BUY order, search from the cheapest price in the SELL list
     // and only execute trades where the sell order price is equal to or lower than the input price.
+    /// @return done Whether the order has been completely matched or the maxMatchCount has reached 0.
+    /// @return matchedBaseAmount The amount of BASE purchased.
+    /// @return useQuoteAmount The amount of QUOTE used for the purchase.
     function _matchBuyOrder(
         uint256 orderId,
         Order memory order,
         uint256 quoteAmount, // Quote amount to be used for Market trades.
         uint256 maxMatchCount
-    ) private setLatest returns (bool done, uint256 matchedBaseAmount) {
-        // (done) Whether the order has been completely matched or the maxMatchCount has reached 0.
-        MatchBuyCache memory cache = MatchBuyCache({useQuoteAmount: 0, totalFee: 0});
+    ) private setLatest returns (bool, uint256, uint256) {
+        MatchBuyCache memory cache = MatchBuyCache({price: 0, matchedBaseAmount: 0, useQuoteAmount: 0, totalFee: 0});
 
         List.U256 storage _sellPrices = _prices[uint8(OrderSide.SELL)];
         while (!_sellPrices.empty()) {
-            uint256 price = _sellPrices.at(0);
-            if (price > order.price) break;
-            List.U256 storage _orders = _sellOrders[price];
-            _cacheLatestPrice(price);
+            cache.price = _sellPrices.at(0);
+            if (cache.price > order.price) break;
+            List.U256 storage _orders = _sellOrders[cache.price];
+            _cacheLatestPrice(cache.price);
 
             // If it is a Market trade, calculate the maximum quantity that can be purchased at the given price.
             if (quoteAmount != 0) {
-                uint256 buyAmount = Math.mulDiv(quoteAmount - cache.useQuoteAmount, DENOMINATOR, price);
+                uint256 buyAmount = Math.mulDiv(quoteAmount - cache.useQuoteAmount, DENOMINATOR, cache.price);
                 buyAmount -= buyAmount % lotSize;
                 order.amount = buyAmount;
                 if (buyAmount == 0) {
                     if (cache.totalFee != 0) QUOTE.safeTransfer(_feeCollector(), cache.totalFee);
-                    return (true, matchedBaseAmount);
+                    return (true, cache.matchedBaseAmount, cache.useQuoteAmount);
                 }
             }
 
@@ -511,14 +531,15 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
                 // Update the settled quantity.
                 // For buy order matching sell order: buy order is taker, sell order is maker
                 (address targetOwner, uint256 tradeAmount, uint32 targetFeeBps) =
-                    _matchOrderAmount(orderId, order, targetId, target, price, _orders);
-                uint256 tradeQuoteAmount = Math.mulDiv(price, tradeAmount, DENOMINATOR);
+                    _matchOrderAmount(orderId, order, targetId, target, cache.price, _orders);
+                uint256 tradeQuoteAmount = Math.mulDiv(cache.price, tradeAmount, DENOMINATOR);
 
                 // Trade executed. ( Calculate using the fee rate at the time the seller registered the sale.)
-                cache.totalFee += _exchangeQuote(targetId, targetOwner, tradeQuoteAmount, _feeCollector(), targetFeeBps);
+                cache.totalFee +=
+                    _exchangeSellOrder(targetId, targetOwner, tradeQuoteAmount, _feeCollector(), targetFeeBps);
 
                 // Update information.
-                matchedBaseAmount += tradeAmount;
+                cache.matchedBaseAmount += tradeAmount;
                 cache.useQuoteAmount += tradeQuoteAmount;
                 _accountReserves[targetOwner][0] -= tradeAmount; // The `matchedBaseAmount` is processed in a single step, so `_updateReserve()` is not used here.
                 if (order.amount == 0 || --maxMatchCount == 0) {
@@ -526,18 +547,18 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
                         // Although the `while` loop has not yet ended,
                         // if `cOrder` and the last `target.amount` in `orders` are the same,
                         // `_orders` may be empty.
-                        if (!_sellPrices.remove(price)) revert PairUnknownPrices(OrderSide.SELL, price);
+                        if (!_sellPrices.remove(cache.price)) revert PairUnknownPrices(OrderSide.SELL, cache.price);
                     }
                     if (cache.totalFee != 0) QUOTE.safeTransfer(_feeCollector(), cache.totalFee);
-                    return (true, matchedBaseAmount);
+                    return (true, cache.matchedBaseAmount, cache.useQuoteAmount);
                 }
             }
             // Reaching this point means that all orders at the given `price` have been matched,
             // so remove `price` from `_sellPrices`.
-            if (!_sellPrices.remove(price)) revert PairUnknownPrices(OrderSide.SELL, price);
+            if (!_sellPrices.remove(cache.price)) revert PairUnknownPrices(OrderSide.SELL, cache.price);
         }
         if (cache.totalFee != 0) QUOTE.safeTransfer(_feeCollector(), cache.totalFee);
-        return (false, matchedBaseAmount);
+        return (false, cache.matchedBaseAmount, cache.useQuoteAmount);
     }
 
     function _matchOrderAmount(
@@ -631,7 +652,7 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         if (remainQuoteAmount != 0) QUOTE.safeTransfer(to, remainQuoteAmount);
     }
 
-    function _exchangeQuote(uint256 orderId, address _owner, uint256 amount, address feeCollector, uint32 feeBps)
+    function _exchangeSellOrder(uint256 orderId, address _owner, uint256 amount, address feeCollector, uint32 feeBps)
         private
         returns (uint256)
     {
@@ -648,40 +669,85 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         }
     }
 
+    function _exchangeBuyOrder(
+        uint256 orderId,
+        address _owner,
+        uint256 buyBaseAmount,
+        uint256 useQuoteAmount,
+        address feeCollector,
+        uint32 feeBps
+    ) private returns (uint256) {
+        if (feeBps == 0) {
+            QUOTE.safeTransfer(_owner, buyBaseAmount);
+            return 0;
+        } else {
+            uint256 fee = Math.mulDiv(useQuoteAmount, feeBps, BPS_DENOMINATOR);
+            emit FeeCollect(orderId, _owner, useQuoteAmount, feeCollector, feeBps, fee, useQuoteAmount - fee);
+
+            BASE.safeTransfer(_owner, buyBaseAmount);
+            return fee;
+        }
+    }
+
     function _cacheFeeInfos() private {
         IMarketV2 market = IMarketV2(MARKET);
         address feeCollector = market.feeCollector();
-        (uint32 makerFeeBps, uint32 takerFeeBps) = _resolveEffectiveFees();
+        FeeConfig memory feeInfos = _resolveEffectiveFees();
 
         assembly {
             tstore(_feeCollectorSlot, feeCollector)
-            tstore(_makerFeeBpsSlot, makerFeeBps)
-            tstore(_takerFeeBpsSlot, takerFeeBps)
+            tstore(_feeBpsSlot, feeInfos)
         }
     }
 
-    function _resolveEffectiveFees() private view returns (uint32 makerFeeBps, uint32 takerFeeBps) {
-        IMarketV2 market = IMarketV2(MARKET);
-        makerFeeBps = feeConfig.makerFeeBps == NO_FEE_BPS ? market.makerFeeBps() : feeConfig.makerFeeBps;
-        takerFeeBps = feeConfig.takerFeeBps == NO_FEE_BPS ? market.takerFeeBps() : feeConfig.takerFeeBps;
-    }
-
-    function _makerFeeBps() private view returns (uint32 feeBps) {
-        assembly {
-            feeBps := tload(_makerFeeBpsSlot)
-        }
-    }
-
-    function _takerFeeBps() private view returns (uint32 feeBps) {
-        assembly {
-            feeBps := tload(_takerFeeBpsSlot)
-        }
+    function _resolveEffectiveFees() private view returns (FeeConfig memory feeInfos) {
+        IMarketV2.FeeConfig memory defaultFeeBps = IMarketV2(MARKET).getFeeConfig();
+        feeInfos.sellerMakerFeeBps =
+            feeConfig.sellerMakerFeeBps == NO_FEE_BPS ? defaultFeeBps.sellerMakerFeeBps : feeConfig.sellerMakerFeeBps;
+        feeInfos.sellerTakerFeeBps =
+            feeConfig.sellerTakerFeeBps == NO_FEE_BPS ? defaultFeeBps.sellerTakerFeeBps : feeConfig.sellerTakerFeeBps;
+        feeInfos.buyerMakerFeeBps =
+            feeConfig.buyerMakerFeeBps == NO_FEE_BPS ? defaultFeeBps.buyerMakerFeeBps : feeConfig.buyerMakerFeeBps;
+        feeInfos.buyerTakerFeeBps =
+            feeConfig.buyerTakerFeeBps == NO_FEE_BPS ? defaultFeeBps.buyerTakerFeeBps : feeConfig.buyerTakerFeeBps;
     }
 
     function _feeCollector() private view returns (address feeCollector) {
         assembly {
             feeCollector := tload(_feeCollectorSlot)
         }
+    }
+
+    function _sellerMakerFeeBps() private view returns (uint32 feeBps) {
+        FeeConfig memory feeInfos;
+        assembly {
+            feeInfos := tload(_feeBpsSlot)
+        }
+        feeBps = feeInfos.sellerMakerFeeBps;
+    }
+
+    function _sellerTakerFeeBps() private view returns (uint32 feeBps) {
+        FeeConfig memory feeInfos;
+        assembly {
+            feeInfos := tload(_feeBpsSlot)
+        }
+        feeBps = feeInfos.sellerTakerFeeBps;
+    }
+
+    function _buyerMakerFeeBps() private view returns (uint32 feeBps) {
+        FeeConfig memory feeInfos;
+        assembly {
+            feeInfos := tload(_feeBpsSlot)
+        }
+        feeBps = feeInfos.buyerMakerFeeBps;
+    }
+
+    function _buyerTakerFeeBps() private view returns (uint32 feeBps) {
+        FeeConfig memory feeInfos;
+        assembly {
+            feeInfos := tload(_feeBpsSlot)
+        }
+        feeBps = feeInfos.buyerTakerFeeBps;
     }
 
     function _cacheLatestPrice(uint256 price) private {
@@ -697,6 +763,34 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         }
         if (_latestPrice != 0 && _latestPrice != matchedPrice) matchedPrice = _latestPrice;
         if (matchedAt != block.timestamp) matchedAt = block.timestamp;
+    }
+
+    function _setFeeBps(
+        uint32 sellerMakerFeeBps_,
+        uint32 sellerTakerFeeBps_,
+        uint32 buyerMakerFeeBps_,
+        uint32 buyerTakerFeeBps_
+    ) private {
+        if (sellerMakerFeeBps_ >= BPS_DENOMINATOR && sellerMakerFeeBps_ != NO_FEE_BPS) {
+            revert PairInvalidInitializeData("sellerMakerFeeBps");
+        }
+        if (sellerTakerFeeBps_ >= BPS_DENOMINATOR && sellerTakerFeeBps_ != NO_FEE_BPS) {
+            revert PairInvalidInitializeData("sellerTakerFeeBps");
+        }
+        if (buyerMakerFeeBps_ >= BPS_DENOMINATOR && buyerMakerFeeBps_ != NO_FEE_BPS) {
+            revert PairInvalidInitializeData("buyerMakerFeeBps");
+        }
+        if (buyerTakerFeeBps_ >= BPS_DENOMINATOR && buyerTakerFeeBps_ != NO_FEE_BPS) {
+            revert PairInvalidInitializeData("buyerTakerFeeBps");
+        }
+
+        emit PairFeesUpdated(sellerMakerFeeBps_, sellerTakerFeeBps_, buyerMakerFeeBps_, buyerTakerFeeBps_);
+        feeConfig = FeeConfig({
+            sellerMakerFeeBps: sellerMakerFeeBps_,
+            sellerTakerFeeBps: sellerTakerFeeBps_,
+            buyerMakerFeeBps: buyerMakerFeeBps_,
+            buyerTakerFeeBps: buyerTakerFeeBps_
+        });
     }
 
     //    ##   #    # ##### #    #  ####  #####  # ######   ##   ##### #  ####  #    #
@@ -719,16 +813,13 @@ contract PairImplV2 is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         minTradeVolume = Math.mulDiv(_tickSize, _lotSize, DENOMINATOR);
     }
 
-    function setPairFees(uint32 makerFeeBps, uint32 takerFeeBps) external onlyOwner {
-        if (makerFeeBps >= BPS_DENOMINATOR && makerFeeBps != NO_FEE_BPS) {
-            revert PairInvalidInitializeData("makerFeeBps");
-        }
-        if (takerFeeBps >= BPS_DENOMINATOR && takerFeeBps != NO_FEE_BPS) {
-            revert PairInvalidInitializeData("takerFeeBps");
-        }
-
-        emit PairFeesUpdated(makerFeeBps, takerFeeBps);
-        feeConfig = FeeConfig({makerFeeBps: makerFeeBps, takerFeeBps: takerFeeBps});
+    function setPairFees(
+        uint32 sellerMakerFeeBps_,
+        uint32 sellerTakerFeeBps_,
+        uint32 buyerMakerFeeBps_,
+        uint32 buyerTakerFeeBps_
+    ) external onlyOwner {
+        _setFeeBps(sellerMakerFeeBps_, sellerTakerFeeBps_, buyerMakerFeeBps_, buyerTakerFeeBps_);
     }
 
     function skim(IERC20 erc20, address to, uint256 amount) external onlyOwner {
