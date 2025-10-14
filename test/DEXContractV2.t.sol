@@ -140,7 +140,7 @@ contract DEXContractV2Test is Test {
     }
 
     // Test V2 system initialization with seller-only fees
-    function test_v2_initialization_seller_only_fees() external {
+    function test_v2_initialization_seller_only_fees() external view {
         IMarketV2.FeeConfig memory feeConfig = MARKET.getFeeConfig();
         assertEq(feeConfig.sellerMakerFeeBps, MARKET_SELLER_MAKER_FEE, "Seller maker fee should match");
         assertEq(feeConfig.sellerTakerFeeBps, MARKET_SELLER_TAKER_FEE, "Seller taker fee should match");
@@ -204,7 +204,7 @@ contract DEXContractV2Test is Test {
 
         // Buyer places limit order without any fees
         vm.prank(USER1);
-        uint256 orderId = ROUTER.submitBuyLimit(
+        ROUTER.submitBuyLimit(
             address(PAIR), tradePrice, tradeAmount, IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
         );
 
