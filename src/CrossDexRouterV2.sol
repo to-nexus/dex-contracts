@@ -135,7 +135,7 @@ contract CrossDexRouterV2 is
 
         {
             uint256 volume = Math.mulDiv(price, amount, info.DENOMINATOR);
-            // Get buyer maker fee for V2 pairs
+            // Use taker fee since limit order can be immediately matched and become taker
             volume = _calculateRequireBuyVolume(pair, volume);
 
             if (address(info.QUOTE) == address(CROSS)) CROSS.mintTo{value: volume}(pair);
@@ -197,14 +197,15 @@ contract CrossDexRouterV2 is
     }
 
     /**
-     * @dev Calculate the volume including buyer maker fee for buy limit orders
+     * @dev Calculate the volume including buyer taker fee for buy orders
+     * Use taker fee since both limit and market orders can be matched immediately
      * @param pair The pair contract address
      * @param baseVolume The base volume without fee
      * @return The volume including fee
      */
     function _calculateRequireBuyVolume(address pair, uint256 baseVolume) private view returns (uint256) {
-        (,, uint32 buyerMakerFeeBps,) = IPairV2(pair).getEffectiveFees();
-        return Math.mulDiv(baseVolume, BPS_DENOMINATOR + buyerMakerFeeBps, BPS_DENOMINATOR);
+        (,,, uint32 buyerTakerFeeBps) = IPairV2(pair).getEffectiveFees();
+        return Math.mulDiv(baseVolume, BPS_DENOMINATOR + buyerTakerFeeBps, BPS_DENOMINATOR);
     }
 
     function _toMaxMatchCount(uint256 _maxMatchCount) private view returns (uint256) {
