@@ -20,11 +20,11 @@ import {IRouter} from "../src/interfaces/IRouter.sol";
 import {T20} from "./mock/T20.sol";
 
 /**
- * @title DEXErrorHandlingV2Test
+ * @title DEXV2ErrorHandlingTest
  * @notice Comprehensive error handling tests for V2 contracts
  * @dev Tests critical custom errors defined in V2 contracts
  */
-contract DEXErrorHandlingV2Test is Test {
+contract DEXV2ErrorHandlingTest is Test {
     CrossDexImplV2 public CROSS_DEX;
     MarketImplV2 public MARKET;
     PairImplV2 public PAIR;
@@ -129,25 +129,25 @@ contract DEXErrorHandlingV2Test is Test {
     // Fee Structure Error Tests
     // ================================
 
-    function test_PairInvalidFeeStructure_seller_fees() external {
+    function test_v2_PairInvalidFeeStructure_seller_fees() external {
         vm.prank(OWNER);
         vm.expectRevert(abi.encodeWithSignature("PairInvalidFeeStructure(uint32,uint32)", 100, 50));
         PAIR.setPairFees(100, 50, 0, 0); // seller maker > seller taker
     }
 
-    function test_PairInvalidFeeStructure_buyer_fees() external {
+    function test_v2_PairInvalidFeeStructure_buyer_fees() external {
         vm.prank(OWNER);
         vm.expectRevert(abi.encodeWithSignature("PairInvalidFeeStructure(uint32,uint32)", 75, 25));
         PAIR.setPairFees(0, 0, 75, 25); // buyer maker > buyer taker
     }
 
-    function test_PairInvalidFeeBps_over_limit() external {
+    function test_v2_PairInvalidFeeBps_over_limit() external {
         vm.prank(OWNER);
         vm.expectRevert(abi.encodeWithSignature("PairInvalidFeeBps()"));
         PAIR.setPairFees(BPS_DENOMINATOR, 0, 0, 0); // 100% fee
     }
 
-    function test_PairInvalidFeeBps_buyer_over_limit() external {
+    function test_v2_PairInvalidFeeBps_buyer_over_limit() external {
         vm.prank(OWNER);
         vm.expectRevert(abi.encodeWithSignature("PairInvalidFeeBps()"));
         PAIR.setPairFees(0, 0, 0, BPS_DENOMINATOR + 1); // >100% fee
@@ -157,19 +157,19 @@ contract DEXErrorHandlingV2Test is Test {
     // Access Control Error Tests
     // ================================
 
-    function test_OwnableUnauthorizedAccount_setPairFees() external {
+    function test_v2_OwnableUnauthorizedAccount_setPairFees() external {
         vm.prank(USER1);
         vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", USER1));
         PAIR.setPairFees(30, 50, 25, 40);
     }
 
-    function test_OwnableUnauthorizedAccount_setMarketFees() external {
+    function test_v2_OwnableUnauthorizedAccount_setMarketFees() external {
         vm.prank(USER1);
         vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", USER1));
         MARKET.setMarketFees(30, 50, 25, 40);
     }
 
-    function test_OwnableUnauthorizedAccount_setFeeCollector() external {
+    function test_v2_OwnableUnauthorizedAccount_setFeeCollector() external {
         vm.prank(USER1);
         vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", USER1));
         MARKET.setFeeCollector(USER1);
@@ -179,7 +179,7 @@ contract DEXErrorHandlingV2Test is Test {
     // Router Error Tests
     // ================================
 
-    function test_RouterInvalidPairAddress_manual_check() external {
+    function test_v2_RouterInvalidPairAddress_manual_check() external {
         address invalidPair = address(0x123);
 
         // Verify that isPair returns false for invalid address
@@ -192,7 +192,7 @@ contract DEXErrorHandlingV2Test is Test {
         assertTrue(!isValidPair, "Should properly detect invalid pair");
     }
 
-    function test_RouterCancelLimitExceeded() external {
+    function test_v2_RouterCancelLimitExceeded() external {
         // Create multiple orders first to test cancel limit
         vm.startPrank(USER1);
         uint256[] memory orderIds = new uint256[](60); // More than cancelLimit (50)
@@ -217,13 +217,13 @@ contract DEXErrorHandlingV2Test is Test {
     // Market-Specific Error Tests
     // ================================
 
-    function test_MarketInvalidFeeCollector_zero_address() external {
+    function test_v2_MarketInvalidFeeCollector_zero_address() external {
         vm.prank(OWNER);
         vm.expectRevert(); // Should revert when setting zero address as fee collector
         MARKET.setFeeCollector(address(0));
     }
 
-    function test_MarketInvalidBaseAddress_same_as_quote() external {
+    function test_v2_MarketInvalidBaseAddress_same_as_quote() external {
         // Test that createPair rejects when base == quote
         vm.prank(OWNER);
         vm.expectRevert(); // Should revert with MarketInvalidBaseAddress
@@ -238,7 +238,7 @@ contract DEXErrorHandlingV2Test is Test {
         );
     }
 
-    function test_MarketAlreadyCreatedBaseAddress() external {
+    function test_v2_MarketAlreadyCreatedBaseAddress() external {
         // Try to create another pair with the same base token
         vm.prank(OWNER);
         vm.expectRevert(); // Should revert with MarketAlreadyCreatedBaseAddress
@@ -257,7 +257,7 @@ contract DEXErrorHandlingV2Test is Test {
     // Complex Integration Error Tests
     // ================================
 
-    function test_fee_validation_integration() external {
+    function test_v2_fee_validation_integration() external {
         // Test that fee validation works end-to-end
 
         // 1. Market level fee validation
@@ -281,7 +281,7 @@ contract DEXErrorHandlingV2Test is Test {
         assertEq(buyerTaker, 40, "Buyer taker fee should be set");
     }
 
-    function test_access_control_comprehensive() external {
+    function test_v2_access_control_comprehensive() external {
         // Test all major access control points
 
         // 1. Pair fees
@@ -305,7 +305,7 @@ contract DEXErrorHandlingV2Test is Test {
         ROUTER.setMaxMatchCount(200);
     }
 
-    function test_basic_order_validation() external {
+    function test_v2_basic_order_validation() external {
         // Test that the system properly validates and rejects/accepts orders
 
         // Test 1: Verify that we can check pair validity
@@ -336,7 +336,7 @@ contract DEXErrorHandlingV2Test is Test {
     // Error Message Validation Tests
     // ================================
 
-    function test_custom_error_data_validation() external {
+    function test_v2_custom_error_data_validation() external {
         // Test that custom errors include the expected data
 
         // PairInvalidFeeStructure should include both fee values

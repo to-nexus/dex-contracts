@@ -17,7 +17,7 @@ import {IPair, IPairV2} from "../src/interfaces/IPair.sol";
 
 import {T20} from "./mock/T20.sol";
 
-contract DEXContractV2Test is Test {
+contract DEXV2ContractTest is Test {
     address public constant OWNER = address(bytes20("OWNER"));
     address public constant FEE_COLLECTOR = address(bytes20("FEE_COLLECTOR"));
     address public constant USER1 = address(bytes20("USER1"));

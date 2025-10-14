@@ -20,11 +20,11 @@ import {IRouter} from "../src/interfaces/IRouter.sol";
 import {T20} from "./mock/T20.sol";
 
 /**
- * @title DEXErrorHandlingV2Test
+ * @title DEXV2ErrorHandlingTest
  * @notice Comprehensive error handling tests for V2 contracts
  * @dev Tests all custom errors defined in V2 contracts to ensure proper error handling
  */
-contract DEXErrorHandlingV2Test is Test {
+contract DEXV2ErrorHandlingTest is Test {
     CrossDexImplV2 public CROSS_DEX;
     MarketImplV2 public MARKET;
     PairImplV2 public PAIR;
@@ -140,25 +140,25 @@ contract DEXErrorHandlingV2Test is Test {
     // Fee Structure Error Tests
     // ================================
 
-    function test_PairInvalidFeeStructure_seller_fees() external {
+    function test_v2_PairInvalidFeeStructure_seller_fees() external {
         vm.prank(OWNER);
         vm.expectRevert(abi.encodeWithSignature("PairInvalidFeeStructure(uint32,uint32)", 100, 50));
         PAIR.setPairFees(100, 50, 0, 0); // seller maker > seller taker
     }
 
-    function test_PairInvalidFeeStructure_buyer_fees() external {
+    function test_v2_PairInvalidFeeStructure_buyer_fees() external {
         vm.prank(OWNER);
         vm.expectRevert(abi.encodeWithSignature("PairInvalidFeeStructure(uint32,uint32)", 75, 25));
         PAIR.setPairFees(0, 0, 75, 25); // buyer maker > buyer taker
     }
 
-    function test_PairInvalidFeeBps_over_limit() external {
+    function test_v2_PairInvalidFeeBps_over_limit() external {
         vm.prank(OWNER);
         vm.expectRevert(abi.encodeWithSignature("PairInvalidFeeBps()"));
         PAIR.setPairFees(BPS_DENOMINATOR, 0, 0, 0); // 100% fee
     }
 
-    function test_PairInvalidFeeBps_buyer_over_limit() external {
+    function test_v2_PairInvalidFeeBps_buyer_over_limit() external {
         vm.prank(OWNER);
         vm.expectRevert(abi.encodeWithSignature("PairInvalidFeeBps()"));
         PAIR.setPairFees(0, 0, 0, BPS_DENOMINATOR + 1); // >100% fee
@@ -168,7 +168,7 @@ contract DEXErrorHandlingV2Test is Test {
     // Order Validation Error Tests
     // ================================
 
-    function test_PairInvalidAmount_zero() external {
+    function test_v2_PairInvalidAmount_zero() external {
         vm.prank(USER1);
         vm.expectRevert(abi.encodeWithSignature("PairInvalidAmount(uint256)", 0));
         ROUTER.submitSellLimit(
@@ -181,7 +181,7 @@ contract DEXErrorHandlingV2Test is Test {
         );
     }
 
-    function test_PairInvalidPrice_zero() external {
+    function test_v2_PairInvalidPrice_zero() external {
         vm.prank(USER1);
         vm.expectRevert(abi.encodeWithSignature("PairInvalidPrice(uint256)", 0));
         ROUTER.submitSellLimit(
@@ -194,7 +194,7 @@ contract DEXErrorHandlingV2Test is Test {
         );
     }
 
-    function test_PairInvalidOrderId_nonexistent() external {
+    function test_v2_PairInvalidOrderId_nonexistent() external {
         uint256[] memory invalidOrderIds = new uint256[](1);
         invalidOrderIds[0] = 999999; // non-existent order ID
 
@@ -203,7 +203,7 @@ contract DEXErrorHandlingV2Test is Test {
         ROUTER.cancelOrder(address(PAIR), invalidOrderIds);
     }
 
-    function test_PairNotOwner_cancel_others_order() external {
+    function test_v2_PairNotOwner_cancel_others_order() external {
         // USER1 creates an order
         vm.prank(USER1);
         uint256 orderId = ROUTER.submitSellLimit(
@@ -223,19 +223,19 @@ contract DEXErrorHandlingV2Test is Test {
     // Access Control Error Tests
     // ================================
 
-    function test_OwnableUnauthorizedAccount_setPairFees() external {
+    function test_v2_OwnableUnauthorizedAccount_setPairFees() external {
         vm.prank(USER1);
         vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", USER1));
         PAIR.setPairFees(30, 50, 25, 40);
     }
 
-    function test_OwnableUnauthorizedAccount_setMarketFees() external {
+    function test_v2_OwnableUnauthorizedAccount_setMarketFees() external {
         vm.prank(USER1);
         vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", USER1));
         MARKET.setMarketFees(30, 50, 25, 40);
     }
 
-    function test_OwnableUnauthorizedAccount_setFeeCollector() external {
+    function test_v2_OwnableUnauthorizedAccount_setFeeCollector() external {
         vm.prank(USER1);
         vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", USER1));
         MARKET.setFeeCollector(USER1);
@@ -245,7 +245,7 @@ contract DEXErrorHandlingV2Test is Test {
     // Router Error Tests
     // ================================
 
-    function test_RouterInvalidPairAddress() external {
+    function test_v2_RouterInvalidPairAddress() external {
         address invalidPair = address(0x123);
 
         vm.prank(USER1);
@@ -255,7 +255,7 @@ contract DEXErrorHandlingV2Test is Test {
         );
     }
 
-    function test_RouterCancelLimitExceeded() external {
+    function test_v2_RouterCancelLimitExceeded() external {
         // Create multiple orders first
         vm.startPrank(USER1);
         uint256[] memory orderIds = new uint256[](60); // More than cancelLimit (50)
@@ -271,19 +271,19 @@ contract DEXErrorHandlingV2Test is Test {
         vm.stopPrank();
     }
 
-    function test_RouterInvalidInputData_findPrevPriceCount() external {
+    function test_v2_RouterInvalidInputData_findPrevPriceCount() external {
         vm.prank(OWNER);
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidInputData(bytes32)", "findPrevPriceCount"));
         ROUTER.setfindPrevPriceCount(0);
     }
 
-    function test_RouterInvalidInputData_maxMatchCount() external {
+    function test_v2_RouterInvalidInputData_maxMatchCount() external {
         vm.prank(OWNER);
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidInputData(bytes32)", "findPrevPriceCount"));
         ROUTER.setMaxMatchCount(0);
     }
 
-    function test_RouterInvalidInputData_cancelLimit() external {
+    function test_v2_RouterInvalidInputData_cancelLimit() external {
         vm.prank(OWNER);
         vm.expectRevert(abi.encodeWithSignature("RouterInvalidInputData(bytes32)", "cancelLimit"));
         ROUTER.setCancelLimit(0);
@@ -293,7 +293,7 @@ contract DEXErrorHandlingV2Test is Test {
     // Market Reserve Error Tests
     // ================================
 
-    function test_PairInvalidReserve_insufficient_base() external {
+    function test_v2_PairInvalidReserve_insufficient_base() external {
         // Try to submit sell order with insufficient BASE tokens
         vm.prank(INVALID_USER); // User with no tokens
         vm.expectRevert(); // ERC20InsufficientBalance will be thrown first
@@ -307,7 +307,7 @@ contract DEXErrorHandlingV2Test is Test {
         );
     }
 
-    function test_PairInvalidReserve_insufficient_quote() external {
+    function test_v2_PairInvalidReserve_insufficient_quote() external {
         // Try to submit buy order with insufficient QUOTE tokens
         vm.prank(INVALID_USER); // User with no tokens
         vm.expectRevert(); // ERC20InsufficientBalance will be thrown first
@@ -325,7 +325,7 @@ contract DEXErrorHandlingV2Test is Test {
     // Fill or Kill Error Tests
     // ================================
 
-    function test_PairFillOrKill_insufficient_liquidity() external {
+    function test_v2_PairFillOrKill_insufficient_liquidity() external {
         // Try to place a large Fill-or-Kill order when there's no liquidity
         vm.prank(USER1);
         vm.expectRevert(abi.encodeWithSignature("PairFillOrKill(address)", USER1));
@@ -343,7 +343,7 @@ contract DEXErrorHandlingV2Test is Test {
     // Tick Size Error Tests
     // ================================
 
-    function test_PairInvalidTickSize() external {
+    function test_v2_PairInvalidTickSize() external {
         // This would require creating a pair with specific tick size settings
         // and then trying to place orders that don't conform to the tick size
 
@@ -376,7 +376,7 @@ contract DEXErrorHandlingV2Test is Test {
     // Market-Specific Error Tests
     // ================================
 
-    function test_MarketInvalidFeeCollector_zero_address() external {
+    function test_v2_MarketInvalidFeeCollector_zero_address() external {
         vm.prank(OWNER);
         vm.expectRevert(); // Should revert when setting zero address as fee collector
         MARKET.setFeeCollector(address(0));
@@ -386,7 +386,7 @@ contract DEXErrorHandlingV2Test is Test {
     // Edge Case Error Tests
     // ================================
 
-    function test_PairInsufficientTradeVolume() external {
+    function test_v2_PairInsufficientTradeVolume() external {
         // This error occurs when the calculated trade volume is insufficient
         // Usually happens with very small amounts or prices near zero
 
@@ -407,7 +407,7 @@ contract DEXErrorHandlingV2Test is Test {
         ROUTER.submitBuyMarket(address(PAIR), 1, 1); // Tiny amount
     }
 
-    function test_Complex_scenario_multiple_errors() external {
+    function test_v2_Complex_scenario_multiple_errors() external {
         // Test a complex scenario that could trigger multiple error conditions
 
         // 1. Set invalid fee structure first
@@ -432,7 +432,7 @@ contract DEXErrorHandlingV2Test is Test {
     // Gas Optimization Error Tests
     // ================================
 
-    function test_RouterInvalidValue_eth_handling() external {
+    function test_v2_RouterInvalidValue_eth_handling() external {
         // Test ETH value handling in router
         // This should work normally for non-ETH pairs
         vm.prank(USER1);
@@ -445,7 +445,7 @@ contract DEXErrorHandlingV2Test is Test {
     // Initialization Error Tests
     // ================================
 
-    function test_PairInvalidInitializeData() external {
+    function test_v2_PairInvalidInitializeData() external {
         // Test initialization with invalid data
         // Try to create pair with same quote token as base (should be invalid)
 
