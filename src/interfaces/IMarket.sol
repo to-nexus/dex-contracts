@@ -18,3 +18,14 @@ interface IMarket {
     function feeCollector() external view returns (address);
     function checkTickSizeRoles(address account) external view;
 }
+
+uint32 constant NO_FEE_BPS = type(uint32).max; // Special value to indicate "use market fee"
+uint32 constant BPS_DENOMINATOR = 10000; // Basis points denominator (100%)
+
+interface IMarketV2 {
+    function makerFeeBps() external view returns (uint32);
+    function takerFeeBps() external view returns (uint32);
+    function feeCollector() external view returns (address);
+    function getMarketFees() external view returns (uint32 makerFee, uint32 takerFee);
+    function checkTickSizeRoles(address account) external view;
+}
