@@ -17,4 +17,7 @@ interface IMarket {
     function feeBps() external view returns (uint32);
     function feeCollector() external view returns (address);
     function checkTickSizeRoles(address account) external view;
+    function createPair(address base, uint256 tickSize, uint256 lotSize) external returns (address);
+    function setFeeCollector(address _feeCollector) external;
+    function setFeeBps(uint256 _feeBps) external;
 }
