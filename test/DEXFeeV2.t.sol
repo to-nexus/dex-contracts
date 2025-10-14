@@ -8,6 +8,7 @@ import {Test, console} from "forge-std/Test.sol";
 
 import {CrossDexImplV2} from "../src/CrossDexImplV2.sol";
 import {CrossDexRouter} from "../src/CrossDexRouter.sol";
+import {CrossDexRouterV2} from "../src/CrossDexRouterV2.sol";
 import {MarketImplV2} from "../src/MarketImplV2.sol";
 import {PairImplV2} from "../src/PairImplV2.sol";
 import {WETH} from "../src/WETH.sol";
@@ -67,7 +68,7 @@ contract DEXFeeV2Test is Test {
 
         {
             // deploy impl contracts (using V2 versions)
-            address routerImpl = address(new CrossDexRouter());
+            address routerImpl = address(new CrossDexRouterV2());
             address marketImpl = address(new MarketImplV2());
             address pairImpl = address(new PairImplV2());
 

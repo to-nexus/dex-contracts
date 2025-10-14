@@ -396,7 +396,12 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         else quoteAmount = Math.mulDiv(order.price, order.amount, DENOMINATOR);
 
         // 1. Verify that the required tokens for the order have been deposited.
-        uint256 quoteWithFee = Math.mulDiv(quoteAmount, BPS_DENOMINATOR + _buyerTakerFeeBps(), BPS_DENOMINATOR);
+        // For limit orders (spendQuoteAmount == 0), use maker fee. For market orders, use taker fee.
+        uint256 quoteWithFee = Math.mulDiv(
+            quoteAmount,
+            BPS_DENOMINATOR + ((spendQuoteAmount != 0) ? _buyerTakerFeeBps() : _buyerMakerFeeBps()),
+            BPS_DENOMINATOR
+        );
         uint256 quoteBalance = QUOTE.balanceOf(address(this));
         (bool ok, uint256 skimQuoteAmount) = Math.trySub(quoteBalance, quoteReserve + quoteWithFee);
         if (!ok) revert PairInvalidReserve(address(QUOTE));
@@ -412,7 +417,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         if (buyBaseAmount != 0) {
             baseReserve -= buyBaseAmount;
             uint256 fee = _exchangeBuyOrder(
-                orderId, order.owner, buyBaseAmount, useQuoteAmount, _feeCollector(), _sellerTakerFeeBps()
+                orderId, order.owner, buyBaseAmount, useQuoteAmount, _feeCollector(), _buyerTakerFeeBps()
             );
             if (fee != 0) {
                 quoteReserve -= fee;
@@ -679,12 +684,13 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         uint32 feeBps
     ) private returns (uint256) {
         if (feeBps == 0) {
-            QUOTE.safeTransfer(_owner, buyBaseAmount);
+            // No fee, no additional transfers needed
             return 0;
         } else {
             uint256 fee = Math.mulDiv(useQuoteAmount, feeBps, BPS_DENOMINATOR);
             emit FeeCollect(orderId, _owner, useQuoteAmount, feeCollector, feeBps, fee, useQuoteAmount - fee);
 
+            // No token transfer here - BASE token transfer is handled by the caller
             BASE.safeTransfer(_owner, buyBaseAmount);
             return fee;
         }
