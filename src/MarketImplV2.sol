@@ -23,9 +23,7 @@ contract MarketImplV2 is IMarketV2, UUPSUpgradeable, OwnableUpgradeable {
 
     event PairCreated(address indexed pair, address indexed base, uint256 timestamp);
     event FeeCollectorChanged(address indexed before, address indexed current);
-    event MarketFeesUpdated(
-        uint32 indexed sellerMakerFee, uint32 indexed sellerTakerFee, uint32 indexed buyerMakerFee, uint32 buyerTakerFee
-    );
+    event MarketFeesUpdated(uint32 sellerMakerFee, uint32 sellerTakerFee, uint32 buyerMakerFee, uint32 buyerTakerFee);
 
     uint256 public deployed; // immutable
     ICrossDex public CROSS_DEX; // immutable

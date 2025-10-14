@@ -396,8 +396,9 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         else quoteAmount = Math.mulDiv(order.price, order.amount, DENOMINATOR);
 
         // 1. Verify that the required tokens for the order have been deposited.
+        uint256 quoteWithFee = Math.mulDiv(quoteAmount, BPS_DENOMINATOR + _buyerTakerFeeBps(), BPS_DENOMINATOR);
         uint256 quoteBalance = QUOTE.balanceOf(address(this));
-        (bool ok, uint256 skimQuoteAmount) = Math.trySub(quoteBalance, quoteReserve + quoteAmount);
+        (bool ok, uint256 skimQuoteAmount) = Math.trySub(quoteBalance, quoteReserve + quoteWithFee);
         if (!ok) revert PairInvalidReserve(address(QUOTE));
         emit OrderCreated(order.owner, orderId, order.side, order.price, order.amount, block.timestamp);
 
