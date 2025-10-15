@@ -43,8 +43,7 @@ contract MarketImplV2 is IMarketV2, UUPSUpgradeable, OwnableUpgradeable {
         _disableInitializers();
     }
 
-    // 기존의 interface 를 변경하지 않기 위해 feeBps 를 seller maker, seller taker fee 로 동일하게 설정
-    // 이제 bytes로 4가지 수수료를 받도록 수정
+    // Initialize with 4 different fee rates encoded in bytes data
     function initialize(
         address _owner,
         address _router,
@@ -61,11 +60,11 @@ contract MarketImplV2 is IMarketV2, UUPSUpgradeable, OwnableUpgradeable {
         if (_pairImpl == address(0)) revert MarketInvalidInitializeData("pairImpl");
         if (_feeCollector == address(0)) revert MarketInvalidInitializeData("feeCollector");
 
-        // 4가지 수수료 디코딩
+        // Decode 4 different fee rates
         (uint32 _sellerMakerFeeBps, uint32 _sellerTakerFeeBps, uint32 _buyerMakerFeeBps, uint32 _buyerTakerFeeBps) =
             abi.decode(feeData, (uint32, uint32, uint32, uint32));
 
-        // 수수료 유효성 검증
+        // Validate fee rates
         if (_sellerMakerFeeBps != NO_FEE_BPS && _sellerMakerFeeBps >= BPS_DENOMINATOR) {
             revert MarketInvalidInitializeData("sellerMakerFeeBps");
         }
@@ -86,7 +85,7 @@ contract MarketImplV2 is IMarketV2, UUPSUpgradeable, OwnableUpgradeable {
         pairImpl = _pairImpl;
 
         feeCollector = _feeCollector;
-        _feeConfig.sellerMakerFeeBps = _sellerMakerFeeBps; // 기존 변수는 Seller Maker fee로 사용
+        _feeConfig.sellerMakerFeeBps = _sellerMakerFeeBps; // Seller Maker fee
         _feeConfig.sellerTakerFeeBps = _sellerTakerFeeBps; // Seller Taker fee
         _feeConfig.buyerMakerFeeBps = _buyerMakerFeeBps; // Buyer Maker fee
         _feeConfig.buyerTakerFeeBps = _buyerTakerFeeBps; // Buyer Taker fee
@@ -131,7 +130,7 @@ contract MarketImplV2 is IMarketV2, UUPSUpgradeable, OwnableUpgradeable {
         if (baseDecimals == 0) revert MarketInvalidBaseAddress(base);
         if (_allPairs.contains(base)) revert MarketAlreadyCreatedBaseAddress(base);
 
-        // 4가지 수수료 인코딩
+        // Encode 4 different fee rates
         bytes memory feeData = abi.encode(_sellerMakerFeeBps, _sellerTakerFeeBps, _buyerMakerFeeBps, _buyerTakerFeeBps);
 
         bytes memory bytecode = abi.encodePacked(

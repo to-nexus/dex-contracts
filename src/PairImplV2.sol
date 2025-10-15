@@ -132,7 +132,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         address base,
         uint256 _tickSize, // tick size for quote token
         uint256 _lotSize, // lot size for base token
-        bytes memory feeData // 4개 수수료를 인코딩한 데이터
+        bytes memory feeData // 4 fee rates encoded data
     ) external initializer {
         __Pausable_init();
 
@@ -154,7 +154,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         lotSize = _lotSize;
         minTradeVolume = Math.mulDiv(_tickSize, _lotSize, DENOMINATOR);
 
-        // 4가지 수수료 디코딩
+        // Decode 4 different fee rates
         (uint32 sellerMakerFeeBps_, uint32 sellerTakerFeeBps_, uint32 buyerMakerFeeBps_, uint32 buyerTakerFeeBps_) =
             abi.decode(feeData, (uint32, uint32, uint32, uint32));
         _setFeeBps(sellerMakerFeeBps_, sellerTakerFeeBps_, buyerMakerFeeBps_, buyerTakerFeeBps_);
@@ -418,7 +418,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
             uint256 fee = _exchangeBuyOrder(
                 orderId, order.owner, buyBaseAmount, useQuoteAmount, _feeCollector(), _buyerTakerFeeBps()
             );
-            // _exchangeBuyOrder 에서는 이벤트만 남기기 때문에 여기서 실제 전송
+            // _exchangeBuyOrder only emits events, so actual transfer happens here
             if (fee != 0) QUOTE.safeTransfer(_feeCollector(), fee);
         }
 
