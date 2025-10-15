@@ -37,7 +37,7 @@ contract MarketImplV2 is IMarketV2, UUPSUpgradeable, OwnableUpgradeable {
 
     EnumerableMap.AddressToAddressMap private _allPairs; // base => pair
 
-    uint256[38] private __gap;
+    uint256[42] private __gap;
 
     constructor() {
         _disableInitializers();
