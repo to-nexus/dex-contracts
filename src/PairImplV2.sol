@@ -286,9 +286,8 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
                 // update order
                 _allOrders[orderId] = order;
 
-                uint256 volume = Math.mulDiv(order.price, order.amount, DENOMINATOR);
                 if (isSellOrder) {
-                    _addBaseReserve(order.owner, order.amount, _sellerMakerFeeBps(), volume);
+                    _addBaseReserve(order.owner, order.amount);
                     // For sell orders, a fee is charged when acting as a maker.
                     _allOrders[orderId].feeBps = _sellerMakerFeeBps();
                     _sellOrders[order.price].push(orderId);
@@ -296,7 +295,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
                     uint32 feeBps = _buyerMakerFeeBps();
                     // For V2 RouterV2, the fee is already included in the transferred amount
                     // So we use the actual received amount instead of calculating fee again
-                    uint256 receivedAmount = QUOTE.balanceOf(address(this)) - quoteReserve;
+                    uint256 receivedAmount = QUOTE.balanceOf(address(this)) - mustRemainQuoteAmount;
                     _addQuoteReserve(order.owner, receivedAmount);
                     _allOrders[orderId].feeBps = feeBps;
                     _buyOrders[order.price].push(orderId);
@@ -398,21 +397,14 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         // 1. Verify that the required tokens for the order have been deposited.
         uint256 skimQuoteAmount;
         {
-            uint256 requiredAmount;
             bool ok;
 
-            if (spendQuoteAmount != 0) {
-                // For market orders, RouterV2 already calculated and transferred the required amount including fees
-                requiredAmount = quoteAmount;
-            } else {
-                // For limit orders, calculate fee separately since RouterV2 includes it
-                uint32 feeBps = _buyerTakerFeeBps(); // Always use taker fee since even limit orders can be immediately matched
-                uint256 fee = feeBps != 0 ? Math.mulDiv(quoteAmount, feeBps, BPS_DENOMINATOR) : 0;
-                requiredAmount = quoteAmount + fee;
-            }
+            // For limit orders, calculate fee separately since RouterV2 includes it
+            uint32 feeBps = _buyerTakerFeeBps(); // Always use taker fee since even limit orders can be immediately matched
+            uint256 fee = feeBps != 0 ? Math.mulDiv(quoteAmount, feeBps, BPS_DENOMINATOR) : 0;
 
             uint256 quoteBalance = QUOTE.balanceOf(address(this));
-            (ok, skimQuoteAmount) = Math.trySub(quoteBalance, quoteReserve + requiredAmount);
+            (ok, skimQuoteAmount) = Math.trySub(quoteBalance, quoteReserve + quoteAmount + fee);
             if (!ok) revert PairInvalidReserve(address(QUOTE));
             emit OrderCreated(order.owner, orderId, order.side, order.price, order.amount, block.timestamp);
         }
@@ -425,9 +417,9 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         // 3. Transfer the immediately settled BASE tokens.
         if (buyBaseAmount != 0) {
             // Process buyer fee
-            uint32 feeBps = spendQuoteAmount == 0 ? _buyerMakerFeeBps() : _buyerTakerFeeBps();
-            uint256 fee =
-                _exchangeBuyOrder(orderId, order.owner, buyBaseAmount, useQuoteAmount, _feeCollector(), feeBps);
+            uint256 fee = _exchangeBuyOrder(
+                orderId, order.owner, buyBaseAmount, useQuoteAmount, _feeCollector(), _buyerTakerFeeBps()
+            );
             if (fee != 0) QUOTE.safeTransfer(_feeCollector(), fee);
 
             // maker 수수료가 다른 경우 ( == 더 싼 경우) 해당 토큰을 skimQuoteAmount에서 차감한다. (트랜잭션이 종료될때 돌려준다.)
@@ -627,9 +619,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
             uint256 amount = order.amount;
             if (amount != 0) {
                 BASE.safeTransfer(order.owner, amount);
-                uint256 remainFee =
-                    _subBaseReserve(order.owner, amount, order.feeBps, Math.mulDiv(order.price, amount, DENOMINATOR));
-                if (remainFee != 0) QUOTE.safeTransfer(order.owner, remainFee);
+                _subBaseReserve(order.owner, amount, order.feeBps, 0); // Base 의 reserve 만 제거하면 되므로 거래 수량은 0
             }
         } else {
             _orders = _buyOrders[order.price];
@@ -680,7 +670,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     }
 
     // LimitSell
-    function _addBaseReserve(address account, uint256 amount, uint32 feeBps, uint256 volume) private {
+    function _addBaseReserve(address account, uint256 amount) private {
         (bool ok, uint256 newReserve) = Math.tryAdd(baseReserve, amount);
         if (!ok) revert PairInvalidAccountReserve(account, address(BASE));
         baseReserve = newReserve;
@@ -688,17 +678,12 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         (ok, newReserve) = Math.tryAdd(_accountReserves[account][0], amount);
         if (!ok) revert PairInvalidAccountReserve(account, address(BASE));
         _accountReserves[account][0] = newReserve;
-
-        if (feeBps != 0) {
-            uint256 fee = Math.mulDiv(volume, feeBps, BPS_DENOMINATOR);
-            _addQuoteReserve(account, fee);
-        }
     }
 
     // For LimitSell order cancel or Matched From Buy
     /// @return remaining quote fee
     // todo: in matching, after update quoteReserve
-    function _subBaseReserve(address account, uint256 amount, uint32 feeBps, uint256 volume)
+    function _subBaseReserve(address account, uint256 amount, uint32 feeBps, uint256 tradeVolume)
         private
         returns (uint256)
     {
@@ -710,8 +695,8 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         if (!ok) revert PairInvalidAccountReserve(account, address(BASE));
         _accountReserves[account][0] = newReserve;
 
-        if (feeBps != 0) {
-            uint256 fee = Math.mulDiv(volume, feeBps, BPS_DENOMINATOR);
+        if (feeBps != 0 && tradeVolume != 0) {
+            uint256 fee = Math.mulDiv(tradeVolume, feeBps, BPS_DENOMINATOR);
             _subQuoteReserve(account, fee);
             return fee;
         }
