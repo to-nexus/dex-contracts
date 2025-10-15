@@ -780,7 +780,6 @@ contract DEXV2ContractTest is Test {
         {
             uint256 tradePrice = _toQuote(2);
             uint256 tradeAmount = _toBase(100);
-            uint256 tradeVolume = Math.mulDiv(tradePrice, tradeAmount, _toBase(1)); // 200 QUOTE
 
             vm.prank(USER2);
             ROUTER.submitSellLimit(
@@ -788,14 +787,9 @@ contract DEXV2ContractTest is Test {
             );
 
             uint256 baseReserve = PAIR.baseReserve();
-            uint256 quoteReserve = PAIR.quoteReserve();
 
             // Base reserve should include the BASE amount
             assertEq(baseReserve, tradeAmount, "Base reserve should equal sell order amount");
-
-            // Quote reserve should include seller maker fee
-            uint256 expectedSellerFee = Math.mulDiv(tradeVolume, sellerMakerFee, BPS_DENOMINATOR);
-            assertEq(quoteReserve, expectedSellerFee, "Quote reserve should include seller maker fee");
 
             // Execute buy market order that matches the sell limit order
             vm.prank(USER1);
@@ -892,14 +886,9 @@ contract DEXV2ContractTest is Test {
         );
 
         uint256 baseReserve = PAIR.baseReserve();
-        uint256 quoteReserve = PAIR.quoteReserve();
 
         // Should have 1000 BASE in reserve plus seller maker fee in quote reserve
         assertEq(baseReserve, largeAmount, "Large sell order should add to base reserve");
-        uint256 expectedSellerFee = Math.mulDiv(_toQuote(1000), sellerMakerFee, BPS_DENOMINATOR);
-        console.log("Expected seller maker fee:", expectedSellerFee);
-        return;
-        assertEq(quoteReserve, expectedSellerFee, "Quote reserve should include seller maker fee");
 
         // Create buy order that will partially match
         vm.prank(USER1);

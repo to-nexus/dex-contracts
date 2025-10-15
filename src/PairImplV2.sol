@@ -373,7 +373,6 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         // 3. Immediately transfer the proceeds from the trade to the seller.
         if (earnQuoteAmount != 0) {
             (address feeCollector, uint32 feeBps) = (_feeCollector(), _sellerTakerFeeBps());
-            // quoteReserve -= earnQuoteAmount; // todo
             uint256 fee = _exchangeSellOrder(orderId, order.owner, earnQuoteAmount, feeCollector, feeBps);
             if (fee != 0) QUOTE.safeTransfer(feeCollector, fee);
         }
@@ -403,8 +402,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
             uint32 feeBps = _buyerTakerFeeBps(); // Always use taker fee since even limit orders can be immediately matched
             uint256 fee = feeBps != 0 ? Math.mulDiv(quoteAmount, feeBps, BPS_DENOMINATOR) : 0;
 
-            uint256 quoteBalance = QUOTE.balanceOf(address(this));
-            (ok, skimQuoteAmount) = Math.trySub(quoteBalance, quoteReserve + quoteAmount + fee);
+            (ok, skimQuoteAmount) = Math.trySub(QUOTE.balanceOf(address(this)), quoteReserve + quoteAmount + fee);
             if (!ok) revert PairInvalidReserve(address(QUOTE));
             emit OrderCreated(order.owner, orderId, order.side, order.price, order.amount, block.timestamp);
         }
@@ -420,20 +418,8 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
             uint256 fee = _exchangeBuyOrder(
                 orderId, order.owner, buyBaseAmount, useQuoteAmount, _feeCollector(), _buyerTakerFeeBps()
             );
+            // _exchangeBuyOrder 에서는 이벤트만 남기기 때문에 여기서 실제 전송
             if (fee != 0) QUOTE.safeTransfer(_feeCollector(), fee);
-
-            // maker 수수료가 다른 경우 ( == 더 싼 경우) 해당 토큰을 skimQuoteAmount에서 차감한다. (트랜잭션이 종료될때 돌려준다.)
-            // Market orders are always taker, so no fee adjustment needed
-            if (spendQuoteAmount == 0 && _buyerMakerFeeBps() != _buyerTakerFeeBps()) {
-                // maker 의 수수료가 더 싸야 하기 때문에 항상 성공해야 하며, 실패한 경우는 수수료율이 잘못 설정된 경우이다.
-                // MarketImpl 의 수수료도 사용하고 PairImpl 의 수수료도 사용하는경우 발생할 수 있다.
-                (bool ok, uint256 diff) =
-                    Math.trySub(fee, Math.mulDiv(useQuoteAmount, _buyerMakerFeeBps(), BPS_DENOMINATOR));
-                if (!ok) revert PairInvalidFeeBps();
-
-                (ok, skimQuoteAmount) = Math.trySub(skimQuoteAmount, diff);
-                if (!ok) revert PairInvalidReserve(address(QUOTE));
-            }
         }
 
         return (done, skimQuoteAmount);
@@ -443,6 +429,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         uint256 price;
         uint256 earnQuoteAmount;
         uint256 totalTargetFee;
+        uint256 quoteReserve;
     }
 
     // For a SELL order, search from the most expensive price in the BUY list
@@ -454,7 +441,8 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         setLatest
         returns (bool, uint256)
     {
-        MatchSellCache memory cache = MatchSellCache({price: 0, earnQuoteAmount: 0, totalTargetFee: 0});
+        MatchSellCache memory cache =
+            MatchSellCache({price: 0, earnQuoteAmount: 0, totalTargetFee: 0, quoteReserve: quoteReserve});
         // cache storage immutables to memory
         List.U256 storage _buyPrices = _prices[uint8(OrderSide.BUY)];
         while (!_buyPrices.empty()) {
@@ -481,7 +469,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
 
                 // Update information.
                 cache.earnQuoteAmount += tradeQuoteAmount;
-                _subQuoteReserve(targetOwner, tradeQuoteAmount + fee);
+                cache.quoteReserve = _subQuoteReserve(targetOwner, tradeQuoteAmount + fee, true, cache.quoteReserve);
                 if (order.amount == 0 || --maxMatchCount == 0) {
                     if (_orders.empty()) {
                         // Although the `while` loop has not yet ended,
@@ -490,6 +478,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
                         if (!_buyPrices.remove(cache.price)) revert PairUnknownPrices(OrderSide.BUY, cache.price);
                     }
                     if (cache.totalTargetFee != 0) QUOTE.safeTransfer(_feeCollector(), cache.totalTargetFee);
+                    if (cache.quoteReserve != quoteReserve) quoteReserve = cache.quoteReserve;
                     return (true, cache.earnQuoteAmount);
                 }
             }
@@ -498,6 +487,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
             if (!_buyPrices.remove(cache.price)) revert PairUnknownPrices(OrderSide.BUY, cache.price);
         }
         if (cache.totalTargetFee != 0) QUOTE.safeTransfer(_feeCollector(), cache.totalTargetFee);
+        if (cache.quoteReserve != quoteReserve) quoteReserve = cache.quoteReserve;
         return (false, cache.earnQuoteAmount);
     }
 
@@ -507,6 +497,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         uint256 matchedBaseAmount;
         uint256 useQuoteAmount;
         uint256 totalFee;
+        uint256 baseReserve;
     }
 
     // For a BUY order, search from the cheapest price in the SELL list
@@ -520,7 +511,8 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         uint256 quoteAmount, // Quote amount to be used for Market trades.
         uint256 maxMatchCount
     ) private setLatest returns (bool, uint256, uint256) {
-        MatchBuyCache memory cache = MatchBuyCache({price: 0, matchedBaseAmount: 0, useQuoteAmount: 0, totalFee: 0});
+        MatchBuyCache memory cache =
+            MatchBuyCache({price: 0, matchedBaseAmount: 0, useQuoteAmount: 0, totalFee: 0, baseReserve: baseReserve});
 
         List.U256 storage _sellPrices = _prices[uint8(OrderSide.SELL)];
         while (!_sellPrices.empty()) {
@@ -536,6 +528,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
                 order.amount = buyAmount;
                 if (buyAmount == 0) {
                     if (cache.totalFee != 0) QUOTE.safeTransfer(_feeCollector(), cache.totalFee);
+                    if (cache.baseReserve != baseReserve) baseReserve = cache.baseReserve;
                     return (true, cache.matchedBaseAmount, cache.useQuoteAmount);
                 }
             }
@@ -557,7 +550,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
                 // Update information.
                 cache.matchedBaseAmount += tradeAmount;
                 cache.useQuoteAmount += tradeQuoteAmount;
-                _subBaseReserve(targetOwner, tradeAmount, targetFeeBps, tradeQuoteAmount);
+                cache.baseReserve = _subBaseReserve(targetOwner, tradeAmount, true, cache.baseReserve);
                 if (order.amount == 0 || --maxMatchCount == 0) {
                     if (_orders.empty()) {
                         // Although the `while` loop has not yet ended,
@@ -566,6 +559,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
                         if (!_sellPrices.remove(cache.price)) revert PairUnknownPrices(OrderSide.SELL, cache.price);
                     }
                     if (cache.totalFee != 0) QUOTE.safeTransfer(_feeCollector(), cache.totalFee);
+                    if (cache.baseReserve != baseReserve) baseReserve = cache.baseReserve;
                     return (true, cache.matchedBaseAmount, cache.useQuoteAmount);
                 }
             }
@@ -574,6 +568,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
             if (!_sellPrices.remove(cache.price)) revert PairUnknownPrices(OrderSide.SELL, cache.price);
         }
         if (cache.totalFee != 0) QUOTE.safeTransfer(_feeCollector(), cache.totalFee);
+        if (cache.baseReserve != baseReserve) baseReserve = cache.baseReserve;
         return (false, cache.matchedBaseAmount, cache.useQuoteAmount);
     }
 
@@ -619,7 +614,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
             uint256 amount = order.amount;
             if (amount != 0) {
                 BASE.safeTransfer(order.owner, amount);
-                _subBaseReserve(order.owner, amount, order.feeBps, 0); // Base 의 reserve 만 제거하면 되므로 거래 수량은 0
+                _subBaseReserve(order.owner, amount, false, baseReserve);
             }
         } else {
             _orders = _buyOrders[order.price];
@@ -629,7 +624,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
                     returnQuoteAmount += Math.mulDiv(returnQuoteAmount, order.feeBps, BPS_DENOMINATOR);
                 }
                 QUOTE.safeTransfer(order.owner, returnQuoteAmount);
-                _subQuoteReserve(order.owner, returnQuoteAmount);
+                _subQuoteReserve(order.owner, returnQuoteAmount, false, quoteReserve);
             }
         }
 
@@ -658,15 +653,17 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     }
 
     // For LimitBuy order cancel or Matched From Sell
-    // todo: in matching, after update quoteReserve
-    function _subQuoteReserve(address account, uint256 amount) private {
-        (bool ok, uint256 newReserve) = Math.trySub(quoteReserve, amount);
-        if (!ok) revert PairInvalidAccountReserve(account, address(QUOTE));
-        quoteReserve = newReserve;
-
-        (ok, newReserve) = Math.trySub(_accountReserves[account][1], amount);
+    function _subQuoteReserve(address account, uint256 amount, bool inMatching, uint256 reserve)
+        private
+        returns (uint256 newQuoteReserve)
+    {
+        (bool ok, uint256 newReserve) = Math.trySub(_accountReserves[account][1], amount);
         if (!ok) revert PairInvalidAccountReserve(account, address(QUOTE));
         _accountReserves[account][1] = newReserve;
+
+        (ok, newQuoteReserve) = Math.trySub(reserve, amount);
+        if (!ok) revert PairInvalidAccountReserve(account, address(QUOTE));
+        if (!inMatching) quoteReserve = newQuoteReserve;
     }
 
     // LimitSell
@@ -681,26 +678,17 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     }
 
     // For LimitSell order cancel or Matched From Buy
-    /// @return remaining quote fee
-    // todo: in matching, after update quoteReserve
-    function _subBaseReserve(address account, uint256 amount, uint32 feeBps, uint256 tradeVolume)
+    function _subBaseReserve(address account, uint256 amount, bool inMatching, uint256 reserve)
         private
-        returns (uint256)
+        returns (uint256 newBaseReserve)
     {
-        (bool ok, uint256 newReserve) = Math.trySub(baseReserve, amount);
-        if (!ok) revert PairInvalidAccountReserve(account, address(BASE));
-        baseReserve = newReserve;
-
-        (ok, newReserve) = Math.trySub(_accountReserves[account][0], amount);
+        (bool ok, uint256 newReserve) = Math.trySub(_accountReserves[account][0], amount);
         if (!ok) revert PairInvalidAccountReserve(account, address(BASE));
         _accountReserves[account][0] = newReserve;
 
-        if (feeBps != 0 && tradeVolume != 0) {
-            uint256 fee = Math.mulDiv(tradeVolume, feeBps, BPS_DENOMINATOR);
-            _subQuoteReserve(account, fee);
-            return fee;
-        }
-        return 0;
+        (ok, newBaseReserve) = Math.trySub(reserve, amount);
+        if (!ok) revert PairInvalidAccountReserve(account, address(BASE));
+        if (!inMatching) baseReserve = newBaseReserve;
     }
 
     function _returnRemainQuote(address to, uint256 mustRemainQuoteAmount) private {
