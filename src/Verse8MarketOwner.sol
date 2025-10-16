@@ -16,7 +16,7 @@ import {IMarket} from "./interfaces/IMarket.sol";
 contract Verse8MarketOwner is AccessControlDefaultAdminRules {
     error Verse8MarketOwner__CallFailed();
 
-    bytes32 public constant PAIR_CREATOR_ROLE = keccak256("PAIR_CREATOR_ROLE");
+    bytes32 private constant PAIR_CREATOR_ROLE = keccak256("PAIR_CREATOR_ROLE");
 
     constructor(address _owner, address[] memory creators) AccessControlDefaultAdminRules(1 days, _owner) {
         _grantRole(PAIR_CREATOR_ROLE, _owner); // Owner can also create pairs
