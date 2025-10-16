@@ -430,6 +430,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         uint256 earnQuoteAmount;
         uint256 totalTargetFee;
         uint256 quoteReserve;
+        bool done;
     }
 
     // For a SELL order, search from the most expensive price in the BUY list
@@ -442,7 +443,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         returns (bool, uint256)
     {
         MatchSellCache memory cache =
-            MatchSellCache({price: 0, earnQuoteAmount: 0, totalTargetFee: 0, quoteReserve: quoteReserve});
+            MatchSellCache({price: 0, earnQuoteAmount: 0, totalTargetFee: 0, quoteReserve: quoteReserve, done: false});
         // cache storage immutables to memory
         List.U256 storage _buyPrices = _prices[uint8(OrderSide.BUY)];
         while (!_buyPrices.empty()) {
@@ -477,18 +478,18 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
                         // `_orders` may be empty.
                         if (!_buyPrices.remove(cache.price)) revert PairUnknownPrices(OrderSide.BUY, cache.price);
                     }
-                    if (cache.totalTargetFee != 0) QUOTE.safeTransfer(_feeCollector(), cache.totalTargetFee);
-                    if (cache.quoteReserve != quoteReserve) quoteReserve = cache.quoteReserve;
-                    return (true, cache.earnQuoteAmount);
+                    cache.done = true;
+                    break;
                 }
             }
+            if (cache.done) break;
             // Reaching this point means that all orders at the given `price` have been matched,
             // so remove `price` from `_buyPrices`.
             if (!_buyPrices.remove(cache.price)) revert PairUnknownPrices(OrderSide.BUY, cache.price);
         }
         if (cache.totalTargetFee != 0) QUOTE.safeTransfer(_feeCollector(), cache.totalTargetFee);
         if (cache.quoteReserve != quoteReserve) quoteReserve = cache.quoteReserve;
-        return (false, cache.earnQuoteAmount);
+        return (cache.done, cache.earnQuoteAmount);
     }
 
     // avoid stack too deep `_matchBuyOrder function`
@@ -498,6 +499,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         uint256 useQuoteAmount;
         uint256 totalFee;
         uint256 baseReserve;
+        bool done;
     }
 
     // For a BUY order, search from the cheapest price in the SELL list
@@ -511,8 +513,14 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         uint256 quoteAmount, // Quote amount to be used for Market trades.
         uint256 maxMatchCount
     ) private setLatest returns (bool, uint256, uint256) {
-        MatchBuyCache memory cache =
-            MatchBuyCache({price: 0, matchedBaseAmount: 0, useQuoteAmount: 0, totalFee: 0, baseReserve: baseReserve});
+        MatchBuyCache memory cache = MatchBuyCache({
+            price: 0,
+            matchedBaseAmount: 0,
+            useQuoteAmount: 0,
+            totalFee: 0,
+            baseReserve: baseReserve,
+            done: false
+        });
 
         List.U256 storage _sellPrices = _prices[uint8(OrderSide.SELL)];
         while (!_sellPrices.empty()) {
@@ -527,9 +535,8 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
                 buyAmount -= buyAmount % lotSize;
                 order.amount = buyAmount;
                 if (buyAmount == 0) {
-                    if (cache.totalFee != 0) QUOTE.safeTransfer(_feeCollector(), cache.totalFee);
-                    if (cache.baseReserve != baseReserve) baseReserve = cache.baseReserve;
-                    return (true, cache.matchedBaseAmount, cache.useQuoteAmount);
+                    cache.done = true;
+                    break;
                 }
             }
 
@@ -558,18 +565,18 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
                         // `_orders` may be empty.
                         if (!_sellPrices.remove(cache.price)) revert PairUnknownPrices(OrderSide.SELL, cache.price);
                     }
-                    if (cache.totalFee != 0) QUOTE.safeTransfer(_feeCollector(), cache.totalFee);
-                    if (cache.baseReserve != baseReserve) baseReserve = cache.baseReserve;
-                    return (true, cache.matchedBaseAmount, cache.useQuoteAmount);
+                    cache.done = true;
+                    break;
                 }
             }
+            if (cache.done) break;
             // Reaching this point means that all orders at the given `price` have been matched,
             // so remove `price` from `_sellPrices`.
             if (!_sellPrices.remove(cache.price)) revert PairUnknownPrices(OrderSide.SELL, cache.price);
         }
         if (cache.totalFee != 0) QUOTE.safeTransfer(_feeCollector(), cache.totalFee);
         if (cache.baseReserve != baseReserve) baseReserve = cache.baseReserve;
-        return (false, cache.matchedBaseAmount, cache.useQuoteAmount);
+        return (cache.done, cache.matchedBaseAmount, cache.useQuoteAmount);
     }
 
     function _matchOrderAmount(
