@@ -30,7 +30,6 @@ contract Verse8MarketOwner is AccessControlDefaultAdminRules {
         onlyRole(PAIR_CREATOR_ROLE)
         returns (address)
     {
-        require(hasRole(PAIR_CREATOR_ROLE, msg.sender), "Verse8MarketOwner: Not authorized to create pairs");
         return IMarket(market).createPair(base, tickSize, lotSize);
     }
 
