@@ -56,7 +56,7 @@ contract CrossDexRouterV2 is
 
     uint256[44] private __gap;
 
-    modifier submitCheck() {
+    modifier checkSubmit() {
         _checkAccountCode(_msgSender());
         _;
         if (address(this).balance != 0) revert RouterInvalidValue();
@@ -110,7 +110,7 @@ contract CrossDexRouterV2 is
         IPair.LimitConstraints constraints,
         uint256[2] memory adjacent,
         uint256 _maxMatchCount
-    ) external payable nonReentrant submitCheck validPair(pair) returns (uint256) {
+    ) external payable nonReentrant checkSubmit validPair(pair) returns (uint256) {
         address _owner = _msgSender();
         IPairV2 _pair = IPairV2(pair);
         IPairV2.Config memory info = _pair.getConfig();
@@ -132,7 +132,7 @@ contract CrossDexRouterV2 is
         IPair.LimitConstraints constraints,
         uint256[2] calldata adjacent,
         uint256 _maxMatchCount
-    ) external payable nonReentrant submitCheck validPair(pair) returns (uint256) {
+    ) external payable nonReentrant checkSubmit validPair(pair) returns (uint256) {
         address _owner = _msgSender();
         IPairV2 _pair = IPairV2(pair);
         IPairV2.Config memory info = _pair.getConfig();
@@ -156,7 +156,7 @@ contract CrossDexRouterV2 is
         external
         payable
         nonReentrant
-        submitCheck
+        checkSubmit
         validPair(pair)
     {
         address _owner = _msgSender();
@@ -175,7 +175,7 @@ contract CrossDexRouterV2 is
         external
         payable
         nonReentrant
-        submitCheck
+        checkSubmit
         validPair(pair)
     {
         address _owner = _msgSender();
