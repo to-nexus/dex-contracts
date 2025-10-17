@@ -17,6 +17,9 @@ interface IMarket {
     function feeBps() external view returns (uint32);
     function feeCollector() external view returns (address);
     function checkTickSizeRoles(address account) external view;
+    function createPair(address base, uint256 tickSize, uint256 lotSize) external returns (address);
+    function setFeeCollector(address _feeCollector) external;
+    function setFeeBps(uint256 _feeBps) external;
 }
 
 uint32 constant NO_FEE_BPS = type(uint32).max; // Special value to indicate "use market fee"
@@ -43,4 +46,8 @@ interface IMarketV2 {
     function feeCollector() external view returns (address);
     function checkTickSizeRoles(address account) external view;
     function getFeeConfig() external view returns (FeeConfig memory);
+
+    function createPair(address base, uint256 tickSize, uint256 lotSize, bytes memory feeData)
+        external
+        returns (address);
 }

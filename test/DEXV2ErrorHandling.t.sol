@@ -40,6 +40,7 @@ contract DEXV2ErrorHandlingTest is Test {
     address public constant USER2 = address(bytes20("USER2"));
     address public constant INVALID_USER = address(bytes20("INVALID_USER"));
 
+    bytes public NO_FEE_BPS_DATA = abi.encode(NO_FEE_BPS, NO_FEE_BPS, NO_FEE_BPS, NO_FEE_BPS);
     uint256[2] private _searchPrices = [uint256(0), uint256(0)];
 
     function setUp() external {
@@ -92,10 +93,7 @@ contract DEXV2ErrorHandlingTest is Test {
             address(BASE),
             QUOTE_DECIMALS / quote_tick_size, // tickSize
             BASE_DECIMALS / base_tick_size, // lotSize
-            NO_FEE_BPS, // use market seller maker fee
-            NO_FEE_BPS, // use market seller taker fee
-            NO_FEE_BPS, // use market buyer maker fee
-            NO_FEE_BPS // use market buyer taker fee
+            NO_FEE_BPS_DATA
         );
         PAIR = PairImplV2(pairAddress);
 
@@ -286,10 +284,7 @@ contract DEXV2ErrorHandlingTest is Test {
             address(QUOTE), // Same as quote token
             1e16, // tickSize
             1e12, // lotSize
-            NO_FEE_BPS,
-            NO_FEE_BPS,
-            NO_FEE_BPS,
-            NO_FEE_BPS
+            NO_FEE_BPS_DATA
         );
     }
 }
