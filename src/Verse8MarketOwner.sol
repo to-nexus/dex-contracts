@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 import {AccessControlDefaultAdminRules} from
     "@openzeppelin-contracts-5.2.0/access/extensions/AccessControlDefaultAdminRules.sol";
 
-import {IMarket} from "./interfaces/IMarket.sol";
+import {IMarketV2} from "./interfaces/IMarket.sol";
 
 /**
  * @title Verse8MarketOwner
@@ -18,19 +18,19 @@ contract Verse8MarketOwner is AccessControlDefaultAdminRules {
 
     bytes32 private constant PAIR_CREATOR_ROLE = keccak256("PAIR_CREATOR_ROLE");
 
-    constructor(address _owner, address[] memory creators) AccessControlDefaultAdminRules(1 days, _owner) {
+    constructor(address _owner, address[] memory creators) AccessControlDefaultAdminRules(0, _owner) {
         _grantRole(PAIR_CREATOR_ROLE, _owner); // Owner can also create pairs
         for (uint256 i = 0; i < creators.length; i++) {
             _grantRole(PAIR_CREATOR_ROLE, creators[i]);
         }
     }
 
-    function createPair(address market, address base, uint256 tickSize, uint256 lotSize)
+    function createPair(address market, address base, uint256 tickSize, uint256 lotSize, bytes memory feeData)
         external
         onlyRole(PAIR_CREATOR_ROLE)
         returns (address)
     {
-        return IMarket(market).createPair(base, tickSize, lotSize);
+        return IMarketV2(market).createPair(base, tickSize, lotSize, feeData);
     }
 
     struct CreatePairArgs {
@@ -38,6 +38,7 @@ contract Verse8MarketOwner is AccessControlDefaultAdminRules {
         address base;
         uint256 tickSize;
         uint256 lotSize;
+        bytes feeData;
     }
 
     function createPairs(CreatePairArgs[] calldata args)
@@ -47,7 +48,8 @@ contract Verse8MarketOwner is AccessControlDefaultAdminRules {
     {
         address[] memory pairs = new address[](args.length);
         for (uint256 i = 0; i < args.length; i++) {
-            pairs[i] = IMarket(args[i].market).createPair(args[i].base, args[i].tickSize, args[i].lotSize);
+            CreatePairArgs memory arg = args[i];
+            pairs[i] = IMarketV2(arg.market).createPair(arg.base, arg.tickSize, arg.lotSize, arg.feeData);
         }
         return pairs;
     }

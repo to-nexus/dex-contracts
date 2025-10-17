@@ -46,4 +46,8 @@ interface IMarketV2 {
     function feeCollector() external view returns (address);
     function checkTickSizeRoles(address account) external view;
     function getFeeConfig() external view returns (FeeConfig memory);
+
+    function createPair(address base, uint256 tickSize, uint256 lotSize, bytes memory feeData)
+        external
+        returns (address);
 }

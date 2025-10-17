@@ -107,7 +107,7 @@ contract CrossDexImplV2 is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
         return _allMarkets.get(quote) == market;
     }
 
-    function createMarket(address _owner, address quote, address feeCollector, bytes memory marketInitializeData)
+    function createMarket(address _owner, address quote, address feeCollector, bytes memory data)
         external
         onlyOwner
         returns (address)
@@ -115,10 +115,7 @@ contract CrossDexImplV2 is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
         bytes memory bytecode = abi.encodePacked(
             type(ERC1967Proxy).creationCode,
             abi.encode(
-                marketImpl,
-                abi.encodeCall(
-                    IMarketV2.initialize, (_owner, ROUTER, quote, pairImpl, feeCollector, marketInitializeData)
-                )
+                marketImpl, abi.encodeCall(IMarketV2.initialize, (_owner, ROUTER, quote, pairImpl, feeCollector, data))
             )
         );
         bytes32 salt = keccak256(abi.encodePacked(quote));

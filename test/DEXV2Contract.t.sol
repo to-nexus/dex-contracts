@@ -41,6 +41,8 @@ contract DEXV2ContractTest is Test {
     uint256 public MARKET_SELLER_MAKER_FEE = 20; // 0.2%
     uint256 public MARKET_SELLER_TAKER_FEE = 30; // 0.3%
 
+    bytes public NO_FEE_BPS_DATA = abi.encode(NO_FEE_BPS, NO_FEE_BPS, NO_FEE_BPS, NO_FEE_BPS);
+
     uint256 public QUOTE_DECIMALS;
     uint256 public BASE_DECIMALS;
 
@@ -100,13 +102,7 @@ contract DEXV2ContractTest is Test {
 
             // create pair with default fees (NO_FEE_BPS = use market fees)
             address pair = MARKET.createPair(
-                address(BASE),
-                QUOTE_DECIMALS / quote_tick_size,
-                BASE_DECIMALS / base_tick_size,
-                NO_FEE_BPS, // use market seller maker fee
-                NO_FEE_BPS, // use market seller taker fee
-                NO_FEE_BPS, // use market buyer maker fee (0)
-                NO_FEE_BPS // use market buyer taker fee (0)
+                address(BASE), QUOTE_DECIMALS / quote_tick_size, BASE_DECIMALS / base_tick_size, NO_FEE_BPS_DATA
             );
             PAIR = PairImplV2(pair);
         }

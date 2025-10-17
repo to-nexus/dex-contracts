@@ -2,27 +2,34 @@
 pragma solidity 0.8.28;
 
 import {ERC1967Proxy} from "@openzeppelin-contracts-5.2.0/proxy/ERC1967/ERC1967Proxy.sol";
-import {Test} from "forge-std/Test.sol";
+import {Test, console} from "forge-std/Test.sol";
 
-import {MarketImpl} from "../src/MarketImpl.sol";
-import {PairImpl} from "../src/PairImpl.sol";
+import {CrossDexImplV2} from "../src/CrossDexImplV2.sol";
+import {CrossDexRouterV2} from "../src/CrossDexRouterV2.sol";
+import {MarketImplV2} from "../src/MarketImplV2.sol";
+import {PairImplV2} from "../src/PairImplV2.sol";
 import {Verse8MarketOwner} from "../src/Verse8MarketOwner.sol";
-import {IMarket} from "../src/interfaces/IMarket.sol";
+import {IMarketV2, NO_FEE_BPS} from "../src/interfaces/IMarket.sol";
+
+import {T20} from "./mock/T20.sol";
 
 contract Verse8MarketOwnerTest is Test {
     Verse8MarketOwner public verse8Owner;
-    MarketImpl public marketImpl;
-    MarketImpl public market;
-    PairImpl public pairImpl;
+    MarketImplV2 public marketImpl;
+    MarketImplV2 public market;
+    PairImplV2 public pairImpl;
 
     address public owner;
     address public pairCreator1;
     address public pairCreator2;
     address public unauthorized;
+    address public feeCollector;
+
     address public router;
     address public quote;
-    address public feeCollector;
     address public base;
+
+    bytes public NOFEEBPS;
 
     bytes32 public constant PAIR_CREATOR_ROLE = keccak256("PAIR_CREATOR_ROLE");
     bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
@@ -34,29 +41,29 @@ contract Verse8MarketOwnerTest is Test {
         pairToMarket[pair] = msg.sender;
     }
 
-    function checkTickSizeRoles(address) external view {
-        // Mock: allow all for testing
-    }
-
     function setUp() public {
         owner = makeAddr("owner");
         pairCreator1 = makeAddr("pairCreator1");
         pairCreator2 = makeAddr("pairCreator2");
         unauthorized = makeAddr("unauthorized");
-        router = makeAddr("router");
-        quote = makeAddr("quote");
         feeCollector = makeAddr("feeCollector");
-        base = makeAddr("base");
+        quote = address(new T20("QUOTE", "QUOTE", 18));
+        base = address(new T20("BASE", "BASE", 18));
+
+        NOFEEBPS = abi.encode(NO_FEE_BPS, NO_FEE_BPS, NO_FEE_BPS, NO_FEE_BPS);
 
         // Deploy implementations
-        marketImpl = new MarketImpl();
-        pairImpl = new PairImpl();
-
-        // Deploy Market proxy with deployer as temporary owner
-        bytes memory initData =
-            abi.encodeCall(MarketImpl.initialize, (address(this), router, quote, address(pairImpl), feeCollector, 30));
-        ERC1967Proxy marketProxy = new ERC1967Proxy(address(marketImpl), initData);
-        market = MarketImpl(address(marketProxy));
+        marketImpl = new MarketImplV2();
+        pairImpl = new PairImplV2();
+        address crossDexImpl = address(new CrossDexImplV2());
+        address routerImpl = address(new CrossDexRouterV2());
+        CrossDexImplV2 CROSS_DEX;
+        {
+            ERC1967Proxy proxy = new ERC1967Proxy(crossDexImpl, hex"");
+            CROSS_DEX = CrossDexImplV2(address(proxy));
+            CROSS_DEX.initialize(owner, routerImpl, 20, 100, 1, address(marketImpl), address(pairImpl));
+            router = CROSS_DEX.ROUTER();
+        }
 
         // Deploy Verse8MarketOwner with multiple pair creators
         address[] memory creators = new address[](2);
@@ -65,12 +72,8 @@ contract Verse8MarketOwnerTest is Test {
         verse8Owner = new Verse8MarketOwner(owner, creators);
 
         // Transfer market ownership to Verse8MarketOwner
-        market.transferOwnership(address(verse8Owner));
-
-        // Mock tokens
-        vm.etch(quote, hex"00");
-        vm.etch(base, hex"00");
-        vm.mockCall(base, abi.encodeWithSignature("decimals()"), abi.encode(uint8(18)));
+        vm.prank(owner);
+        market = MarketImplV2(CROSS_DEX.createMarket(address(verse8Owner), quote, feeCollector, abi.encode(0, 0, 0, 0)));
     }
 
     // Test initial state and role assignments
@@ -93,21 +96,21 @@ contract Verse8MarketOwnerTest is Test {
     // Test createPair function with PAIR_CREATOR_ROLE
     function test_OwnerCanCreatePair() public {
         vm.startPrank(owner);
-        address pair = verse8Owner.createPair(address(market), base, 1e18, 1e18);
+        address pair = verse8Owner.createPair(address(market), base, 1e18, 1e18, NOFEEBPS);
         assertNotEq(pair, address(0));
         vm.stopPrank();
     }
 
     function test_PairCreator1CanCreatePair() public {
         vm.startPrank(pairCreator1);
-        address pair = verse8Owner.createPair(address(market), base, 1e18, 1e18);
+        address pair = verse8Owner.createPair(address(market), base, 1e18, 1e18, NOFEEBPS);
         assertNotEq(pair, address(0));
         vm.stopPrank();
     }
 
     function test_PairCreator2CanCreatePair() public {
         vm.startPrank(pairCreator2);
-        address pair = verse8Owner.createPair(address(market), base, 1e18, 1e18);
+        address pair = verse8Owner.createPair(address(market), base, 1e18, 1e18, NOFEEBPS);
         assertNotEq(pair, address(0));
         vm.stopPrank();
     }
@@ -115,7 +118,7 @@ contract Verse8MarketOwnerTest is Test {
     function test_RevertWhen_UnauthorizedTriesToCreatePair() public {
         vm.startPrank(unauthorized);
         vm.expectRevert();
-        verse8Owner.createPair(address(market), base, 1e18, 1e18);
+        verse8Owner.createPair(address(market), base, 1e18, 1e18, NOFEEBPS);
         vm.stopPrank();
     }
 
@@ -126,9 +129,20 @@ contract Verse8MarketOwnerTest is Test {
         vm.mockCall(base2, abi.encodeWithSignature("decimals()"), abi.encode(uint8(18)));
 
         Verse8MarketOwner.CreatePairArgs[] memory args = new Verse8MarketOwner.CreatePairArgs[](2);
-        args[0] = Verse8MarketOwner.CreatePairArgs({market: address(market), base: base, tickSize: 1e18, lotSize: 1e18});
-        args[1] =
-            Verse8MarketOwner.CreatePairArgs({market: address(market), base: base2, tickSize: 2e18, lotSize: 2e18});
+        args[0] = Verse8MarketOwner.CreatePairArgs({
+            market: address(market),
+            base: base,
+            tickSize: 1e18,
+            lotSize: 1e18,
+            feeData: NOFEEBPS
+        });
+        args[1] = Verse8MarketOwner.CreatePairArgs({
+            market: address(market),
+            base: base2,
+            tickSize: 2e18,
+            lotSize: 2e18,
+            feeData: NOFEEBPS
+        });
 
         vm.startPrank(pairCreator1);
         address[] memory pairs = verse8Owner.createPairs(args);
@@ -141,7 +155,7 @@ contract Verse8MarketOwnerTest is Test {
     // Test setFeeCollector function through execute
     function test_OwnerCanSetFeeCollector() public {
         address newFeeCollector = makeAddr("newFeeCollector");
-        bytes memory data = abi.encodeCall(IMarket.setFeeCollector, (newFeeCollector));
+        bytes memory data = abi.encodeCall(MarketImplV2.setFeeCollector, (newFeeCollector));
 
         vm.startPrank(owner);
         verse8Owner.execute(address(market), 0, data);
@@ -152,7 +166,7 @@ contract Verse8MarketOwnerTest is Test {
 
     function test_RevertWhen_PairCreatorTriesToSetFeeCollector() public {
         address newFeeCollector = makeAddr("newFeeCollector");
-        bytes memory data = abi.encodeCall(IMarket.setFeeCollector, (newFeeCollector));
+        bytes memory data = abi.encodeCall(MarketImplV2.setFeeCollector, (newFeeCollector));
 
         vm.startPrank(pairCreator1);
         vm.expectRevert();
@@ -160,21 +174,35 @@ contract Verse8MarketOwnerTest is Test {
         vm.stopPrank();
     }
 
-    // Test setFeeBps function through execute
-    function test_OwnerCanSetFeeBps() public {
-        uint256 newFeeBps = 50;
-        bytes memory data = abi.encodeCall(IMarket.setFeeBps, (newFeeBps));
+    // Test setMarketFees function through execute
+    function test_OwnerCanSetMarketFees() public {
+        uint32 newSellerMakerFee = 50;
+        uint32 newSellerTakerFee = 60;
+        uint32 newBuyerMakerFee = 40;
+        uint32 newBuyerTakerFee = 70;
+        bytes memory data = abi.encodeCall(
+            MarketImplV2.setMarketFees, (newSellerMakerFee, newSellerTakerFee, newBuyerMakerFee, newBuyerTakerFee)
+        );
 
         vm.startPrank(owner);
         verse8Owner.execute(address(market), 0, data);
         vm.stopPrank();
 
-        assertEq(market.feeBps(), newFeeBps);
+        IMarketV2.FeeConfig memory feeConfig = market.getFeeConfig();
+        assertEq(feeConfig.sellerMakerFeeBps, newSellerMakerFee);
+        assertEq(feeConfig.sellerTakerFeeBps, newSellerTakerFee);
+        assertEq(feeConfig.buyerMakerFeeBps, newBuyerMakerFee);
+        assertEq(feeConfig.buyerTakerFeeBps, newBuyerTakerFee);
     }
 
-    function test_RevertWhen_PairCreatorTriesToSetFeeBps() public {
-        uint256 newFeeBps = 50;
-        bytes memory data = abi.encodeCall(IMarket.setFeeBps, (newFeeBps));
+    function test_RevertWhen_PairCreatorTriesToSetMarketFees() public {
+        uint32 newSellerMakerFee = 50;
+        uint32 newSellerTakerFee = 60;
+        uint32 newBuyerMakerFee = 40;
+        uint32 newBuyerTakerFee = 70;
+        bytes memory data = abi.encodeCall(
+            MarketImplV2.setMarketFees, (newSellerMakerFee, newSellerTakerFee, newBuyerMakerFee, newBuyerTakerFee)
+        );
 
         vm.startPrank(pairCreator1);
         vm.expectRevert();
@@ -186,7 +214,7 @@ contract Verse8MarketOwnerTest is Test {
     function test_OwnerCanCallAdministrativeFunctions() public {
         // Test that owner can call any function through execute
         address newFeeCollector = makeAddr("newFeeCollector");
-        bytes memory data = abi.encodeCall(IMarket.setFeeCollector, (newFeeCollector));
+        bytes memory data = abi.encodeCall(MarketImplV2.setFeeCollector, (newFeeCollector));
 
         vm.startPrank(owner);
         bytes memory result = verse8Owner.execute(address(market), 0, data);
@@ -197,7 +225,7 @@ contract Verse8MarketOwnerTest is Test {
 
     function test_RevertWhen_PairCreatorTriesToCallAdministrativeFunctions() public {
         address newFeeCollector = makeAddr("newFeeCollector");
-        bytes memory data = abi.encodeCall(IMarket.setFeeCollector, (newFeeCollector));
+        bytes memory data = abi.encodeCall(MarketImplV2.setFeeCollector, (newFeeCollector));
 
         vm.startPrank(pairCreator1);
         vm.expectRevert();
@@ -208,18 +236,18 @@ contract Verse8MarketOwnerTest is Test {
     // Test executeBatch function
     function test_OwnerCanExecuteBatch() public {
         address newFeeCollector = makeAddr("newFeeCollector");
-        uint256 newFeeBps = 75;
+        uint32 newSellerMakerFee = 75;
 
         Verse8MarketOwner.ExecuteBatchArgs[] memory calls = new Verse8MarketOwner.ExecuteBatchArgs[](2);
         calls[0] = Verse8MarketOwner.ExecuteBatchArgs({
             to: address(market),
             value: 0,
-            data: abi.encodeCall(IMarket.setFeeCollector, (newFeeCollector))
+            data: abi.encodeCall(MarketImplV2.setFeeCollector, (newFeeCollector))
         });
         calls[1] = Verse8MarketOwner.ExecuteBatchArgs({
             to: address(market),
             value: 0,
-            data: abi.encodeCall(IMarket.setFeeBps, (newFeeBps))
+            data: abi.encodeCall(MarketImplV2.setMarketFees, (newSellerMakerFee, NO_FEE_BPS, NO_FEE_BPS, NO_FEE_BPS))
         });
 
         vm.startPrank(owner);
@@ -228,7 +256,8 @@ contract Verse8MarketOwnerTest is Test {
 
         assertEq(results.length, 2);
         assertEq(market.feeCollector(), newFeeCollector);
-        assertEq(market.feeBps(), newFeeBps);
+        IMarketV2.FeeConfig memory feeConfig = market.getFeeConfig();
+        assertEq(feeConfig.sellerMakerFeeBps, newSellerMakerFee);
     }
 
     function test_RevertWhen_PairCreatorTriesToExecuteBatch() public {
@@ -236,7 +265,7 @@ contract Verse8MarketOwnerTest is Test {
         calls[0] = Verse8MarketOwner.ExecuteBatchArgs({
             to: address(market),
             value: 0,
-            data: abi.encodeCall(IMarket.setFeeBps, (100))
+            data: abi.encodeCall(MarketImplV2.setMarketFees, (uint32(100), NO_FEE_BPS, NO_FEE_BPS, NO_FEE_BPS))
         });
 
         vm.startPrank(pairCreator1);
@@ -246,7 +275,8 @@ contract Verse8MarketOwnerTest is Test {
     }
 
     function test_RevertWhen_UnauthorizedTriesToExecute() public {
-        bytes memory data = abi.encodeCall(IMarket.setFeeBps, (100));
+        bytes memory data =
+            abi.encodeCall(MarketImplV2.setMarketFees, (uint32(100), NO_FEE_BPS, NO_FEE_BPS, NO_FEE_BPS));
 
         vm.startPrank(unauthorized);
         vm.expectRevert();
@@ -277,7 +307,7 @@ contract Verse8MarketOwnerTest is Test {
 
         // New pair creator should be able to create pairs
         vm.startPrank(newPairCreator);
-        address pair = verse8Owner.createPair(address(market), base, 1e18, 1e18);
+        address pair = verse8Owner.createPair(address(market), base, 1e18, 1e18, NOFEEBPS);
         assertNotEq(pair, address(0));
         vm.stopPrank();
     }
@@ -292,7 +322,7 @@ contract Verse8MarketOwnerTest is Test {
         // Revoked pair creator should not be able to create pairs
         vm.startPrank(pairCreator1);
         vm.expectRevert();
-        verse8Owner.createPair(address(market), base, 1e18, 1e18);
+        verse8Owner.createPair(address(market), base, 1e18, 1e18, NOFEEBPS);
         vm.stopPrank();
     }
 
@@ -311,11 +341,12 @@ contract Verse8MarketOwnerTest is Test {
         vm.startPrank(pairCreator1);
 
         // Should succeed: createPair
-        address pair = verse8Owner.createPair(address(market), base, 1e18, 1e18);
+        address pair = verse8Owner.createPair(address(market), base, 1e18, 1e18, NOFEEBPS);
         assertNotEq(pair, address(0));
 
         // Should fail: execute
-        bytes memory data = abi.encodeCall(IMarket.setFeeBps, (100));
+        bytes memory data =
+            abi.encodeCall(MarketImplV2.setMarketFees, (uint32(100), NO_FEE_BPS, NO_FEE_BPS, NO_FEE_BPS));
         vm.expectRevert();
         verse8Owner.execute(address(market), 0, data);
 
@@ -328,12 +359,13 @@ contract Verse8MarketOwnerTest is Test {
         address base2 = makeAddr("base2");
         vm.etch(base2, hex"00");
         vm.mockCall(base2, abi.encodeWithSignature("decimals()"), abi.encode(uint8(18)));
-        address pair2 = verse8Owner.createPair(address(market), base2, 1e18, 1e18);
+        address pair2 = verse8Owner.createPair(address(market), base2, 1e18, 1e18, NOFEEBPS);
         assertNotEq(pair2, address(0));
 
         // Should succeed: execute
         verse8Owner.execute(address(market), 0, data);
-        assertEq(market.feeBps(), 100);
+        IMarketV2.FeeConfig memory feeConfig = market.getFeeConfig();
+        assertEq(feeConfig.sellerMakerFeeBps, 100);
 
         vm.stopPrank();
 
@@ -342,7 +374,7 @@ contract Verse8MarketOwnerTest is Test {
 
         // Should fail: createPair
         vm.expectRevert();
-        verse8Owner.createPair(address(market), base, 1e18, 1e18);
+        verse8Owner.createPair(address(market), base, 1e18, 1e18, NOFEEBPS);
 
         // Should fail: execute
         vm.expectRevert();

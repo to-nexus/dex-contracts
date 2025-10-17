@@ -20,6 +20,7 @@ contract MarketImplV2 is IMarketV2, UUPSUpgradeable, OwnableUpgradeable {
     error MarketInvalidBaseAddress(address);
     error MarketAlreadyCreatedBaseAddress(address);
     error MarketDeployPair();
+    error MarketInvalidFeeStructure(uint32 makerFee, uint32 takerFee);
 
     event PairCreated(address indexed pair, address indexed base, uint256 timestamp);
     event FeeCollectorChanged(address indexed before, address indexed current);
@@ -116,22 +117,15 @@ contract MarketImplV2 is IMarketV2, UUPSUpgradeable, OwnableUpgradeable {
         return _allPairs.get(base);
     }
 
-    function createPair(
-        address base,
-        uint256 tickSize,
-        uint256 lotSize,
-        uint32 _sellerMakerFeeBps,
-        uint32 _sellerTakerFeeBps,
-        uint32 _buyerMakerFeeBps,
-        uint32 _buyerTakerFeeBps
-    ) external onlyOwner returns (address) {
+    function createPair(address base, uint256 tickSize, uint256 lotSize, bytes memory feeData)
+        external
+        onlyOwner
+        returns (address)
+    {
         if (base == address(0) || base == address(QUOTE)) revert MarketInvalidBaseAddress(base);
         uint256 baseDecimals = IERC20Metadata(base).decimals();
         if (baseDecimals == 0) revert MarketInvalidBaseAddress(base);
         if (_allPairs.contains(base)) revert MarketAlreadyCreatedBaseAddress(base);
-
-        // Encode 4 different fee rates
-        bytes memory feeData = abi.encode(_sellerMakerFeeBps, _sellerTakerFeeBps, _buyerMakerFeeBps, _buyerTakerFeeBps);
 
         bytes memory bytecode = abi.encodePacked(
             type(ERC1967Proxy).creationCode,
@@ -173,6 +167,14 @@ contract MarketImplV2 is IMarketV2, UUPSUpgradeable, OwnableUpgradeable {
         }
         if (_buyerTakerFeeBps != NO_FEE_BPS && _buyerTakerFeeBps >= BPS_DENOMINATOR) {
             revert MarketInvalidInitializeData("buyerTakerFeeBps");
+        }
+
+        // logical check - taker fee must be >= maker fee
+        if (_sellerTakerFeeBps < _sellerMakerFeeBps && _sellerMakerFeeBps != NO_FEE_BPS) {
+            revert MarketInvalidFeeStructure(_sellerMakerFeeBps, _sellerTakerFeeBps);
+        }
+        if (_buyerTakerFeeBps < _buyerMakerFeeBps && _buyerMakerFeeBps != NO_FEE_BPS) {
+            revert MarketInvalidFeeStructure(_buyerMakerFeeBps, _buyerTakerFeeBps);
         }
 
         emit MarketFeesUpdated(_sellerMakerFeeBps, _sellerTakerFeeBps, _buyerMakerFeeBps, _buyerTakerFeeBps);
