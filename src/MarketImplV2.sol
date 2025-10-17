@@ -11,7 +11,7 @@ import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/acce
 
 import {PairImplV2} from "./PairImplV2.sol";
 import {ICrossDex} from "./interfaces/ICrossDex.sol";
-import {BPS_DENOMINATOR, IMarketInitializer, IMarketV2, NO_FEE_BPS} from "./interfaces/IMarket.sol";
+import {BPS_DENOMINATOR, IMarketV2, NO_FEE_BPS} from "./interfaces/IMarket.sol";
 
 contract MarketImplV2 is IMarketV2, UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableMap for EnumerableMap.AddressToAddressMap;
