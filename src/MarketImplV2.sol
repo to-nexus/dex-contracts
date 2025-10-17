@@ -25,6 +25,7 @@ contract MarketImplV2 is IMarketV2, UUPSUpgradeable, OwnableUpgradeable {
     event PairCreated(address indexed pair, address indexed base, uint256 timestamp);
     event FeeCollectorChanged(address indexed before, address indexed current);
     event MarketFeesUpdated(uint32 sellerMakerFee, uint32 sellerTakerFee, uint32 buyerMakerFee, uint32 buyerTakerFee);
+    event PairImplSet(address indexed before, address indexed current);
 
     uint256 public deployed; // immutable
     ICrossDex public CROSS_DEX; // immutable
@@ -182,6 +183,12 @@ contract MarketImplV2 is IMarketV2, UUPSUpgradeable, OwnableUpgradeable {
         _feeConfig.sellerTakerFeeBps = _sellerTakerFeeBps; // seller taker fee
         _feeConfig.buyerMakerFeeBps = _buyerMakerFeeBps; // buyer maker fee
         _feeConfig.buyerTakerFeeBps = _buyerTakerFeeBps; // buyer taker fee
+    }
+
+    function setPairImpl(address _pairImpl) external onlyOwner {
+        if (_pairImpl == address(0)) revert MarketInvalidInitializeData("pairImpl");
+        emit PairImplSet(pairImpl, _pairImpl);
+        pairImpl = _pairImpl;
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
