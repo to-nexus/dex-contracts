@@ -110,8 +110,8 @@ contract BuyerTest is Test {
         address pairAddress = market.createPair(address(baseToken), TICK_SIZE, LOT_SIZE);
         pair = PairImpl(pairAddress);
 
-        // Deploy Buyer for normal token
-        buyer = new Buyer(owner, address(router), MIN_ORDER_AMOUNT);
+        // Deploy Buyer for normal token (0 interval = no delay)
+        buyer = new Buyer(owner, address(router), MIN_ORDER_AMOUNT, 0);
 
         // Setup initial liquidity (sell orders)
         _setupLiquidity();
@@ -130,8 +130,8 @@ contract BuyerTest is Test {
         address wethPairAddress = market.createPair(wethAddress, TICK_SIZE, LOT_SIZE);
         wethPair = PairImpl(wethPairAddress);
 
-        // Deploy Buyer for WETH
-        buyerWithWETH = new Buyer(owner, address(router), MIN_ORDER_AMOUNT);
+        // Deploy Buyer for WETH (0 interval = no delay)
+        buyerWithWETH = new Buyer(owner, address(router), MIN_ORDER_AMOUNT, 0);
 
         // Setup liquidity for WETH pair
         address seller = makeAddr("wethSeller");
@@ -291,31 +291,6 @@ contract BuyerTest is Test {
         vm.prank(user);
         vm.expectRevert();
         buyer.setMinOrderAmount(500e18);
-    }
-
-    function test_OwnerCanSetRouter() public {
-        address newRouter = makeAddr("newRouter");
-
-        vm.prank(owner);
-        vm.expectEmit(true, true, false, false);
-        emit Buyer.RouterSet(address(router), newRouter);
-        buyer.setRouter(newRouter);
-
-        assertEq(address(buyer.router()), newRouter);
-    }
-
-    function test_RevertWhen_SetRouterToZeroAddress() public {
-        vm.prank(owner);
-        vm.expectRevert(abi.encodeWithSelector(Buyer.BuyerInvalidRouter.selector, address(0)));
-        buyer.setRouter(address(0));
-    }
-
-    function test_RevertWhen_NonOwnerTriesToSetRouter() public {
-        address newRouter = makeAddr("newRouter");
-
-        vm.prank(user);
-        vm.expectRevert();
-        buyer.setRouter(newRouter);
     }
 
     function test_CanBuyMarketView() public {

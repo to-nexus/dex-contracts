@@ -20,6 +20,7 @@ contract Buyer is Ownable {
     error BuyerInvalidRouter(address);
     error BuyerInvalidPair(address);
     error BuyerInvalidMinOrderAmount(uint256);
+    error BuyerIntervalNotPassed(uint256 timeSinceLastBuy, uint256 requiredInterval);
 
     event MarketBuyExecuted(
         address indexed pair,
@@ -29,7 +30,7 @@ contract Buyer is Ownable {
         address executor
     );
     event MinOrderAmountSet(uint256 indexed before, uint256 indexed current);
-    event RouterSet(address indexed before, address indexed current);
+    event IntervalSet(uint256 indexed before, uint256 indexed current);
     event Withdrawn(address indexed token, address indexed to, uint256 amount);
 
     /// @notice CrossDexRouter address
@@ -38,21 +39,35 @@ contract Buyer is Ownable {
     /// @notice Minimum order amount required to execute market buy
     uint256 public minOrderAmount;
 
+    /// @notice Minimum time interval (in seconds) between buy executions
+    uint256 public interval;
+
+    /// @notice Timestamp of the last buyMarket execution
+    uint256 public lastBuyTime;
+
     /**
      * @notice Contract constructor
      * @param _owner Owner address
      * @param _router CrossDexRouter address
      * @param _minOrderAmount Minimum order amount in QUOTE token
+     * @param _interval Minimum time interval (in seconds) between buy executions
      */
-    constructor(address _owner, address _router, uint256 _minOrderAmount) Ownable(_owner) {
+    constructor(
+        address _owner,
+        address _router,
+        uint256 _minOrderAmount,
+        uint256 _interval
+    ) Ownable(_owner) {
         if (_router == address(0)) revert BuyerInvalidRouter(_router);
-        if (_minOrderAmount == 0) revert BuyerInvalidMinOrderAmount(_minOrderAmount);
+        if (_minOrderAmount == 0)
+            revert BuyerInvalidMinOrderAmount(_minOrderAmount);
 
         router = IRouter(_router);
         minOrderAmount = _minOrderAmount;
+        interval = _interval;
 
-        emit RouterSet(address(0), _router);
         emit MinOrderAmountSet(0, _minOrderAmount);
+        emit IntervalSet(0, _interval);
     }
 
     // ===== PUBLIC FUNCTIONS =====
@@ -65,8 +80,21 @@ contract Buyer is Ownable {
      * @param recipient Address to receive BASE tokens (address(0) to keep in contract)
      * @param maxMatchCount Maximum number of orders to match (0 for router default)
      */
-    function buyMarket(address pair, uint256 amount, address recipient, uint256 maxMatchCount) external {
+    function buyMarket(
+        address pair,
+        uint256 amount,
+        address recipient,
+        uint256 maxMatchCount
+    ) external {
         if (pair == address(0)) revert BuyerInvalidPair(pair);
+
+        // Check interval has passed since last buy
+        if (interval > 0 && lastBuyTime > 0) {
+            uint256 timeSinceLastBuy = block.timestamp - lastBuyTime;
+            if (timeSinceLastBuy < interval) {
+                revert BuyerIntervalNotPassed(timeSinceLastBuy, interval);
+            }
+        }
 
         // Get pair configuration
         IPair.Config memory config = IPair(pair).getConfig();
@@ -80,18 +108,32 @@ contract Buyer is Ownable {
         uint256 spendAmount = amount == 0 ? balance : amount;
 
         // Check minimum order amount
-        if (spendAmount < minOrderAmount) revert BuyerInsufficientBalance(spendAmount, minOrderAmount);
+        if (spendAmount < minOrderAmount)
+            revert BuyerInsufficientBalance(spendAmount, minOrderAmount);
 
         // Check sufficient balance
-        if (spendAmount > balance) revert BuyerInsufficientBalance(balance, spendAmount);
+        if (spendAmount > balance)
+            revert BuyerInsufficientBalance(balance, spendAmount);
 
-        // Approve router to spend QUOTE tokens
-        quoteToken.forceApprove(address(router), spendAmount);
+        // Approve router if needed (only once per token)
+        address routerAddress = address(router);
+        if (quoteToken.allowance(address(this), routerAddress) < spendAmount) {
+            quoteToken.forceApprove(routerAddress, type(uint256).max);
+        }
 
         // Execute market buy
         router.submitBuyMarket(pair, spendAmount, maxMatchCount);
 
-        emit MarketBuyExecuted(pair, address(quoteToken), address(baseToken), spendAmount, msg.sender);
+        emit MarketBuyExecuted(
+            pair,
+            address(quoteToken),
+            address(baseToken),
+            spendAmount,
+            msg.sender
+        );
+
+        // Update last buy time
+        lastBuyTime = block.timestamp;
 
         // Transfer BASE tokens to recipient if specified
         if (recipient != address(0)) {
@@ -129,7 +171,7 @@ contract Buyer is Ownable {
         uint256 withdrawAmount = amount == 0 ? balance : amount;
         require(withdrawAmount <= balance, "Insufficient balance");
 
-        (bool success,) = owner().call{value: withdrawAmount}("");
+        (bool success, ) = owner().call{value: withdrawAmount}("");
         require(success, "ETH transfer failed");
         emit Withdrawn(address(0), owner(), withdrawAmount);
     }
@@ -140,20 +182,20 @@ contract Buyer is Ownable {
      * @param _minOrderAmount New minimum order amount
      */
     function setMinOrderAmount(uint256 _minOrderAmount) external onlyOwner {
-        if (_minOrderAmount == 0) revert BuyerInvalidMinOrderAmount(_minOrderAmount);
+        if (_minOrderAmount == 0)
+            revert BuyerInvalidMinOrderAmount(_minOrderAmount);
         emit MinOrderAmountSet(minOrderAmount, _minOrderAmount);
         minOrderAmount = _minOrderAmount;
     }
 
     /**
-     * @notice Set router address
+     * @notice Set time interval between buy executions
      * @dev Only owner can set
-     * @param _router New router address
+     * @param _interval New interval in seconds (0 to disable)
      */
-    function setRouter(address _router) external onlyOwner {
-        if (_router == address(0)) revert BuyerInvalidRouter(_router);
-        emit RouterSet(address(router), _router);
-        router = IRouter(_router);
+    function setInterval(uint256 _interval) external onlyOwner {
+        emit IntervalSet(interval, _interval);
+        interval = _interval;
     }
 
     // ===== VIEW FUNCTIONS =====
@@ -164,7 +206,9 @@ contract Buyer is Ownable {
      * @return canBuy Whether the buy can be executed
      * @return balance Current QUOTE token balance
      */
-    function canBuyMarket(address pair) external view returns (bool canBuy, uint256 balance) {
+    function canBuyMarket(
+        address pair
+    ) external view returns (bool canBuy, uint256 balance) {
         if (pair == address(0)) return (false, 0);
 
         IPair.Config memory config = IPair(pair).getConfig();
