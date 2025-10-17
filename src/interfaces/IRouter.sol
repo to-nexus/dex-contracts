@@ -7,4 +7,6 @@ interface IRouterInitializer {
 
 interface IRouter {
     function isPair(address pair) external view returns (bool);
+    function submitBuyMarket(address pair, uint256 amount, uint256 maxMatchCount) external payable;
+    function submitSellMarket(address pair, uint256 amount, uint256 maxMatchCount) external payable;
 }
