@@ -38,10 +38,12 @@ contract CrossDexRouterV2 is
     error RouterInvalidPairAddress(address);
     error RouterInvalidValue();
     error RouterCancelLimitExceeded(uint256 length, uint256 limit);
+    error RouterContractAccountBlocked(address);
 
     event FindPrevPriceCountChanged(uint256 indexed before, uint256 indexed current);
     event MaxMatchCountChanged(uint256 indexed before, uint256 indexed current);
     event CancelLimitChanged(uint256 indexed before, uint256 indexed current);
+    event WhitelistedCodeAccountSet(address indexed account, bool whitelisted);
 
     address public CROSS_DEX; // immutable
     IWETH public CROSS; // immutable
@@ -50,9 +52,12 @@ contract CrossDexRouterV2 is
     uint256 public maxMatchCount;
     uint256 public cancelLimit;
 
-    uint256[45] private __gap;
+    EnumerableSet.AddressSet private whitelistedCodeAccounts;
 
-    modifier checkValue() {
+    uint256[44] private __gap;
+
+    modifier checkSubmit() {
+        _checkAccountCode(_msgSender());
         _;
         if (address(this).balance != 0) revert RouterInvalidValue();
     }
@@ -105,7 +110,7 @@ contract CrossDexRouterV2 is
         IPair.LimitConstraints constraints,
         uint256[2] memory adjacent,
         uint256 _maxMatchCount
-    ) external payable nonReentrant validPair(pair) checkValue returns (uint256) {
+    ) external payable nonReentrant checkSubmit validPair(pair) returns (uint256) {
         address _owner = _msgSender();
         IPairV2 _pair = IPairV2(pair);
         IPairV2.Config memory info = _pair.getConfig();
@@ -127,7 +132,7 @@ contract CrossDexRouterV2 is
         IPair.LimitConstraints constraints,
         uint256[2] calldata adjacent,
         uint256 _maxMatchCount
-    ) external payable nonReentrant validPair(pair) checkValue returns (uint256) {
+    ) external payable nonReentrant checkSubmit validPair(pair) returns (uint256) {
         address _owner = _msgSender();
         IPairV2 _pair = IPairV2(pair);
         IPairV2.Config memory info = _pair.getConfig();
@@ -151,8 +156,8 @@ contract CrossDexRouterV2 is
         external
         payable
         nonReentrant
+        checkSubmit
         validPair(pair)
-        checkValue
     {
         address _owner = _msgSender();
         IPairV2.Config memory info = IPairV2(pair).getConfig();
@@ -170,8 +175,8 @@ contract CrossDexRouterV2 is
         external
         payable
         nonReentrant
+        checkSubmit
         validPair(pair)
-        checkValue
     {
         address _owner = _msgSender();
         IPairV2.Config memory info = IPairV2(pair).getConfig();
@@ -188,7 +193,7 @@ contract CrossDexRouterV2 is
         IPairV2(pair).submitMarketOrder(order, amount, _toMaxMatchCount(_maxMatchCount));
     }
 
-    function cancelOrder(address pair, uint256[] calldata orderIds) external validPair(pair) {
+    function cancelOrder(address pair, uint256[] calldata orderIds) external nonReentrant validPair(pair) {
         uint256 length = orderIds.length;
         if (length != 0) {
             if (length > cancelLimit) revert RouterCancelLimitExceeded(length, cancelLimit);
@@ -212,7 +217,18 @@ contract CrossDexRouterV2 is
         return _maxMatchCount == 0 || _maxMatchCount > maxMatchCount ? maxMatchCount : _maxMatchCount;
     }
 
-    function setfindPrevPriceCount(uint256 _findPrevPriceCount) external onlyOwner {
+    /**
+     * @dev Checks if the account has contract code and blocks contract accounts unless whitelisted
+     *
+     * WARNING: This check can be bypassed by contracts calling the router from within their
+     * constructor, as account.code.length is zero during construction.
+     */
+    function _checkAccountCode(address account) private view {
+        if (whitelistedCodeAccounts.contains(account)) return;
+        if (account.code.length != 0) revert RouterContractAccountBlocked(account);
+    }
+
+    function setFindPrevPriceCount(uint256 _findPrevPriceCount) external onlyOwner {
         if (_findPrevPriceCount == 0) revert RouterInvalidInputData("findPrevPriceCount");
         emit FindPrevPriceCountChanged(findPrevPriceCount, _findPrevPriceCount);
         findPrevPriceCount = _findPrevPriceCount;
@@ -228,6 +244,26 @@ contract CrossDexRouterV2 is
         if (_cancelLimit == 0) revert RouterInvalidInputData("cancelLimit");
         emit CancelLimitChanged(cancelLimit, _cancelLimit);
         cancelLimit = _cancelLimit;
+    }
+
+    function setWhitelistedCodeAccount(address[] memory accounts, bool whitelisted) external onlyOwner {
+        if (whitelisted) {
+            for (uint256 i = 0; i < accounts.length;) {
+                address account = accounts[i];
+                if (whitelistedCodeAccounts.add(account)) emit WhitelistedCodeAccountSet(account, true);
+                unchecked {
+                    ++i;
+                }
+            }
+        } else {
+            for (uint256 i = 0; i < accounts.length;) {
+                address account = accounts[i];
+                if (whitelistedCodeAccounts.remove(account)) emit WhitelistedCodeAccountSet(account, false);
+                unchecked {
+                    ++i;
+                }
+            }
+        }
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}

@@ -20,6 +20,35 @@ import {IRouter} from "../src/interfaces/IRouter.sol";
 import {T20} from "./mock/T20.sol";
 
 /**
+ * @title MockContractUser
+ * @notice Simple contract to test router's contract account blocking functionality
+ */
+contract MockContractUser is Test {
+    CrossDexRouterV2 public router;
+    address public pair;
+
+    constructor(address _router, address _pair) {
+        router = CrossDexRouterV2(_router);
+        pair = _pair;
+
+        // Get token addresses from pair config
+        IPairV2 pairContract = IPairV2(_pair);
+        IPair.Config memory config = pairContract.getConfig();
+
+        // Approve tokens for router
+        config.BASE.approve(_router, type(uint256).max);
+        config.QUOTE.approve(_router, type(uint256).max);
+    }
+
+    function submitSellOrder(uint256 price, uint256 amount, bytes calldata errordata) external returns (uint256) {
+        uint256[2] memory searchPrices = [uint256(0), uint256(0)];
+        console2.log("MockContractUser calling submitSellLimit from address:", address(this));
+        if (errordata.length > 0) vm.expectRevert(errordata);
+        return router.submitSellLimit(pair, price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, searchPrices, 0);
+    }
+}
+
+/**
  * @title DEXV2ErrorHandlingTest
  * @notice Comprehensive error handling tests for V2 contracts
  * @dev Tests all custom errors defined in V2 contracts to ensure proper error handling
@@ -188,6 +217,65 @@ contract DEXV2ErrorHandlingTest is Test {
     // Router Error Tests
     // ================================
 
+    function test_v2_RouterContractAccountBlocked() external {
+        // Create a simple contract deployment address that has code
+        address contractAddr = address(new MockContractUser(address(ROUTER), address(PAIR)));
+        assertTrue(contractAddr.code.length > 0, "Contract should have code");
+
+        // Give tokens to this test contract (not the mock contract)
+        // and try to call router directly from the mock contract
+        BASE.transfer(contractAddr, _toBase(100));
+        QUOTE.transfer(contractAddr, _toQuote(100));
+
+        // The MockContractUser should revert when trying to call Router
+        MockContractUser contractUser = MockContractUser(contractAddr);
+        contractUser.submitSellOrder(
+            _toQuote(1), _toBase(1), abi.encodeWithSignature("RouterContractAccountBlocked(address)", contractAddr)
+        );
+    }
+
+    function test_v2_RouterWhitelistedContractAccountAllowed() external {
+        // Deploy a contract that will try to submit orders
+        MockContractUser contractUser = new MockContractUser(address(ROUTER), address(PAIR));
+
+        // Give the contract some tokens
+        BASE.transfer(address(contractUser), _toBase(100));
+        QUOTE.transfer(address(contractUser), _toQuote(100));
+
+        // Add contract to whitelist
+        vm.prank(OWNER);
+        address[] memory accounts = new address[](1);
+        accounts[0] = address(contractUser);
+        ROUTER.setWhitelistedCodeAccount(accounts, true);
+
+        // Now contract should be able to submit orders
+        uint256 orderId = contractUser.submitSellOrder(_toQuote(1), _toBase(1), "");
+        assertGt(orderId, 0, "Order should be submitted successfully");
+
+        // Remove from whitelist
+        vm.prank(OWNER);
+        ROUTER.setWhitelistedCodeAccount(accounts, false);
+
+        // Should be blocked again
+        contractUser.submitSellOrder(
+            _toQuote(1),
+            _toBase(1),
+            abi.encodeWithSignature("RouterContractAccountBlocked(address)", address(contractUser))
+        );
+    }
+
+    function test_v2_RouterEOAAccountAllowed() external {
+        // EOA (Externally Owned Account) should always be allowed
+        vm.startPrank(USER1);
+
+        uint256 orderId = ROUTER.submitSellLimit(
+            address(PAIR), _toQuote(1), _toBase(1), IPair.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+        );
+
+        assertGt(orderId, 0, "EOA should be able to submit orders");
+        vm.stopPrank();
+    }
+
     function test_v2_RouterCancelLimitExceeded() external {
         // Create multiple orders first
         vm.startPrank(USER1);
@@ -208,7 +296,7 @@ contract DEXV2ErrorHandlingTest is Test {
         // Test that invalid input validation works for findPrevPriceCount
         vm.prank(OWNER);
         vm.expectRevert(); // Any revert is acceptable for invalid input
-        ROUTER.setfindPrevPriceCount(0);
+        ROUTER.setFindPrevPriceCount(0);
     }
 
     function test_v2_RouterInvalidInputData_maxMatchCount() external {
