@@ -217,6 +217,12 @@ contract CrossDexRouterV2 is
         return _maxMatchCount == 0 || _maxMatchCount > maxMatchCount ? maxMatchCount : _maxMatchCount;
     }
 
+    /**
+     * @dev Checks if the account has contract code and blocks contract accounts unless whitelisted
+     *
+     * WARNING: This check can be bypassed by contracts calling the router from within their
+     * constructor, as account.code.length is zero during construction.
+     */
     function _checkAccountCode(address account) private view {
         if (whitelistedCodeAccounts.contains(account)) return;
         if (account.code.length != 0) revert RouterContractAccountBlocked(account);

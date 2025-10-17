@@ -43,7 +43,6 @@ contract MockContractUser is Test {
     function submitSellOrder(uint256 price, uint256 amount, bytes calldata errordata) external returns (uint256) {
         uint256[2] memory searchPrices = [uint256(0), uint256(0)];
         console2.log("MockContractUser calling submitSellLimit from address:", address(this));
-        console2.log("Code length:", address(this).code.length);
         if (errordata.length > 0) vm.expectRevert(errordata);
         return router.submitSellLimit(pair, price, amount, IPair.LimitConstraints.GOOD_TILL_CANCEL, searchPrices, 0);
     }
