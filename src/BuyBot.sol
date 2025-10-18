@@ -9,18 +9,18 @@ import {IPair} from "./interfaces/IPair.sol";
 import {IRouter} from "./interfaces/IRouter.sol";
 
 /**
- * @title Buyer
- * @notice A contract that automatically buys tokens at market price using its balance
- * @dev Anyone can trigger the buy function if the balance meets the minimum requirement
+ * @title BuyBot
+ * @notice A bot contract that automatically buys tokens at market price using its balance
+ * @dev Anyone can trigger the buy function if the balance meets the minimum requirement and interval has passed
  */
-contract Buyer is Ownable {
+contract BuyBot is Ownable {
     using SafeERC20 for IERC20;
 
-    error BuyerInsufficientBalance(uint256 balance, uint256 minOrderAmount);
-    error BuyerInvalidRouter(address);
-    error BuyerInvalidPair(address);
-    error BuyerInvalidMinOrderAmount(uint256);
-    error BuyerIntervalNotPassed(uint256 timeSinceLastBuy, uint256 requiredInterval);
+    error BuyBotInsufficientBalance(uint256 balance, uint256 minOrderAmount);
+    error BuyBotInvalidRouter(address);
+    error BuyBotInvalidPair(address);
+    error BuyBotInvalidMinOrderAmount(uint256);
+    error BuyBotIntervalNotPassed(uint256 timeSinceLastBuy, uint256 requiredInterval);
 
     event MarketBuyExecuted(
         address indexed pair,
@@ -58,9 +58,9 @@ contract Buyer is Ownable {
         uint256 _minOrderAmount,
         uint256 _interval
     ) Ownable(_owner) {
-        if (_router == address(0)) revert BuyerInvalidRouter(_router);
+        if (_router == address(0)) revert BuyBotInvalidRouter(_router);
         if (_minOrderAmount == 0)
-            revert BuyerInvalidMinOrderAmount(_minOrderAmount);
+            revert BuyBotInvalidMinOrderAmount(_minOrderAmount);
 
         router = IRouter(_router);
         minOrderAmount = _minOrderAmount;
@@ -74,7 +74,7 @@ contract Buyer is Ownable {
 
     /**
      * @notice Execute market buy order
-     * @dev Can be called by anyone if amount >= minOrderAmount
+     * @dev Can be called by anyone if amount >= minOrderAmount and interval has passed
      * @param pair Trading pair address
      * @param amount Amount to spend (0 for entire balance)
      * @param recipient Address to receive BASE tokens (address(0) to keep in contract)
@@ -86,13 +86,13 @@ contract Buyer is Ownable {
         address recipient,
         uint256 maxMatchCount
     ) external {
-        if (pair == address(0)) revert BuyerInvalidPair(pair);
+        if (pair == address(0)) revert BuyBotInvalidPair(pair);
 
         // Check interval has passed since last buy
         if (interval > 0 && lastBuyTime > 0) {
             uint256 timeSinceLastBuy = block.timestamp - lastBuyTime;
             if (timeSinceLastBuy < interval) {
-                revert BuyerIntervalNotPassed(timeSinceLastBuy, interval);
+                revert BuyBotIntervalNotPassed(timeSinceLastBuy, interval);
             }
         }
 
@@ -109,11 +109,11 @@ contract Buyer is Ownable {
 
         // Check minimum order amount
         if (spendAmount < minOrderAmount)
-            revert BuyerInsufficientBalance(spendAmount, minOrderAmount);
+            revert BuyBotInsufficientBalance(spendAmount, minOrderAmount);
 
         // Check sufficient balance
         if (spendAmount > balance)
-            revert BuyerInsufficientBalance(balance, spendAmount);
+            revert BuyBotInsufficientBalance(balance, spendAmount);
 
         // Approve router if needed (only once per token)
         address routerAddress = address(router);
@@ -183,7 +183,7 @@ contract Buyer is Ownable {
      */
     function setMinOrderAmount(uint256 _minOrderAmount) external onlyOwner {
         if (_minOrderAmount == 0)
-            revert BuyerInvalidMinOrderAmount(_minOrderAmount);
+            revert BuyBotInvalidMinOrderAmount(_minOrderAmount);
         emit MinOrderAmountSet(minOrderAmount, _minOrderAmount);
         minOrderAmount = _minOrderAmount;
     }
@@ -231,3 +231,4 @@ contract Buyer is Ownable {
      */
     receive() external payable {}
 }
+
