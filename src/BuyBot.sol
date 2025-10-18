@@ -203,7 +203,7 @@ contract BuyBot is Ownable {
     /**
      * @notice Check if market buy can be executed
      * @param pair Trading pair address
-     * @return canBuy Whether the buy can be executed
+     * @return canBuy Whether the buy can be executed (balance sufficient and interval passed)
      * @return balance Current QUOTE token balance
      */
     function canBuyMarket(
@@ -213,7 +213,17 @@ contract BuyBot is Ownable {
 
         IPair.Config memory config = IPair(pair).getConfig();
         balance = config.QUOTE.balanceOf(address(this));
-        canBuy = balance >= minOrderAmount;
+        
+        // Check balance requirement
+        if (balance < minOrderAmount) return (false, balance);
+        
+        // Check interval requirement
+        if (interval > 0 && lastBuyTime > 0) {
+            uint256 timeSinceLastBuy = block.timestamp - lastBuyTime;
+            if (timeSinceLastBuy < interval) return (false, balance);
+        }
+        
+        canBuy = true;
     }
 
     /**

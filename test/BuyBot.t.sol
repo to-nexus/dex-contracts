@@ -312,6 +312,38 @@ contract BuyBotTest is Test {
         assertEq(balance, MIN_ORDER_AMOUNT);
     }
 
+    function test_CanBuyMarketViewWithInterval() public {
+        // Deploy buyer with 60 second interval
+        BuyBot buyerWithInterval = new BuyBot(owner, address(router), MIN_ORDER_AMOUNT, 60);
+
+        // Sufficient balance, but no lastBuyTime yet (should be true)
+        quoteToken.mint(address(buyerWithInterval), MIN_ORDER_AMOUNT);
+        (bool canBuy, uint256 balance) = buyerWithInterval.canBuyMarket(address(pair));
+        assertTrue(canBuy, "Should be able to buy when no lastBuyTime");
+        assertEq(balance, MIN_ORDER_AMOUNT);
+
+        // Execute first buy
+        vm.prank(user);
+        buyerWithInterval.buyMarket(address(pair), 0, address(0), 0);
+
+        // Immediately after buy - should be false (interval not passed)
+        quoteToken.mint(address(buyerWithInterval), MIN_ORDER_AMOUNT);
+        (canBuy, balance) = buyerWithInterval.canBuyMarket(address(pair));
+        assertFalse(canBuy, "Should not be able to buy immediately after");
+        assertEq(balance, MIN_ORDER_AMOUNT);
+
+        // 30 seconds later - still false
+        vm.warp(block.timestamp + 30);
+        (canBuy, balance) = buyerWithInterval.canBuyMarket(address(pair));
+        assertFalse(canBuy, "Should not be able to buy after 30 seconds");
+
+        // 60 seconds later - should be true
+        vm.warp(block.timestamp + 30); // Total 60 seconds
+        (canBuy, balance) = buyerWithInterval.canBuyMarket(address(pair));
+        assertTrue(canBuy, "Should be able to buy after 60 seconds");
+        assertEq(balance, MIN_ORDER_AMOUNT);
+    }
+
     function test_GetBalance() public {
         uint256 amount = 123e18;
         quoteToken.mint(address(buyer), amount);
