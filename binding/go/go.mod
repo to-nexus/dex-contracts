@@ -1,3 +1,3 @@
 module github.com/to-nexus/dex-contracts/binding/go
 
-go 1.22.10
+go 1.24.1
