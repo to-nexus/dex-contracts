@@ -13,8 +13,8 @@ import {ReentrancyGuardUpgradeable} from
     "@openzeppelin-contracts-upgradeable-5.2.0/utils/ReentrancyGuardUpgradeable.sol";
 
 import {WETH} from "./WETH.sol";
-
 import {ICrossDex} from "./interfaces/ICrossDex.sol";
+import {BPS_DENOMINATOR} from "./interfaces/IMarket.sol";
 import {IOwnable} from "./interfaces/IOwnable.sol";
 import {IPair, IPairV2} from "./interfaces/IPair.sol";
 import {IRouter, IRouterInitializer} from "./interfaces/IRouter.sol";
@@ -31,8 +31,6 @@ contract CrossDexRouterV2 is
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
     using Math for uint256;
-
-    uint32 private constant BPS_DENOMINATOR = 10000;
 
     error RouterInvalidInputData(bytes32);
     error RouterInvalidPairAddress(address);

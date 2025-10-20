@@ -35,11 +35,12 @@ contract MarketImplV2 is IMarketV2, UUPSUpgradeable, OwnableUpgradeable {
     address public pairImpl;
 
     address public override feeCollector;
-    FeeConfig private _feeConfig;
+    uint32 private _emptySlot;
 
     EnumerableMap.AddressToAddressMap private _allPairs; // base => pair
+    FeeConfig private _feeConfig;
 
-    uint256[42] private __gap;
+    uint256[40] private __gap;
 
     constructor() {
         _disableInitializers();
