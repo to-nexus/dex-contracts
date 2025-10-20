@@ -247,7 +247,7 @@ contract Verse8MarketOwnerTest is Test {
         calls[1] = Verse8MarketOwner.ExecuteBatchArgs({
             to: address(market),
             value: 0,
-            data: abi.encodeCall(MarketImplV2.setMarketFees, (newSellerMakerFee, NO_FEE_BPS, NO_FEE_BPS, NO_FEE_BPS))
+            data: abi.encodeCall(MarketImplV2.setMarketFees, (newSellerMakerFee, 120, 0, 0))
         });
 
         vm.startPrank(owner);
@@ -345,8 +345,7 @@ contract Verse8MarketOwnerTest is Test {
         assertNotEq(pair, address(0));
 
         // Should fail: execute
-        bytes memory data =
-            abi.encodeCall(MarketImplV2.setMarketFees, (uint32(100), NO_FEE_BPS, NO_FEE_BPS, NO_FEE_BPS));
+        bytes memory data = abi.encodeCall(MarketImplV2.setMarketFees, (uint32(100), 120, 100, 120));
         vm.expectRevert();
         verse8Owner.execute(address(market), 0, data);
 

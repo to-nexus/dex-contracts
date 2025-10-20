@@ -208,7 +208,7 @@ contract CrossDexRouterV2 is
      */
     function _calculateRequireBuyVolume(address pair, uint256 baseVolume) private view returns (uint256) {
         (,,, uint32 buyerTakerFeeBps) = IPairV2(pair).getEffectiveFees();
-        return Math.mulDiv(baseVolume, BPS_DENOMINATOR + buyerTakerFeeBps, BPS_DENOMINATOR);
+        return baseVolume + Math.mulDiv(baseVolume, buyerTakerFeeBps, BPS_DENOMINATOR);
     }
 
     function _toMaxMatchCount(uint256 _maxMatchCount) private view returns (uint256) {

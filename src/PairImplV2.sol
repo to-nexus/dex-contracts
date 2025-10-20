@@ -292,12 +292,18 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
                     _allOrders[orderId].feeBps = _sellerMakerFeeBps();
                     _sellOrders[order.price].push(orderId);
                 } else {
-                    uint32 feeBps = _buyerMakerFeeBps();
                     // For V2 RouterV2, the fee is already included in the transferred amount
                     // So we use the actual received amount instead of calculating fee again
-                    uint256 receivedAmount = QUOTE.balanceOf(address(this)) - mustRemainQuoteAmount;
-                    _addQuoteReserve(order.owner, receivedAmount);
-                    _allOrders[orderId].feeBps = feeBps;
+                    uint256 reserveQuoteAmount = Math.mulDiv(order.price, order.amount, DENOMINATOR);
+                    {
+                        uint32 feeBps = _buyerMakerFeeBps();
+                        if (feeBps != 0) {
+                            uint256 fee = Math.mulDiv(reserveQuoteAmount, feeBps, BPS_DENOMINATOR);
+                            reserveQuoteAmount += fee;
+                        }
+                        _allOrders[orderId].feeBps = feeBps;
+                    }
+                    _addQuoteReserve(order.owner, reserveQuoteAmount);
                     _buyOrders[order.price].push(orderId);
                 }
             }

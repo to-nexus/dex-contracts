@@ -67,23 +67,14 @@ contract MarketImplV2 is IMarketV2, UUPSUpgradeable, OwnableUpgradeable {
         (uint32 _sellerMakerFeeBps, uint32 _sellerTakerFeeBps, uint32 _buyerMakerFeeBps, uint32 _buyerTakerFeeBps) =
             abi.decode(feeData, (uint32, uint32, uint32, uint32));
 
-        // Validate fee rates
-        if (_sellerMakerFeeBps >= BPS_DENOMINATOR) revert MarketInvalidInitializeData("sellerMakerFeeBps");
-        if (_sellerTakerFeeBps >= BPS_DENOMINATOR) revert MarketInvalidInitializeData("sellerTakerFeeBps");
-        if (_buyerMakerFeeBps >= BPS_DENOMINATOR) revert MarketInvalidInitializeData("buyerMakerFeeBps");
-        if (_buyerTakerFeeBps >= BPS_DENOMINATOR) revert MarketInvalidInitializeData("buyerTakerFeeBps");
-
         deployed = block.number;
         CROSS_DEX = ICrossDex(_msgSender());
         QUOTE = _quote;
         ROUTER = _router;
         pairImpl = _pairImpl;
-
         feeCollector = _feeCollector;
-        _feeConfig.sellerMakerFeeBps = _sellerMakerFeeBps; // Seller Maker fee
-        _feeConfig.sellerTakerFeeBps = _sellerTakerFeeBps; // Seller Taker fee
-        _feeConfig.buyerMakerFeeBps = _buyerMakerFeeBps; // Buyer Maker fee
-        _feeConfig.buyerTakerFeeBps = _buyerTakerFeeBps; // Buyer Taker fee
+
+        _setFeeBps(_sellerMakerFeeBps, _sellerTakerFeeBps, _buyerMakerFeeBps, _buyerTakerFeeBps);
     }
 
     function allPairs() external view returns (address[] memory bases, address[] memory pairs) {
@@ -150,38 +141,39 @@ contract MarketImplV2 is IMarketV2, UUPSUpgradeable, OwnableUpgradeable {
         uint32 _buyerMakerFeeBps,
         uint32 _buyerTakerFeeBps
     ) external onlyOwner {
-        if (_sellerMakerFeeBps != NO_FEE_BPS && _sellerMakerFeeBps >= BPS_DENOMINATOR) {
-            revert MarketInvalidInitializeData("sellerMakerFeeBps");
-        }
-        if (_sellerTakerFeeBps != NO_FEE_BPS && _sellerTakerFeeBps >= BPS_DENOMINATOR) {
-            revert MarketInvalidInitializeData("sellerTakerFeeBps");
-        }
-        if (_buyerMakerFeeBps != NO_FEE_BPS && _buyerMakerFeeBps >= BPS_DENOMINATOR) {
-            revert MarketInvalidInitializeData("buyerMakerFeeBps");
-        }
-        if (_buyerTakerFeeBps != NO_FEE_BPS && _buyerTakerFeeBps >= BPS_DENOMINATOR) {
-            revert MarketInvalidInitializeData("buyerTakerFeeBps");
-        }
-
-        // logical check - taker fee must be >= maker fee
-        if (_sellerTakerFeeBps < _sellerMakerFeeBps && _sellerMakerFeeBps != NO_FEE_BPS) {
-            revert MarketInvalidFeeStructure(_sellerMakerFeeBps, _sellerTakerFeeBps);
-        }
-        if (_buyerTakerFeeBps < _buyerMakerFeeBps && _buyerMakerFeeBps != NO_FEE_BPS) {
-            revert MarketInvalidFeeStructure(_buyerMakerFeeBps, _buyerTakerFeeBps);
-        }
-
-        emit MarketFeesUpdated(_sellerMakerFeeBps, _sellerTakerFeeBps, _buyerMakerFeeBps, _buyerTakerFeeBps);
-        _feeConfig.sellerMakerFeeBps = _sellerMakerFeeBps; // feeBps represents seller maker fee
-        _feeConfig.sellerTakerFeeBps = _sellerTakerFeeBps; // seller taker fee
-        _feeConfig.buyerMakerFeeBps = _buyerMakerFeeBps; // buyer maker fee
-        _feeConfig.buyerTakerFeeBps = _buyerTakerFeeBps; // buyer taker fee
+        _setFeeBps(_sellerMakerFeeBps, _sellerTakerFeeBps, _buyerMakerFeeBps, _buyerTakerFeeBps);
     }
 
     function setPairImpl(address _pairImpl) external onlyOwner {
         if (_pairImpl == address(0)) revert MarketInvalidInitializeData("pairImpl");
         emit PairImplSet(pairImpl, _pairImpl);
         pairImpl = _pairImpl;
+    }
+
+    function _setFeeBps(
+        uint32 sellerMakerFeeBps_,
+        uint32 sellerTakerFeeBps_,
+        uint32 buyerMakerFeeBps_,
+        uint32 buyerTakerFeeBps_
+    ) private {
+        // range check
+        if (sellerMakerFeeBps_ >= BPS_DENOMINATOR) revert MarketInvalidInitializeData("sellerMakerFeeBps");
+        if (sellerTakerFeeBps_ >= BPS_DENOMINATOR) revert MarketInvalidInitializeData("sellerTakerFeeBps");
+        if (buyerMakerFeeBps_ >= BPS_DENOMINATOR) revert MarketInvalidInitializeData("buyerMakerFeeBps");
+        if (buyerTakerFeeBps_ >= BPS_DENOMINATOR) revert MarketInvalidInitializeData("buyerTakerFeeBps");
+
+        // logical check - taker fee must be >= maker fee
+        if (sellerTakerFeeBps_ < sellerMakerFeeBps_) revert MarketInvalidInitializeData("sellerMakerFeeBps");
+        if (buyerTakerFeeBps_ < buyerMakerFeeBps_) revert MarketInvalidInitializeData("buyerMakerFeeBps");
+
+        // set
+        _feeConfig = FeeConfig({
+            sellerMakerFeeBps: sellerMakerFeeBps_,
+            sellerTakerFeeBps: sellerTakerFeeBps_,
+            buyerMakerFeeBps: buyerMakerFeeBps_,
+            buyerTakerFeeBps: buyerTakerFeeBps_
+        });
+        emit MarketFeesUpdated(sellerMakerFeeBps_, sellerTakerFeeBps_, buyerMakerFeeBps_, buyerTakerFeeBps_);
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
