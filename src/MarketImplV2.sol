@@ -68,18 +68,10 @@ contract MarketImplV2 is IMarketV2, UUPSUpgradeable, OwnableUpgradeable {
             abi.decode(feeData, (uint32, uint32, uint32, uint32));
 
         // Validate fee rates
-        if (_sellerMakerFeeBps != NO_FEE_BPS && _sellerMakerFeeBps >= BPS_DENOMINATOR) {
-            revert MarketInvalidInitializeData("sellerMakerFeeBps");
-        }
-        if (_sellerTakerFeeBps != NO_FEE_BPS && _sellerTakerFeeBps >= BPS_DENOMINATOR) {
-            revert MarketInvalidInitializeData("sellerTakerFeeBps");
-        }
-        if (_buyerMakerFeeBps != NO_FEE_BPS && _buyerMakerFeeBps >= BPS_DENOMINATOR) {
-            revert MarketInvalidInitializeData("buyerMakerFeeBps");
-        }
-        if (_buyerTakerFeeBps != NO_FEE_BPS && _buyerTakerFeeBps >= BPS_DENOMINATOR) {
-            revert MarketInvalidInitializeData("buyerTakerFeeBps");
-        }
+        if (_sellerMakerFeeBps >= BPS_DENOMINATOR) revert MarketInvalidInitializeData("sellerMakerFeeBps");
+        if (_sellerTakerFeeBps >= BPS_DENOMINATOR) revert MarketInvalidInitializeData("sellerTakerFeeBps");
+        if (_buyerMakerFeeBps >= BPS_DENOMINATOR) revert MarketInvalidInitializeData("buyerMakerFeeBps");
+        if (_buyerTakerFeeBps >= BPS_DENOMINATOR) revert MarketInvalidInitializeData("buyerTakerFeeBps");
 
         deployed = block.number;
         CROSS_DEX = ICrossDex(_msgSender());
