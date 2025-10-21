@@ -16,6 +16,9 @@ import {IRouter} from "./interfaces/IRouter.sol";
 contract BuyBot is Ownable {
     using SafeERC20 for IERC20;
 
+    /// @notice Address representing native coin (ETH)
+    address public constant NATIVE_COIN = address(1);
+
     error BuyBotInsufficientBalance(uint256 balance, uint256 minOrderAmount);
     error BuyBotInvalidRouter(address);
     error BuyBotInvalidPair(address);
@@ -52,15 +55,9 @@ contract BuyBot is Ownable {
      * @param _minOrderAmount Minimum order amount in QUOTE token
      * @param _interval Minimum time interval (in seconds) between buy executions
      */
-    constructor(
-        address _owner,
-        address _router,
-        uint256 _minOrderAmount,
-        uint256 _interval
-    ) Ownable(_owner) {
+    constructor(address _owner, address _router, uint256 _minOrderAmount, uint256 _interval) Ownable(_owner) {
         if (_router == address(0)) revert BuyBotInvalidRouter(_router);
-        if (_minOrderAmount == 0)
-            revert BuyBotInvalidMinOrderAmount(_minOrderAmount);
+        if (_minOrderAmount == 0) revert BuyBotInvalidMinOrderAmount(_minOrderAmount);
 
         router = IRouter(_router);
         minOrderAmount = _minOrderAmount;
@@ -80,20 +77,13 @@ contract BuyBot is Ownable {
      * @param recipient Address to receive BASE tokens (address(0) to keep in contract)
      * @param maxMatchCount Maximum number of orders to match (0 for router default)
      */
-    function buyMarket(
-        address pair,
-        uint256 amount,
-        address recipient,
-        uint256 maxMatchCount
-    ) external {
+    function buyMarket(address pair, uint256 amount, address recipient, uint256 maxMatchCount) external {
         if (pair == address(0)) revert BuyBotInvalidPair(pair);
 
         // Check interval has passed since last buy
         if (interval > 0 && lastBuyTime > 0) {
             uint256 timeSinceLastBuy = block.timestamp - lastBuyTime;
-            if (timeSinceLastBuy < interval) {
-                revert BuyBotIntervalNotPassed(timeSinceLastBuy, interval);
-            }
+            if (timeSinceLastBuy < interval) revert BuyBotIntervalNotPassed(timeSinceLastBuy, interval);
         }
 
         // Get pair configuration
@@ -108,12 +98,10 @@ contract BuyBot is Ownable {
         uint256 spendAmount = amount == 0 ? balance : amount;
 
         // Check minimum order amount
-        if (spendAmount < minOrderAmount)
-            revert BuyBotInsufficientBalance(spendAmount, minOrderAmount);
+        if (spendAmount < minOrderAmount) revert BuyBotInsufficientBalance(spendAmount, minOrderAmount);
 
         // Check sufficient balance
-        if (spendAmount > balance)
-            revert BuyBotInsufficientBalance(balance, spendAmount);
+        if (spendAmount > balance) revert BuyBotInsufficientBalance(balance, spendAmount);
 
         // Approve router if needed (only once per token)
         address routerAddress = address(router);
@@ -124,13 +112,7 @@ contract BuyBot is Ownable {
         // Execute market buy
         router.submitBuyMarket(pair, spendAmount, maxMatchCount);
 
-        emit MarketBuyExecuted(
-            pair,
-            address(quoteToken),
-            address(baseToken),
-            spendAmount,
-            msg.sender
-        );
+        emit MarketBuyExecuted(pair, address(quoteToken), address(baseToken), spendAmount, msg.sender);
 
         // Update last buy time
         lastBuyTime = block.timestamp;
@@ -171,9 +153,9 @@ contract BuyBot is Ownable {
         uint256 withdrawAmount = amount == 0 ? balance : amount;
         require(withdrawAmount <= balance, "Insufficient balance");
 
-        (bool success, ) = owner().call{value: withdrawAmount}("");
+        (bool success,) = owner().call{value: withdrawAmount}("");
         require(success, "ETH transfer failed");
-        emit Withdrawn(address(0), owner(), withdrawAmount);
+        emit Withdrawn(NATIVE_COIN, owner(), withdrawAmount);
     }
 
     /**
@@ -182,8 +164,7 @@ contract BuyBot is Ownable {
      * @param _minOrderAmount New minimum order amount
      */
     function setMinOrderAmount(uint256 _minOrderAmount) external onlyOwner {
-        if (_minOrderAmount == 0)
-            revert BuyBotInvalidMinOrderAmount(_minOrderAmount);
+        if (_minOrderAmount == 0) revert BuyBotInvalidMinOrderAmount(_minOrderAmount);
         emit MinOrderAmountSet(minOrderAmount, _minOrderAmount);
         minOrderAmount = _minOrderAmount;
     }
@@ -206,33 +187,31 @@ contract BuyBot is Ownable {
      * @return canBuy Whether the buy can be executed (balance sufficient and interval passed)
      * @return balance Current QUOTE token balance
      */
-    function canBuyMarket(
-        address pair
-    ) external view returns (bool canBuy, uint256 balance) {
+    function canBuyMarket(address pair) external view returns (bool canBuy, uint256 balance) {
         if (pair == address(0)) return (false, 0);
 
         IPair.Config memory config = IPair(pair).getConfig();
         balance = config.QUOTE.balanceOf(address(this));
-        
+
         // Check balance requirement
         if (balance < minOrderAmount) return (false, balance);
-        
+
         // Check interval requirement
         if (interval > 0 && lastBuyTime > 0) {
             uint256 timeSinceLastBuy = block.timestamp - lastBuyTime;
             if (timeSinceLastBuy < interval) return (false, balance);
         }
-        
+
         canBuy = true;
     }
 
     /**
      * @notice Get token balance
-     * @param token Token address (address(0) for ETH)
+     * @param token Token address (NATIVE_COIN for ETH)
      * @return balance Token balance
      */
     function getBalance(address token) external view returns (uint256 balance) {
-        if (token == address(0)) return address(this).balance;
+        if (token == NATIVE_COIN) return address(this).balance;
         return IERC20(token).balanceOf(address(this));
     }
 
@@ -241,4 +220,3 @@ contract BuyBot is Ownable {
      */
     receive() external payable {}
 }
-
