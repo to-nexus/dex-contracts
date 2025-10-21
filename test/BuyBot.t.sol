@@ -481,7 +481,7 @@ contract BuyBotTest is Test {
 
         // Check balance
         assertEq(address(buyerWithWETH).balance, ethAmount);
-        assertEq(buyerWithWETH.getBalance(address(0)), ethAmount);
+        assertEq(buyerWithWETH.getBalance(buyerWithWETH.NATIVE_COIN()), ethAmount);
 
         // Withdraw ETH
         uint256 ownerBalanceBefore = owner.balance;
@@ -520,7 +520,7 @@ contract BuyBotTest is Test {
         uint256 ethAmount = 7 ether;
         vm.deal(address(buyerWithWETH), ethAmount);
 
-        assertEq(buyerWithWETH.getBalance(address(0)), ethAmount);
+        assertEq(buyerWithWETH.getBalance(buyerWithWETH.NATIVE_COIN()), ethAmount);
     }
 
     // ===== New Feature Tests: Amount and Recipient Parameters =====
