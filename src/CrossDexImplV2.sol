@@ -57,7 +57,8 @@ contract CrossDexImplV2 is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
         uint256 _maxMatchCount,
         uint256 _cancelLimit,
         address _marketImpl,
-        address _pairImpl
+        address _pairImpl,
+        address _tickSizeSetter
     ) external initializer {
         __Ownable_init(_owner);
 
@@ -74,6 +75,7 @@ contract CrossDexImplV2 is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
             // deploy market & pair logic contracts
             marketImpl = _marketImpl;
             pairImpl = _pairImpl;
+            if (_tickSizeSetter != address(0)) tickSizeSetter = _tickSizeSetter;
         }
     }
 

@@ -76,7 +76,14 @@ contract DEXV2ContractTest is Test {
             ERC1967Proxy proxy = new ERC1967Proxy(crossDexImpl, hex"");
             CROSS_DEX = CrossDexImplV2(address(proxy));
             CROSS_DEX.initialize(
-                OWNER, routerImpl, FIND_PREV_PRICE_COUNT, MAX_MATCH_COUNT, CANCEL_LIMIT, marketImpl, pairImpl
+                OWNER,
+                routerImpl,
+                FIND_PREV_PRICE_COUNT,
+                MAX_MATCH_COUNT,
+                CANCEL_LIMIT,
+                marketImpl,
+                pairImpl,
+                address(0)
             );
         }
         {

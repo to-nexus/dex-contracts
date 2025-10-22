@@ -65,7 +65,8 @@ contract DEXV2ErrorHandlingTest is Test {
             100, // maxMatchCount
             50, // cancelLimit
             marketImpl,
-            pairImpl
+            pairImpl,
+            address(0)
         );
 
         // Get contracts from CROSS_DEX

@@ -61,7 +61,7 @@ contract Verse8MarketOwnerTest is Test {
         {
             ERC1967Proxy proxy = new ERC1967Proxy(crossDexImpl, hex"");
             CROSS_DEX = CrossDexImplV2(address(proxy));
-            CROSS_DEX.initialize(owner, routerImpl, 20, 100, 1, address(marketImpl), address(pairImpl));
+            CROSS_DEX.initialize(owner, routerImpl, 20, 100, 1, address(marketImpl), address(pairImpl), address(0));
             router = CROSS_DEX.ROUTER();
         }
 
