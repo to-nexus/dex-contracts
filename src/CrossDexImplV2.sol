@@ -19,7 +19,6 @@ contract CrossDexImplV2 is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableMap for EnumerableMap.AddressToAddressMap;
 
     error CrossDexInitializeData(bytes32);
-    error CrossDexAlreadyCreatedMarket(address);
     error CrossDexInvalidMarketAddress(address);
     error CrossDexUnauthorizedChangeTickSizes(address);
     error CrossDexInvalidTickSizeSetter(address current, address input);
@@ -159,10 +158,9 @@ contract CrossDexImplV2 is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
                 marketImpl, abi.encodeCall(IMarketV2.initialize, (_owner, ROUTER, quote, pairImpl, feeCollector, data))
             )
         );
-        bytes32 salt = keccak256(abi.encodePacked(quote, keccak256(bytes(message))));
+        bytes32 salt = keccak256(abi.encode(quote, message));
         address market = Create2.deploy(0, salt, bytecode);
-
-        if (!_allMarkets.set(market, quote)) revert CrossDexAlreadyCreatedMarket(market);
+        _allMarkets.set(market, quote);
 
         emit MarketCreated(quote, market, _owner, feeCollector, message);
         return market;
