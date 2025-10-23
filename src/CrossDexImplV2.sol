@@ -88,7 +88,6 @@ contract CrossDexImplV2 is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
 
         address[] memory quotes = new address[](length);
         address[] memory markets = new address[](length);
-        // 전체 목록을 읽어온다.
         for (uint256 i = 0; i < length;) {
             (quotes[i], markets[i]) = _allMarkets.at(i);
             unchecked {
@@ -96,7 +95,6 @@ contract CrossDexImplV2 is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
             }
         }
 
-        // 마지막 부터 제거하는것이 가스비가 유리
         for (uint256 i = length; i != 0;) {
             unchecked {
                 --i;
@@ -104,7 +102,6 @@ contract CrossDexImplV2 is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
             _allMarkets.remove(quotes[i]);
         }
 
-        // 다시 추가
         for (uint256 i = 0; i < length;) {
             _allMarkets.set(markets[i], quotes[i]);
             unchecked {
@@ -112,7 +109,6 @@ contract CrossDexImplV2 is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
             }
         }
 
-        // marketImpl과 pairImpl 업데이트
         if (marketImpl != _marketImpl) {
             emit MarketImplSet(marketImpl, _marketImpl);
             marketImpl = _marketImpl;
