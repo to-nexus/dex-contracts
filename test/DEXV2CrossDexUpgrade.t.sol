@@ -401,4 +401,33 @@ contract CrossDexUpgradeTest is Test {
 
         vm.stopPrank();
     }
+
+    /**
+     * @notice reinitialize는 owner만 호출 가능
+     */
+    function test_reinitialize_only_owner() external {
+        // V2로 업그레이드
+        vm.prank(OWNER);
+        address crossDexImplV2Addr = address(new CrossDexImplV2());
+        vm.prank(OWNER);
+        crossDexV1.upgradeToAndCall(crossDexImplV2Addr, hex"");
+        crossDexV2 = CrossDexImplV2(address(proxy));
+
+        address marketImplV2 = address(new MarketImplV2());
+        address pairImplV2 = address(new PairImplV2());
+
+        // owner가 아닌 계정으로 호출 시 revert
+        address nonOwner = address(0x999);
+        vm.prank(nonOwner);
+        vm.expectRevert();
+        crossDexV2.reinitialize(marketImplV2, pairImplV2);
+
+        // owner는 성공
+        vm.prank(OWNER);
+        crossDexV2.reinitialize(marketImplV2, pairImplV2);
+
+        // implementation이 업데이트되었는지 확인
+        assertEq(crossDexV2.marketImpl(), marketImplV2, "MarketImpl should be updated");
+        assertEq(crossDexV2.pairImpl(), pairImplV2, "PairImpl should be updated");
+    }
 }

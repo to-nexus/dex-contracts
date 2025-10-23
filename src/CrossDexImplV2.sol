@@ -80,7 +80,7 @@ contract CrossDexImplV2 is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
         }
     }
 
-    function reinitialize(address _marketImpl, address _pairImpl) external reinitializer(2) {
+    function reinitialize(address _marketImpl, address _pairImpl) external onlyOwner reinitializer(2) {
         if (_marketImpl == address(0)) revert CrossDexInitializeData("marketImpl");
         if (_pairImpl == address(0)) revert CrossDexInitializeData("pairImpl");
 
