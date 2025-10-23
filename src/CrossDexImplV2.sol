@@ -81,7 +81,10 @@ contract CrossDexImplV2 is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
         }
     }
 
-    function reinitialize() external reinitializer(2) {
+    function reinitialize(address _marketImpl, address _pairImpl) external reinitializer(2) {
+        if (_marketImpl == address(0)) revert CrossDexInitializeData("marketImpl");
+        if (_pairImpl == address(0)) revert CrossDexInitializeData("pairImpl");
+
         uint256 length = _allMarkets.length();
 
         address[] memory quotes = new address[](length);
@@ -109,9 +112,20 @@ contract CrossDexImplV2 is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
                 ++i;
             }
         }
+
+        // marketImpl과 pairImpl 업데이트
+        if (marketImpl != _marketImpl) {
+            emit MarketImplSet(marketImpl, _marketImpl);
+            marketImpl = _marketImpl;
+        }
+
+        if (pairImpl != _pairImpl) {
+            emit PairImplSet(pairImpl, _pairImpl);
+            pairImpl = _pairImpl;
+        }
     }
 
-    function allMarkets() external view returns (address[] memory quotes, address[] memory markets) {
+    function allMarkets() external view returns (address[] memory markets, address[] memory quotes) {
         uint256 length = _allMarkets.length();
         markets = new address[](length);
         quotes = new address[](length);
