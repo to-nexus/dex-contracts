@@ -104,7 +104,7 @@ contract DEXV2ContractTest is Test {
                 uint32(0), // buyer maker fee = 0
                 uint32(0) // buyer taker fee = 0
             );
-            address market = CROSS_DEX.createMarket(OWNER, address(QUOTE), FEE_COLLECTOR, marketInitializeData);
+            address market = CROSS_DEX.createMarket(OWNER, address(QUOTE), FEE_COLLECTOR, marketInitializeData, "");
             MARKET = MarketImplV2(market);
             assertNotEq(MARKET.feeCollector(), address(0), "Fee collector cannot be zero address");
 

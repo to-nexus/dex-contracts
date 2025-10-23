@@ -73,7 +73,8 @@ contract Verse8MarketOwnerTest is Test {
 
         // Transfer market ownership to Verse8MarketOwner
         vm.prank(owner);
-        market = MarketImplV2(CROSS_DEX.createMarket(address(verse8Owner), quote, feeCollector, abi.encode(0, 0, 0, 0)));
+        market =
+            MarketImplV2(CROSS_DEX.createMarket(address(verse8Owner), quote, feeCollector, abi.encode(0, 0, 0, 0), ""));
     }
 
     // Test initial state and role assignments

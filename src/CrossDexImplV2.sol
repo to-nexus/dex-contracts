@@ -19,12 +19,14 @@ contract CrossDexImplV2 is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableMap for EnumerableMap.AddressToAddressMap;
 
     error CrossDexInitializeData(bytes32);
-    error CrossDexAlreadyCreatedMarketQuote(address);
+    error CrossDexAlreadyCreatedMarket(address);
     error CrossDexInvalidMarketAddress(address);
     error CrossDexUnauthorizedChangeTickSizes(address);
     error CrossDexInvalidTickSizeSetter(address current, address input);
 
-    event MarketCreated(address indexed quote, address indexed market, address indexed owner, address fee_collector);
+    event MarketCreated(
+        address indexed quote, address indexed market, address indexed owner, address fee_collector, string message
+    );
     event TickSizeSetterSet(address indexed before, address indexed current);
     event PairImplSet(address indexed before, address indexed current);
     event MarketImplSet(address indexed before, address indexed current);
@@ -34,7 +36,7 @@ contract CrossDexImplV2 is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
     address public marketImpl;
     address public pairImpl;
 
-    EnumerableMap.AddressToAddressMap private _allMarkets; // quote => market
+    EnumerableMap.AddressToAddressMap private _allMarkets; // market => quote (update v2)
     mapping(address pair => address) public override pairToMarket;
 
     address public tickSizeSetter;
@@ -79,20 +81,46 @@ contract CrossDexImplV2 is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
         }
     }
 
-    function allMarkets() external view returns (address[] memory quotes, address[] memory markets) {
+    function reinitialize() external reinitializer(2) {
         uint256 length = _allMarkets.length();
-        quotes = new address[](length);
-        markets = new address[](length);
+
+        address[] memory quotes = new address[](length);
+        address[] memory markets = new address[](length);
+        // 전체 목록을 읽어온다.
         for (uint256 i = 0; i < length;) {
             (quotes[i], markets[i]) = _allMarkets.at(i);
             unchecked {
                 ++i;
             }
         }
+
+        // 마지막 부터 제거하는것이 가스비가 유리
+        for (uint256 i = length; i != 0;) {
+            unchecked {
+                --i;
+            }
+            _allMarkets.remove(quotes[i]);
+        }
+
+        // 다시 추가
+        for (uint256 i = 0; i < length;) {
+            _allMarkets.set(markets[i], quotes[i]);
+            unchecked {
+                ++i;
+            }
+        }
     }
 
-    function quoteToMarket(address quote) external view returns (address) {
-        return _allMarkets.get(quote);
+    function allMarkets() external view returns (address[] memory quotes, address[] memory markets) {
+        uint256 length = _allMarkets.length();
+        markets = new address[](length);
+        quotes = new address[](length);
+        for (uint256 i = 0; i < length;) {
+            (markets[i], quotes[i]) = _allMarkets.at(i);
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     function checkTickSizeRoles(address account) external view override {
@@ -103,13 +131,10 @@ contract CrossDexImplV2 is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     function isMarket(address market) public view returns (bool) {
-        (bool success, bytes memory data) = market.staticcall(abi.encodeCall(IMarketV2.QUOTE, ()));
-        if (!success) return false;
-        address quote = abi.decode(data, (address));
-        return _allMarkets.get(quote) == market;
+        return _allMarkets.contains(market);
     }
 
-    function createMarket(address _owner, address quote, address feeCollector, bytes memory data)
+    function createMarket(address _owner, address quote, address feeCollector, bytes memory data, string memory message)
         external
         onlyOwner
         returns (address)
@@ -120,12 +145,12 @@ contract CrossDexImplV2 is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
                 marketImpl, abi.encodeCall(IMarketV2.initialize, (_owner, ROUTER, quote, pairImpl, feeCollector, data))
             )
         );
-        bytes32 salt = keccak256(abi.encodePacked(quote));
+        bytes32 salt = keccak256(abi.encodePacked(quote, keccak256(bytes(message))));
         address market = Create2.deploy(0, salt, bytecode);
 
-        if (!_allMarkets.set(quote, market)) revert CrossDexAlreadyCreatedMarketQuote(quote);
+        if (!_allMarkets.set(market, quote)) revert CrossDexAlreadyCreatedMarket(market);
 
-        emit MarketCreated(quote, market, _owner, feeCollector);
+        emit MarketCreated(quote, market, _owner, feeCollector, message);
         return market;
     }
 

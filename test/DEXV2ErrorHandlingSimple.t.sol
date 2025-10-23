@@ -80,7 +80,7 @@ contract DEXV2ErrorHandlingTest is Test {
             uint32(25), // buyerMakerFeeBps
             uint32(50) // buyerTakerFeeBps
         );
-        address market = CROSS_DEX.createMarket(OWNER, address(QUOTE), FEE_COLLECTOR, marketInitializeData);
+        address market = CROSS_DEX.createMarket(OWNER, address(QUOTE), FEE_COLLECTOR, marketInitializeData, "");
         MARKET = MarketImplV2(market);
 
         // Create pair with proper parameters (using values from existing tests)
