@@ -11,7 +11,7 @@ import {IRouter} from "./interfaces/IRouter.sol";
 /**
  * @title BuyBot
  * @notice A bot contract that automatically buys tokens at market price using its balance
- * @dev Anyone can trigger the buy function if the balance meets the minimum requirement and interval has passed
+ * @dev Only owner or authorized buyer can trigger the buy function
  */
 contract BuyBot is Ownable {
     using SafeERC20 for IERC20;
@@ -24,6 +24,7 @@ contract BuyBot is Ownable {
     error BuyBotInvalidPair(address);
     error BuyBotInvalidMinOrderAmount(uint256);
     error BuyBotIntervalNotPassed(uint256 timeSinceLastBuy, uint256 requiredInterval);
+    error BuyBotUnauthorizedCaller(address caller);
 
     event MarketBuyExecuted(
         address indexed pair,
@@ -34,6 +35,8 @@ contract BuyBot is Ownable {
     );
     event MinOrderAmountSet(uint256 indexed before, uint256 indexed current);
     event IntervalSet(uint256 indexed before, uint256 indexed current);
+    event RecipientSet(address indexed before, address indexed current);
+    event BuyerSet(address indexed before, address indexed current);
     event Withdrawn(address indexed token, address indexed to, uint256 amount);
 
     /// @notice CrossDexRouter address
@@ -48,36 +51,64 @@ contract BuyBot is Ownable {
     /// @notice Timestamp of the last buyMarket execution
     uint256 public lastBuyTime;
 
+    /// @notice Address to receive purchased BASE tokens
+    address public recipient;
+
+    /// @notice Address authorized to execute buyMarket (in addition to owner)
+    address public buyer;
+
     /**
      * @notice Contract constructor
      * @param _owner Owner address
      * @param _router CrossDexRouter address
      * @param _minOrderAmount Minimum order amount in QUOTE token
      * @param _interval Minimum time interval (in seconds) between buy executions
+     * @param _recipient Address to receive purchased BASE tokens
+     * @param _buyer Address authorized to execute buyMarket
      */
-    constructor(address _owner, address _router, uint256 _minOrderAmount, uint256 _interval) Ownable(_owner) {
+    constructor(
+        address _owner,
+        address _router,
+        uint256 _minOrderAmount,
+        uint256 _interval,
+        address _recipient,
+        address _buyer
+    ) Ownable(_owner) {
         if (_router == address(0)) revert BuyBotInvalidRouter(_router);
         if (_minOrderAmount == 0) revert BuyBotInvalidMinOrderAmount(_minOrderAmount);
 
         router = IRouter(_router);
         minOrderAmount = _minOrderAmount;
         interval = _interval;
+        recipient = _recipient;
+        buyer = _buyer;
 
         emit MinOrderAmountSet(0, _minOrderAmount);
         emit IntervalSet(0, _interval);
+        emit RecipientSet(address(0), _recipient);
+        emit BuyerSet(address(0), _buyer);
+    }
+
+    // ===== MODIFIERS =====
+
+    /**
+     * @notice Only owner or authorized buyer can call
+     */
+    modifier onlyBuyer() {
+        if (msg.sender != owner() && msg.sender != buyer) revert BuyBotUnauthorizedCaller(msg.sender);
+        _;
     }
 
     // ===== PUBLIC FUNCTIONS =====
 
     /**
      * @notice Execute market buy order
-     * @dev Can be called by anyone if amount >= minOrderAmount and interval has passed
+     * @dev Can only be called by owner or authorized buyer
      * @param pair Trading pair address
      * @param amount Amount to spend (0 for entire balance)
-     * @param recipient Address to receive BASE tokens (address(0) to keep in contract)
      * @param maxMatchCount Maximum number of orders to match (0 for router default)
      */
-    function buyMarket(address pair, uint256 amount, address recipient, uint256 maxMatchCount) external {
+    function buyMarket(address pair, uint256 amount, uint256 maxMatchCount) external onlyBuyer {
         if (pair == address(0)) revert BuyBotInvalidPair(pair);
 
         // Check interval has passed since last buy
@@ -119,6 +150,15 @@ contract BuyBot is Ownable {
 
         // Transfer BASE tokens to recipient if specified
         if (recipient != address(0)) {
+            // Check if WETH was auto-unwrapped to ETH
+            uint256 ethBalance = address(this).balance;
+            if (ethBalance > 0) {
+                // Transfer ETH to recipient
+                (bool success,) = recipient.call{value: ethBalance}("");
+                require(success, "ETH transfer failed");
+            }
+
+            // Transfer any remaining ERC20 BASE tokens
             uint256 baseBalance = baseToken.balanceOf(address(this));
             if (baseBalance > 0) baseToken.safeTransfer(recipient, baseBalance);
         }
@@ -179,16 +219,40 @@ contract BuyBot is Ownable {
         interval = _interval;
     }
 
+    /**
+     * @notice Set recipient address for purchased BASE tokens
+     * @dev Only owner can set
+     * @param _recipient New recipient address (address(0) to keep in contract)
+     */
+    function setRecipient(address _recipient) external onlyOwner {
+        emit RecipientSet(recipient, _recipient);
+        recipient = _recipient;
+    }
+
+    /**
+     * @notice Set authorized buyer address
+     * @dev Only owner can set
+     * @param _buyer New buyer address
+     */
+    function setBuyer(address _buyer) external onlyOwner {
+        emit BuyerSet(buyer, _buyer);
+        buyer = _buyer;
+    }
+
     // ===== VIEW FUNCTIONS =====
 
     /**
      * @notice Check if market buy can be executed
      * @param pair Trading pair address
-     * @return canBuy Whether the buy can be executed (balance sufficient and interval passed)
+     * @param caller Address of the caller to check authorization
+     * @return canBuy Whether the buy can be executed (authorized, balance sufficient, and interval passed)
      * @return balance Current QUOTE token balance
      */
-    function canBuyMarket(address pair) external view returns (bool canBuy, uint256 balance) {
+    function canBuyMarket(address pair, address caller) external view returns (bool canBuy, uint256 balance) {
         if (pair == address(0)) return (false, 0);
+
+        // Check authorization
+        if (caller != owner() && caller != buyer) return (false, 0);
 
         IPair.Config memory config = IPair(pair).getConfig();
         balance = config.QUOTE.balanceOf(address(this));

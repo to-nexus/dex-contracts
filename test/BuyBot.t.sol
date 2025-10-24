@@ -71,6 +71,8 @@ contract BuyBotTest is Test {
     address public owner;
     address public user;
     address public feeCollector;
+    address public buyerRole;
+    address public recipient;
 
     uint256 public constant MIN_ORDER_AMOUNT = 100e18;
     uint256 public constant TICK_SIZE = 1e18;
@@ -80,6 +82,8 @@ contract BuyBotTest is Test {
         owner = makeAddr("owner");
         user = makeAddr("user");
         feeCollector = makeAddr("feeCollector");
+        buyerRole = makeAddr("buyerRole");
+        recipient = makeAddr("recipient");
 
         // Deploy mock tokens
         quoteToken = new MockERC20("USDC", "USDC", 18);
@@ -111,7 +115,7 @@ contract BuyBotTest is Test {
         pair = PairImpl(pairAddress);
 
         // Deploy BuyBot for normal token (0 interval = no delay)
-        buyer = new BuyBot(owner, address(router), MIN_ORDER_AMOUNT, 0);
+        buyer = new BuyBot(owner, address(router), MIN_ORDER_AMOUNT, 0, recipient, buyerRole);
 
         // Setup initial liquidity (sell orders)
         _setupLiquidity();
@@ -131,7 +135,7 @@ contract BuyBotTest is Test {
         wethPair = PairImpl(wethPairAddress);
 
         // Deploy BuyBot for WETH (0 interval = no delay)
-        buyerWithWETH = new BuyBot(owner, address(router), MIN_ORDER_AMOUNT, 0);
+        buyerWithWETH = new BuyBot(owner, address(router), MIN_ORDER_AMOUNT, 0, recipient, buyerRole);
 
         // Setup liquidity for WETH pair
         address seller = makeAddr("wethSeller");
@@ -220,12 +224,12 @@ contract BuyBotTest is Test {
         uint256 buyAmount = 200e18;
         quoteToken.mint(address(buyer), buyAmount);
 
-        // Anyone can call buyMarket
-        vm.prank(user);
-        buyer.buyMarket(address(pair), 0, address(0), 0);
+        // Authorized buyer can call buyMarket
+        vm.prank(buyerRole);
+        buyer.buyMarket(address(pair), 0, 0);
 
-        // Check that buyer received base tokens
-        uint256 baseBalance = baseToken.balanceOf(address(buyer));
+        // Check that buyer contract received base tokens (since recipient is set in constructor)
+        uint256 baseBalance = baseToken.balanceOf(recipient);
         assertGt(baseBalance, 0, "Should have received base tokens");
 
         // Check that USDC was spent
@@ -237,9 +241,9 @@ contract BuyBotTest is Test {
         uint256 buyAmount = MIN_ORDER_AMOUNT - 1;
         quoteToken.mint(address(buyer), buyAmount);
 
-        vm.prank(user);
+        vm.prank(buyerRole);
         vm.expectRevert(abi.encodeWithSelector(BuyBot.BuyBotInsufficientBalance.selector, buyAmount, MIN_ORDER_AMOUNT));
-        buyer.buyMarket(address(pair), 0, address(0), 0);
+        buyer.buyMarket(address(pair), 0, 0);
     }
 
     function test_OwnerCanWithdraw() public {
@@ -294,52 +298,57 @@ contract BuyBotTest is Test {
     }
 
     function test_CanBuyMarketView() public {
-        // No balance
-        (bool canBuy, uint256 balance) = buyer.canBuyMarket(address(pair));
+        // No balance - authorized caller
+        (bool canBuy, uint256 balance) = buyer.canBuyMarket(address(pair), buyerRole);
+        assertFalse(canBuy);
+        assertEq(balance, 0);
+
+        // Unauthorized caller
+        (canBuy, balance) = buyer.canBuyMarket(address(pair), user);
         assertFalse(canBuy);
         assertEq(balance, 0);
 
         // Insufficient balance
         quoteToken.mint(address(buyer), MIN_ORDER_AMOUNT - 1);
-        (canBuy, balance) = buyer.canBuyMarket(address(pair));
+        (canBuy, balance) = buyer.canBuyMarket(address(pair), buyerRole);
         assertFalse(canBuy);
         assertEq(balance, MIN_ORDER_AMOUNT - 1);
 
         // Sufficient balance
         quoteToken.mint(address(buyer), 1);
-        (canBuy, balance) = buyer.canBuyMarket(address(pair));
+        (canBuy, balance) = buyer.canBuyMarket(address(pair), buyerRole);
         assertTrue(canBuy);
         assertEq(balance, MIN_ORDER_AMOUNT);
     }
 
     function test_CanBuyMarketViewWithInterval() public {
         // Deploy buyer with 60 second interval
-        BuyBot buyerWithInterval = new BuyBot(owner, address(router), MIN_ORDER_AMOUNT, 60);
+        BuyBot buyerWithInterval = new BuyBot(owner, address(router), MIN_ORDER_AMOUNT, 60, recipient, buyerRole);
 
         // Sufficient balance, but no lastBuyTime yet (should be true)
         quoteToken.mint(address(buyerWithInterval), MIN_ORDER_AMOUNT);
-        (bool canBuy, uint256 balance) = buyerWithInterval.canBuyMarket(address(pair));
+        (bool canBuy, uint256 balance) = buyerWithInterval.canBuyMarket(address(pair), buyerRole);
         assertTrue(canBuy, "Should be able to buy when no lastBuyTime");
         assertEq(balance, MIN_ORDER_AMOUNT);
 
         // Execute first buy
-        vm.prank(user);
-        buyerWithInterval.buyMarket(address(pair), 0, address(0), 0);
+        vm.prank(buyerRole);
+        buyerWithInterval.buyMarket(address(pair), 0, 0);
 
         // Immediately after buy - should be false (interval not passed)
         quoteToken.mint(address(buyerWithInterval), MIN_ORDER_AMOUNT);
-        (canBuy, balance) = buyerWithInterval.canBuyMarket(address(pair));
+        (canBuy, balance) = buyerWithInterval.canBuyMarket(address(pair), buyerRole);
         assertFalse(canBuy, "Should not be able to buy immediately after");
         assertEq(balance, MIN_ORDER_AMOUNT);
 
         // 30 seconds later - still false
         vm.warp(block.timestamp + 30);
-        (canBuy, balance) = buyerWithInterval.canBuyMarket(address(pair));
+        (canBuy, balance) = buyerWithInterval.canBuyMarket(address(pair), buyerRole);
         assertFalse(canBuy, "Should not be able to buy after 30 seconds");
 
         // 60 seconds later - should be true
         vm.warp(block.timestamp + 30); // Total 60 seconds
-        (canBuy, balance) = buyerWithInterval.canBuyMarket(address(pair));
+        (canBuy, balance) = buyerWithInterval.canBuyMarket(address(pair), buyerRole);
         assertTrue(canBuy, "Should be able to buy after 60 seconds");
         assertEq(balance, MIN_ORDER_AMOUNT);
     }
@@ -354,18 +363,18 @@ contract BuyBotTest is Test {
     function test_MultipleBuys() public {
         // First buy
         quoteToken.mint(address(buyer), 150e18);
-        vm.prank(user);
-        buyer.buyMarket(address(pair), 0, address(0), 0);
+        vm.prank(buyerRole);
+        buyer.buyMarket(address(pair), 0, 0);
 
-        uint256 firstBuyBaseBalance = baseToken.balanceOf(address(buyer));
+        uint256 firstBuyBaseBalance = baseToken.balanceOf(recipient);
         assertGt(firstBuyBaseBalance, 0);
 
         // Second buy
         quoteToken.mint(address(buyer), 200e18);
-        vm.prank(user);
-        buyer.buyMarket(address(pair), 0, address(0), 0);
+        vm.prank(buyerRole);
+        buyer.buyMarket(address(pair), 0, 0);
 
-        uint256 secondBuyBaseBalance = baseToken.balanceOf(address(buyer));
+        uint256 secondBuyBaseBalance = baseToken.balanceOf(recipient);
         assertGt(secondBuyBaseBalance, firstBuyBaseBalance);
     }
 
@@ -373,13 +382,17 @@ contract BuyBotTest is Test {
         uint256 buyAmount = 200e18;
         quoteToken.mint(address(buyer), buyAmount);
 
-        vm.prank(user);
+        vm.prank(buyerRole);
         vm.expectEmit(true, true, true, false);
-        emit BuyBot.MarketBuyExecuted(address(pair), address(quoteToken), address(baseToken), buyAmount, user);
-        buyer.buyMarket(address(pair), 0, address(0), 0);
+        emit BuyBot.MarketBuyExecuted(address(pair), address(quoteToken), address(baseToken), buyAmount, buyerRole);
+        buyer.buyMarket(address(pair), 0, 0);
     }
 
     function test_BuyWithQuoteAndWithdrawBase() public {
+        // Set recipient to address(0) to keep tokens in contract
+        vm.prank(owner);
+        buyer.setRecipient(address(0));
+
         // 1. Give buyer contract USDC (QUOTE)
         uint256 quoteAmount = 200e18;
         quoteToken.mint(address(buyer), quoteAmount);
@@ -390,8 +403,8 @@ contract BuyBotTest is Test {
         assertEq(baseToken.balanceOf(owner), 0);
 
         // 2. Execute market buy with QUOTE tokens (keep in contract)
-        vm.prank(user);
-        buyer.buyMarket(address(pair), 0, address(0), 0);
+        vm.prank(buyerRole);
+        buyer.buyMarket(address(pair), 0, 0);
 
         // Verify QUOTE was spent and BASE was received
         assertEq(quoteToken.balanceOf(address(buyer)), 0, "QUOTE should be fully spent");
@@ -408,16 +421,20 @@ contract BuyBotTest is Test {
     }
 
     function test_MultipleBuysAndPartialWithdraw() public {
+        // Set recipient to address(0) to keep tokens in contract
+        vm.prank(owner);
+        buyer.setRecipient(address(0));
+
         // First buy
         quoteToken.mint(address(buyer), 150e18);
-        vm.prank(user);
-        buyer.buyMarket(address(pair), 0, address(0), 0);
+        vm.prank(buyerRole);
+        buyer.buyMarket(address(pair), 0, 0);
         uint256 firstBuyAmount = baseToken.balanceOf(address(buyer));
 
         // Second buy
         quoteToken.mint(address(buyer), 200e18);
-        vm.prank(user);
-        buyer.buyMarket(address(pair), 0, address(0), 0);
+        vm.prank(buyerRole);
+        buyer.buyMarket(address(pair), 0, 0);
         uint256 totalBought = baseToken.balanceOf(address(buyer));
         assertGt(totalBought, firstBuyAmount);
 
@@ -437,27 +454,31 @@ contract BuyBotTest is Test {
         uint256 quoteAmount = 200e18;
         quoteToken.mint(address(buyerWithWETH), quoteAmount);
 
-        // Execute market buy for WETH
-        // WETH will automatically unwrap to ETH when sent to non-pair contract
-        vm.prank(user);
-        buyerWithWETH.buyMarket(address(wethPair), 0, address(0), 0);
+        // Execute market buy for WETH (will be sent to recipient)
+        // WETH will automatically unwrap to ETH when sent to recipient
+        vm.prank(buyerRole);
+        buyerWithWETH.buyMarket(address(wethPair), 0, 0);
 
         // Check that USDC was spent
         assertEq(quoteToken.balanceOf(address(buyerWithWETH)), 0, "USDC should be spent");
 
-        // Check that ETH was received (WETH auto-unwraps)
-        uint256 ethBalance = address(buyerWithWETH).balance;
-        assertGt(ethBalance, 0, "Should have received ETH");
+        // Check that ETH was received by recipient (WETH auto-unwraps)
+        uint256 ethBalance = recipient.balance;
+        assertGt(ethBalance, 0, "Recipient should have received ETH");
     }
 
     function test_BuyWETHAndWithdrawETH() public {
+        // Set recipient to address(0) to keep in contract
+        vm.prank(owner);
+        buyerWithWETH.setRecipient(address(0));
+
         // Give buyer contract USDC
         uint256 quoteAmount = 200e18;
         quoteToken.mint(address(buyerWithWETH), quoteAmount);
 
-        // Execute market buy for WETH (receives ETH)
-        vm.prank(user);
-        buyerWithWETH.buyMarket(address(wethPair), 0, address(0), 0);
+        // Execute market buy for WETH (receives ETH in contract)
+        vm.prank(buyerRole);
+        buyerWithWETH.buyMarket(address(wethPair), 0, 0);
 
         uint256 ethReceived = address(buyerWithWETH).balance;
         assertGt(ethReceived, 0, "Should have received ETH");
@@ -526,14 +547,18 @@ contract BuyBotTest is Test {
     // ===== New Feature Tests: Amount and Recipient Parameters =====
 
     function test_BuyMarketWithSpecificAmount() public {
+        // Set recipient to address(0) to keep in contract
+        vm.prank(owner);
+        buyer.setRecipient(address(0));
+
         // Give buyer contract 300 USDC
         uint256 totalBalance = 300e18;
         quoteToken.mint(address(buyer), totalBalance);
 
         // Buy with only 150 USDC (not entire balance)
         uint256 spendAmount = 150e18;
-        vm.prank(user);
-        buyer.buyMarket(address(pair), spendAmount, address(0), 0);
+        vm.prank(buyerRole);
+        buyer.buyMarket(address(pair), spendAmount, 0);
 
         // Check remaining balance
         assertEq(quoteToken.balanceOf(address(buyer)), totalBalance - spendAmount, "Should have remaining QUOTE");
@@ -545,12 +570,12 @@ contract BuyBotTest is Test {
         uint256 buyAmount = 200e18;
         quoteToken.mint(address(buyer), buyAmount);
 
-        address recipient = makeAddr("recipient");
+        // recipient is already set in constructor
         uint256 recipientBaseBefore = baseToken.balanceOf(recipient);
 
         // Buy and transfer to recipient
-        vm.prank(user);
-        buyer.buyMarket(address(pair), 0, recipient, 0);
+        vm.prank(buyerRole);
+        buyer.buyMarket(address(pair), 0, 0);
 
         // Check that BASE was sent to recipient, not buyer contract
         assertEq(baseToken.balanceOf(address(buyer)), 0, "BuyBot should not have BASE");
@@ -562,12 +587,12 @@ contract BuyBotTest is Test {
         uint256 totalBalance = 300e18;
         quoteToken.mint(address(buyer), totalBalance);
 
-        address recipient = makeAddr("recipient");
+        // recipient is already set in constructor
         uint256 spendAmount = 150e18;
 
         // Buy specific amount and send to recipient
-        vm.prank(user);
-        buyer.buyMarket(address(pair), spendAmount, recipient, 0);
+        vm.prank(buyerRole);
+        buyer.buyMarket(address(pair), spendAmount, 0);
 
         // Check remaining QUOTE in buyer
         assertEq(quoteToken.balanceOf(address(buyer)), totalBalance - spendAmount, "Should have remaining QUOTE");
@@ -584,58 +609,58 @@ contract BuyBotTest is Test {
 
         // Try to buy with 300 USDC
         uint256 excessiveAmount = 300e18;
-        vm.prank(user);
+        vm.prank(buyerRole);
         vm.expectRevert(abi.encodeWithSelector(BuyBot.BuyBotInsufficientBalance.selector, balance, excessiveAmount));
-        buyer.buyMarket(address(pair), excessiveAmount, address(0), 0);
+        buyer.buyMarket(address(pair), excessiveAmount, 0);
     }
 
-    function test_BuyWETHAndTransferETHToRecipient() public {
+    function test_BuyWETHKeepsInContract() public {
+        // Set recipient to address(0) to keep in contract
+        vm.prank(owner);
+        buyerWithWETH.setRecipient(address(0));
+
         // Give buyer contract USDC
         uint256 quoteAmount = 200e18;
         quoteToken.mint(address(buyerWithWETH), quoteAmount);
 
-        address recipient = makeAddr("ethRecipient");
-        uint256 recipientETHBefore = recipient.balance;
+        // Buy WETH and it will auto-unwrap to ETH, stays in contract
+        vm.prank(buyerRole);
+        buyerWithWETH.buyMarket(address(wethPair), 0, 0);
 
-        // Buy WETH and it will auto-unwrap to ETH, but stay in contract (recipient = address(0))
-        vm.prank(user);
-        buyerWithWETH.buyMarket(address(wethPair), 0, address(0), 0);
-
-        // ETH should be in buyer contract, not recipient
+        // ETH should be in buyer contract
         assertGt(address(buyerWithWETH).balance, 0, "BuyBot should have ETH");
-        assertEq(recipient.balance, recipientETHBefore, "Recipient should not have ETH yet");
     }
 
     // ===== Interval Tests =====
 
     function test_BuyMarketWithInterval() public {
         // Deploy buyer with 60 second interval
-        BuyBot buyerWithInterval = new BuyBot(owner, address(router), MIN_ORDER_AMOUNT, 60);
+        BuyBot buyerWithInterval = new BuyBot(owner, address(router), MIN_ORDER_AMOUNT, 60, recipient, buyerRole);
 
         // First buy should succeed
         quoteToken.mint(address(buyerWithInterval), 200e18);
-        vm.prank(user);
-        buyerWithInterval.buyMarket(address(pair), 0, address(0), 0);
+        vm.prank(buyerRole);
+        buyerWithInterval.buyMarket(address(pair), 0, 0);
 
         // Second buy should fail (interval not passed)
         quoteToken.mint(address(buyerWithInterval), 200e18);
-        vm.prank(user);
+        vm.prank(buyerRole);
         vm.expectRevert(abi.encodeWithSelector(BuyBot.BuyBotIntervalNotPassed.selector, 0, 60));
-        buyerWithInterval.buyMarket(address(pair), 0, address(0), 0);
+        buyerWithInterval.buyMarket(address(pair), 0, 0);
 
         // Warp time forward by 59 seconds (still not enough)
         vm.warp(block.timestamp + 59);
-        vm.prank(user);
+        vm.prank(buyerRole);
         vm.expectRevert(abi.encodeWithSelector(BuyBot.BuyBotIntervalNotPassed.selector, 59, 60));
-        buyerWithInterval.buyMarket(address(pair), 0, address(0), 0);
+        buyerWithInterval.buyMarket(address(pair), 0, 0);
 
         // Warp time forward by 1 more second (total 60 seconds)
         vm.warp(block.timestamp + 1);
-        vm.prank(user);
-        buyerWithInterval.buyMarket(address(pair), 0, address(0), 0);
+        vm.prank(buyerRole);
+        buyerWithInterval.buyMarket(address(pair), 0, 0);
 
-        // Should succeed
-        assertGt(baseToken.balanceOf(address(buyerWithInterval)), 0);
+        // Should succeed - recipient gets tokens
+        assertGt(baseToken.balanceOf(recipient), 0);
     }
 
     function test_OwnerCanSetInterval() public {
@@ -655,21 +680,112 @@ contract BuyBotTest is Test {
         buyer.setInterval(120);
     }
 
+    // ===== Authorization Tests =====
+
+    function test_OnlyOwnerCanBuyMarket() public {
+        quoteToken.mint(address(buyer), 200e18);
+
+        // Owner can call buyMarket
+        vm.prank(owner);
+        buyer.buyMarket(address(pair), 0, 0);
+
+        assertGt(baseToken.balanceOf(recipient), 0);
+    }
+
+    function test_AuthorizedBuyerCanBuyMarket() public {
+        quoteToken.mint(address(buyer), 200e18);
+
+        // Authorized buyer can call buyMarket
+        vm.prank(buyerRole);
+        buyer.buyMarket(address(pair), 0, 0);
+
+        assertGt(baseToken.balanceOf(recipient), 0);
+    }
+
+    function test_RevertWhen_UnauthorizedCallerTriesToBuyMarket() public {
+        quoteToken.mint(address(buyer), 200e18);
+
+        // Unauthorized user cannot call buyMarket
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(BuyBot.BuyBotUnauthorizedCaller.selector, user));
+        buyer.buyMarket(address(pair), 0, 0);
+    }
+
+    // ===== Recipient and Buyer Setter Tests =====
+
+    function test_OwnerCanSetRecipient() public {
+        address newRecipient = makeAddr("newRecipient");
+
+        vm.prank(owner);
+        vm.expectEmit(true, true, false, false);
+        emit BuyBot.RecipientSet(recipient, newRecipient);
+        buyer.setRecipient(newRecipient);
+
+        assertEq(buyer.recipient(), newRecipient);
+    }
+
+    function test_RevertWhen_NonOwnerTriesToSetRecipient() public {
+        address newRecipient = makeAddr("newRecipient");
+
+        vm.prank(user);
+        vm.expectRevert();
+        buyer.setRecipient(newRecipient);
+    }
+
+    function test_OwnerCanSetBuyer() public {
+        address newBuyer = makeAddr("newBuyer");
+
+        vm.prank(owner);
+        vm.expectEmit(true, true, false, false);
+        emit BuyBot.BuyerSet(buyerRole, newBuyer);
+        buyer.setBuyer(newBuyer);
+
+        assertEq(buyer.buyer(), newBuyer);
+
+        // New buyer can now call buyMarket
+        quoteToken.mint(address(buyer), 200e18);
+        vm.prank(newBuyer);
+        buyer.buyMarket(address(pair), 0, 0);
+    }
+
+    function test_RevertWhen_NonOwnerTriesToSetBuyer() public {
+        address newBuyer = makeAddr("newBuyer");
+
+        vm.prank(user);
+        vm.expectRevert();
+        buyer.setBuyer(newBuyer);
+    }
+
+    function test_SetRecipientToZeroKeepsTokensInContract() public {
+        // Set recipient to address(0)
+        vm.prank(owner);
+        buyer.setRecipient(address(0));
+
+        // Buy tokens
+        quoteToken.mint(address(buyer), 200e18);
+        vm.prank(buyerRole);
+        buyer.buyMarket(address(pair), 0, 0);
+
+        // Tokens should be in contract, not recipient
+        assertGt(baseToken.balanceOf(address(buyer)), 0);
+        assertEq(baseToken.balanceOf(recipient), 0);
+    }
+
     function test_IntervalZeroDisablesCheck() public {
         // Deploy buyer with 0 interval (disabled)
-        BuyBot buyerNoInterval = new BuyBot(owner, address(router), MIN_ORDER_AMOUNT, 0);
+        BuyBot buyerNoInterval = new BuyBot(owner, address(router), MIN_ORDER_AMOUNT, 0, recipient, buyerRole);
 
         // First buy
         quoteToken.mint(address(buyerNoInterval), 200e18);
-        vm.prank(user);
-        buyerNoInterval.buyMarket(address(pair), 0, address(0), 0);
+        vm.prank(buyerRole);
+        buyerNoInterval.buyMarket(address(pair), 0, 0);
 
         // Second buy should succeed immediately (no interval check)
         quoteToken.mint(address(buyerNoInterval), 200e18);
-        vm.prank(user);
-        buyerNoInterval.buyMarket(address(pair), 0, address(0), 0);
+        vm.prank(buyerRole);
+        buyerNoInterval.buyMarket(address(pair), 0, 0);
 
-        assertGt(baseToken.balanceOf(address(buyerNoInterval)), 0);
+        assertGt(baseToken.balanceOf(recipient), 0);
     }
 
     function test_UpdateIntervalDuringOperation() public {
@@ -678,8 +794,8 @@ contract BuyBotTest is Test {
 
         // First buy
         quoteToken.mint(address(buyer), 200e18);
-        vm.prank(user);
-        buyer.buyMarket(address(pair), 0, address(0), 0);
+        vm.prank(buyerRole);
+        buyer.buyMarket(address(pair), 0, 0);
 
         // Set interval to 30 seconds
         vm.prank(owner);
@@ -687,15 +803,15 @@ contract BuyBotTest is Test {
 
         // Second buy should fail (interval now active)
         quoteToken.mint(address(buyer), 200e18);
-        vm.prank(user);
+        vm.prank(buyerRole);
         vm.expectRevert(abi.encodeWithSelector(BuyBot.BuyBotIntervalNotPassed.selector, 0, 30));
-        buyer.buyMarket(address(pair), 0, address(0), 0);
+        buyer.buyMarket(address(pair), 0, 0);
 
         // Warp time and try again
         vm.warp(block.timestamp + 30);
-        vm.prank(user);
-        buyer.buyMarket(address(pair), 0, address(0), 0);
+        vm.prank(buyerRole);
+        buyer.buyMarket(address(pair), 0, 0);
 
-        assertGt(baseToken.balanceOf(address(buyer)), 0);
+        assertGt(baseToken.balanceOf(recipient), 0);
     }
 }
