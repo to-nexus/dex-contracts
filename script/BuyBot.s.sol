@@ -16,6 +16,7 @@ contract BuyBotScript is Script {
      * @param interval Minimum time interval (in seconds) between buy executions (0 to disable)
      * @param recipient Address to receive purchased BASE tokens (address(0) to keep in contract)
      * @param buyer Address authorized to execute buyMarket (in addition to owner)
+     * @param manager Address authorized to set minOrderAmount and interval (in addition to owner)
      */
     function deployBuyBot(
         address owner,
@@ -23,10 +24,11 @@ contract BuyBotScript is Script {
         uint256 minOrderAmount,
         uint256 interval,
         address recipient,
-        address buyer
+        address buyer,
+        address manager
     ) external returns (address) {
         vm.broadcast();
-        BuyBot bot = new BuyBot(owner, router, minOrderAmount, interval, recipient, buyer);
+        BuyBot bot = new BuyBot(owner, router, minOrderAmount, interval, recipient, buyer, manager);
         return address(bot);
     }
 
@@ -104,6 +106,16 @@ contract BuyBotScript is Script {
     }
 
     /**
+     * @notice Set authorized manager address
+     * @param buyBot BuyBot contract address
+     * @param manager New manager address
+     */
+    function setManager(address buyBot, address manager) external {
+        vm.broadcast();
+        BuyBot(payable(buyBot)).setManager(manager);
+    }
+
+    /**
      * @notice Transfer ownership of BuyBot
      * @param buyBot BuyBot contract address
      * @param newOwner New owner address
@@ -127,6 +139,7 @@ contract BuyBotScript is Script {
         console.log("Router:", address(bot.router()));
         console.log("Recipient:", bot.recipient());
         console.log("Buyer:", bot.buyer());
+        console.log("Manager:", bot.manager());
         console.log("------------------------------------------");
         console.log("Min Order Amount:", bot.minOrderAmount());
         console.log("Interval:", bot.interval(), "seconds");
@@ -173,7 +186,7 @@ contract BuyBotScript is Script {
 
     /**
      * @notice Deploy BuyBot with default settings for testing
-     * @dev Default: 100e18 min order, 0 interval, owner as both recipient and buyer
+     * @dev Default: 100e18 min order, 0 interval, owner as recipient/buyer/manager
      */
     function deployBuyBotDefault(address owner, address router) external returns (address) {
         vm.broadcast();
@@ -183,7 +196,8 @@ contract BuyBotScript is Script {
             100e18, // minOrderAmount: 100 tokens
             0, // interval: 0 (disabled)
             owner, // recipient: owner
-            owner // buyer: owner
+            owner, // buyer: owner
+            owner // manager: owner
         );
         return address(bot);
     }

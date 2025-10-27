@@ -73,6 +73,7 @@ contract BuyBotTest is Test {
     address public feeCollector;
     address public buyerRole;
     address public recipient;
+    address public managerRole;
 
     uint256 public constant MIN_ORDER_AMOUNT = 100e18;
     uint256 public constant TICK_SIZE = 1e18;
@@ -84,6 +85,7 @@ contract BuyBotTest is Test {
         feeCollector = makeAddr("feeCollector");
         buyerRole = makeAddr("buyerRole");
         recipient = makeAddr("recipient");
+        managerRole = makeAddr("managerRole");
 
         // Deploy mock tokens
         quoteToken = new MockERC20("USDC", "USDC", 18);
@@ -115,7 +117,7 @@ contract BuyBotTest is Test {
         pair = PairImpl(pairAddress);
 
         // Deploy BuyBot for normal token (0 interval = no delay)
-        buyer = new BuyBot(owner, address(router), MIN_ORDER_AMOUNT, 0, recipient, buyerRole);
+        buyer = new BuyBot(owner, address(router), MIN_ORDER_AMOUNT, 0, recipient, buyerRole, managerRole);
 
         // Setup initial liquidity (sell orders)
         _setupLiquidity();
@@ -135,7 +137,7 @@ contract BuyBotTest is Test {
         wethPair = PairImpl(wethPairAddress);
 
         // Deploy BuyBot for WETH (0 interval = no delay)
-        buyerWithWETH = new BuyBot(owner, address(router), MIN_ORDER_AMOUNT, 0, recipient, buyerRole);
+        buyerWithWETH = new BuyBot(owner, address(router), MIN_ORDER_AMOUNT, 0, recipient, buyerRole, managerRole);
 
         // Setup liquidity for WETH pair
         address seller = makeAddr("wethSeller");
@@ -299,12 +301,6 @@ contract BuyBotTest is Test {
         buyer.setMinOrderAmount(0);
     }
 
-    function test_RevertWhen_NonOwnerTriesToSetMinOrderAmount() public {
-        vm.prank(user);
-        vm.expectRevert();
-        buyer.setMinOrderAmount(500e18);
-    }
-
     function test_CanBuyMarketView() public {
         // No balance - authorized caller
         (bool canBuy, uint256 balance) = buyer.canBuyMarket(address(pair), buyerRole);
@@ -331,7 +327,8 @@ contract BuyBotTest is Test {
 
     function test_CanBuyMarketViewWithInterval() public {
         // Deploy buyer with 60 second interval
-        BuyBot buyerWithInterval = new BuyBot(owner, address(router), MIN_ORDER_AMOUNT, 60, recipient, buyerRole);
+        BuyBot buyerWithInterval =
+            new BuyBot(owner, address(router), MIN_ORDER_AMOUNT, 60, recipient, buyerRole, managerRole);
 
         // Sufficient balance, but no lastBuyTime yet (should be true)
         quoteToken.mint(address(buyerWithInterval), MIN_ORDER_AMOUNT);
@@ -647,7 +644,8 @@ contract BuyBotTest is Test {
 
     function test_BuyMarketWithInterval() public {
         // Deploy buyer with 60 second interval
-        BuyBot buyerWithInterval = new BuyBot(owner, address(router), MIN_ORDER_AMOUNT, 60, recipient, buyerRole);
+        BuyBot buyerWithInterval =
+            new BuyBot(owner, address(router), MIN_ORDER_AMOUNT, 60, recipient, buyerRole, managerRole);
 
         // First buy should succeed
         uint256 buyAmount = 200e18;
@@ -686,12 +684,6 @@ contract BuyBotTest is Test {
         buyer.setInterval(newInterval);
 
         assertEq(buyer.interval(), newInterval);
-    }
-
-    function test_RevertWhen_NonOwnerTriesToSetInterval() public {
-        vm.prank(user);
-        vm.expectRevert();
-        buyer.setInterval(120);
     }
 
     // ===== Authorization Tests =====
@@ -792,7 +784,8 @@ contract BuyBotTest is Test {
 
     function test_IntervalZeroDisablesCheck() public {
         // Deploy buyer with 0 interval (disabled)
-        BuyBot buyerNoInterval = new BuyBot(owner, address(router), MIN_ORDER_AMOUNT, 0, recipient, buyerRole);
+        BuyBot buyerNoInterval =
+            new BuyBot(owner, address(router), MIN_ORDER_AMOUNT, 0, recipient, buyerRole, managerRole);
 
         // First buy
         uint256 buyAmount = 200e18;
@@ -835,5 +828,66 @@ contract BuyBotTest is Test {
         buyer.buyMarket(address(pair), buyAmount, 0);
 
         assertGt(baseToken.balanceOf(recipient), 0);
+    }
+
+    // ===== Manager Tests =====
+
+    function test_ManagerCanSetMinOrderAmount() public {
+        uint256 newAmount = 500e18;
+
+        vm.prank(managerRole);
+        vm.expectEmit(true, true, false, false);
+        emit BuyBot.MinOrderAmountSet(MIN_ORDER_AMOUNT, newAmount);
+        buyer.setMinOrderAmount(newAmount);
+
+        assertEq(buyer.minOrderAmount(), newAmount);
+    }
+
+    function test_ManagerCanSetInterval() public {
+        uint256 newInterval = 60;
+
+        vm.prank(managerRole);
+        vm.expectEmit(true, true, false, false);
+        emit BuyBot.IntervalSet(0, newInterval);
+        buyer.setInterval(newInterval);
+
+        assertEq(buyer.interval(), newInterval);
+    }
+
+    function test_OwnerCanSetManager() public {
+        address newManager = makeAddr("newManager");
+
+        vm.prank(owner);
+        vm.expectEmit(true, true, false, false);
+        emit BuyBot.ManagerSet(managerRole, newManager);
+        buyer.setManager(newManager);
+
+        assertEq(buyer.manager(), newManager);
+
+        // New manager can now set minOrderAmount
+        uint256 newAmount = 500e18;
+        vm.prank(newManager);
+        buyer.setMinOrderAmount(newAmount);
+        assertEq(buyer.minOrderAmount(), newAmount);
+    }
+
+    function test_RevertWhen_NonOwnerTriesToSetManager() public {
+        address newManager = makeAddr("newManager");
+
+        vm.prank(user);
+        vm.expectRevert();
+        buyer.setManager(newManager);
+    }
+
+    function test_RevertWhen_UnauthorizedUserTriesToSetMinOrderAmount() public {
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(BuyBot.BuyBotUnauthorizedCaller.selector, user));
+        buyer.setMinOrderAmount(500e18);
+    }
+
+    function test_RevertWhen_UnauthorizedUserTriesToSetInterval() public {
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(BuyBot.BuyBotUnauthorizedCaller.selector, user));
+        buyer.setInterval(60);
     }
 }

@@ -38,6 +38,7 @@ contract BuyBot is Ownable {
     event IntervalSet(uint256 indexed before, uint256 indexed current);
     event RecipientSet(address indexed before, address indexed current);
     event BuyerSet(address indexed before, address indexed current);
+    event ManagerSet(address indexed before, address indexed current);
     event Withdrawn(address indexed token, address indexed to, uint256 amount);
 
     /// @notice CrossDexRouter address
@@ -58,6 +59,9 @@ contract BuyBot is Ownable {
     /// @notice Address authorized to execute buyMarket (in addition to owner)
     address public buyer;
 
+    /// @notice Address authorized to set minOrderAmount and interval (in addition to owner)
+    address public manager;
+
     /**
      * @notice Contract constructor
      * @param _owner Owner address
@@ -66,6 +70,7 @@ contract BuyBot is Ownable {
      * @param _interval Minimum time interval (in seconds) between buy executions
      * @param _recipient Address to receive purchased BASE tokens
      * @param _buyer Address authorized to execute buyMarket
+     * @param _manager Address authorized to set minOrderAmount and interval
      */
     constructor(
         address _owner,
@@ -73,7 +78,8 @@ contract BuyBot is Ownable {
         uint256 _minOrderAmount,
         uint256 _interval,
         address _recipient,
-        address _buyer
+        address _buyer,
+        address _manager
     ) Ownable(_owner) {
         if (_router == address(0)) revert BuyBotInvalidRouter(_router);
         if (_minOrderAmount == 0) revert BuyBotInvalidMinOrderAmount(_minOrderAmount);
@@ -83,11 +89,13 @@ contract BuyBot is Ownable {
         interval = _interval;
         recipient = _recipient;
         buyer = _buyer;
+        manager = _manager;
 
         emit MinOrderAmountSet(0, _minOrderAmount);
         emit IntervalSet(0, _interval);
         emit RecipientSet(address(0), _recipient);
         emit BuyerSet(address(0), _buyer);
+        emit ManagerSet(address(0), _manager);
     }
 
     // ===== MODIFIERS =====
@@ -97,6 +105,14 @@ contract BuyBot is Ownable {
      */
     modifier onlyBuyer() {
         if (msg.sender != owner() && msg.sender != buyer) revert BuyBotUnauthorizedCaller(msg.sender);
+        _;
+    }
+
+    /**
+     * @notice Only owner or authorized manager can call
+     */
+    modifier onlyManager() {
+        if (msg.sender != owner() && msg.sender != manager) revert BuyBotUnauthorizedCaller(msg.sender);
         _;
     }
 
@@ -199,10 +215,10 @@ contract BuyBot is Ownable {
 
     /**
      * @notice Set minimum order amount
-     * @dev Only owner can set
+     * @dev Only owner or manager can set
      * @param _minOrderAmount New minimum order amount
      */
-    function setMinOrderAmount(uint256 _minOrderAmount) external onlyOwner {
+    function setMinOrderAmount(uint256 _minOrderAmount) external onlyManager {
         if (_minOrderAmount == 0) revert BuyBotInvalidMinOrderAmount(_minOrderAmount);
         emit MinOrderAmountSet(minOrderAmount, _minOrderAmount);
         minOrderAmount = _minOrderAmount;
@@ -210,10 +226,10 @@ contract BuyBot is Ownable {
 
     /**
      * @notice Set time interval between buy executions
-     * @dev Only owner can set
+     * @dev Only owner or manager can set
      * @param _interval New interval in seconds (0 to disable)
      */
-    function setInterval(uint256 _interval) external onlyOwner {
+    function setInterval(uint256 _interval) external onlyManager {
         emit IntervalSet(interval, _interval);
         interval = _interval;
     }
@@ -236,6 +252,16 @@ contract BuyBot is Ownable {
     function setBuyer(address _buyer) external onlyOwner {
         emit BuyerSet(buyer, _buyer);
         buyer = _buyer;
+    }
+
+    /**
+     * @notice Set authorized manager address
+     * @dev Only owner can set
+     * @param _manager New manager address
+     */
+    function setManager(address _manager) external onlyOwner {
+        emit ManagerSet(manager, _manager);
+        manager = _manager;
     }
 
     // ===== VIEW FUNCTIONS =====
