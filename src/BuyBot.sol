@@ -23,6 +23,7 @@ contract BuyBot is Ownable {
     error BuyBotInvalidRouter(address);
     error BuyBotInvalidPair(address);
     error BuyBotInvalidMinOrderAmount(uint256);
+    error BuyBotInvalidAmount(uint256);
     error BuyBotIntervalNotPassed(uint256 timeSinceLastBuy, uint256 requiredInterval);
     error BuyBotUnauthorizedCaller(address caller);
 
@@ -105,11 +106,12 @@ contract BuyBot is Ownable {
      * @notice Execute market buy order
      * @dev Can only be called by owner or authorized buyer
      * @param pair Trading pair address
-     * @param amount Amount to spend (0 for entire balance)
+     * @param amount Amount to spend (must be greater than 0)
      * @param maxMatchCount Maximum number of orders to match (0 for router default)
      */
     function buyMarket(address pair, uint256 amount, uint256 maxMatchCount) external onlyBuyer {
         if (pair == address(0)) revert BuyBotInvalidPair(pair);
+        if (amount == 0) revert BuyBotInvalidAmount(amount);
 
         // Check interval has passed since last buy
         if (interval > 0 && lastBuyTime > 0) {
@@ -125,25 +127,22 @@ contract BuyBot is Ownable {
         // Get current balance
         uint256 balance = quoteToken.balanceOf(address(this));
 
-        // Determine amount to spend (0 = entire balance)
-        uint256 spendAmount = amount == 0 ? balance : amount;
-
         // Check minimum order amount
-        if (spendAmount < minOrderAmount) revert BuyBotInsufficientBalance(spendAmount, minOrderAmount);
+        if (amount < minOrderAmount) revert BuyBotInsufficientBalance(amount, minOrderAmount);
 
         // Check sufficient balance
-        if (spendAmount > balance) revert BuyBotInsufficientBalance(balance, spendAmount);
+        if (amount > balance) revert BuyBotInsufficientBalance(balance, amount);
 
         // Approve router if needed (only once per token)
         address routerAddress = address(router);
-        if (quoteToken.allowance(address(this), routerAddress) < spendAmount) {
+        if (quoteToken.allowance(address(this), routerAddress) < amount) {
             quoteToken.forceApprove(routerAddress, type(uint256).max);
         }
 
         // Execute market buy
-        router.submitBuyMarket(pair, spendAmount, maxMatchCount);
+        router.submitBuyMarket(pair, amount, maxMatchCount);
 
-        emit MarketBuyExecuted(pair, address(quoteToken), address(baseToken), spendAmount, msg.sender);
+        emit MarketBuyExecuted(pair, address(quoteToken), address(baseToken), amount, msg.sender);
 
         // Update last buy time
         lastBuyTime = block.timestamp;
