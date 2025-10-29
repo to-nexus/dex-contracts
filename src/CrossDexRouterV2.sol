@@ -101,6 +101,16 @@ contract CrossDexRouterV2 is
         return IOwnable(CROSS_DEX).owner();
     }
 
+    /**
+     * @dev Calculate the total QUOTE volume required (including buyer taker fee)
+     * @param pair The pair contract address
+     * @param quoteVolume The base quote volume user wants to spend
+     * @return The total volume needed including fee
+     */
+    function getRequiredBuyVolume(address pair, uint256 quoteVolume) external view validPair(pair) returns (uint256) {
+        return _calculateRequireBuyVolume(pair, quoteVolume);
+    }
+
     function submitSellLimit(
         address pair,
         uint256 price,
