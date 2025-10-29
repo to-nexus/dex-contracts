@@ -102,7 +102,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     uint256[24] private __gap;
 
     modifier onlyOwner() {
-        // The Pair is the same as the Owner of the Market.
+        // The owner of the Pair is the owner of the Market contract that deployed this Pair.
         if (_msgSender() != owner()) revert OwnableUnauthorizedAccount(_msgSender());
         _;
     }
