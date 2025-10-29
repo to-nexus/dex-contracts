@@ -657,7 +657,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     // LimitBuy
     function _addQuoteReserve(address account, uint256 amount) private {
         (bool ok, uint256 newReserve) = Math.tryAdd(quoteReserve, amount);
-        if (!ok) revert PairInvalidAccountReserve(account, address(QUOTE));
+        if (!ok) revert PairInvalidReserve(address(QUOTE));
         quoteReserve = newReserve;
 
         (ok, newReserve) = Math.tryAdd(_accountReserves[account][1], amount);
@@ -671,7 +671,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         returns (uint256 newQuoteReserve)
     {
         (bool ok, uint256 newReserve) = Math.trySub(_accountReserves[account][1], amount);
-        if (!ok) revert PairInvalidAccountReserve(account, address(QUOTE));
+        if (!ok) revert PairInvalidReserve(address(QUOTE));
         _accountReserves[account][1] = newReserve;
 
         (ok, newQuoteReserve) = Math.trySub(reserve, amount);
