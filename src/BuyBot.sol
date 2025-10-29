@@ -3,8 +3,10 @@ pragma solidity 0.8.28;
 
 import {AccessControl} from "@openzeppelin-contracts-5.2.0/access/AccessControl.sol";
 import {Ownable} from "@openzeppelin-contracts-5.2.0/access/Ownable.sol";
+
 import {IERC20} from "@openzeppelin-contracts-5.2.0/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin-contracts-5.2.0/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin-contracts-5.2.0/utils/ReentrancyGuard.sol";
 
 import {IPair} from "./interfaces/IPair.sol";
 import {IRouter} from "./interfaces/IRouter.sol";
@@ -13,8 +15,9 @@ import {IRouter} from "./interfaces/IRouter.sol";
  * @title BuyBot
  * @notice A bot contract that automatically buys tokens at market price using its balance
  * @dev Uses AccessControl for role-based permissions (BUYER_ROLE, MANAGER_ROLE)
+ * @dev Uses ReentrancyGuard to prevent reentrancy attacks during external calls
  */
-contract BuyBot is Ownable, AccessControl {
+contract BuyBot is Ownable, AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     /// @notice Role for executing buyMarket function
@@ -129,11 +132,12 @@ contract BuyBot is Ownable, AccessControl {
     /**
      * @notice Execute market buy order
      * @dev Can only be called by owner or authorized buyer
+     * @dev Protected against reentrancy attacks
      * @param pair Trading pair address
      * @param amount Amount to spend (must be greater than 0)
      * @param maxMatchCount Maximum number of orders to match (0 for router default)
      */
-    function buyMarket(address pair, uint256 amount, uint256 maxMatchCount) external onlyBuyer {
+    function buyMarket(address pair, uint256 amount, uint256 maxMatchCount) external onlyBuyer nonReentrant {
         if (pair == address(0)) revert BuyBotInvalidPair(pair);
         if (amount == 0) revert BuyBotInvalidAmount(amount);
 
@@ -192,10 +196,11 @@ contract BuyBot is Ownable, AccessControl {
     /**
      * @notice Withdraw tokens from the contract
      * @dev Only owner can withdraw
+     * @dev Protected against reentrancy attacks
      * @param token Token address to withdraw
      * @param amount Amount to withdraw (0 for entire balance)
      */
-    function withdraw(address token, uint256 amount) external onlyOwner {
+    function withdraw(address token, uint256 amount) external onlyOwner nonReentrant {
         IERC20 tokenContract = IERC20(token);
         uint256 balance = tokenContract.balanceOf(address(this));
 
@@ -209,9 +214,10 @@ contract BuyBot is Ownable, AccessControl {
     /**
      * @notice Withdraw native ETH from the contract
      * @dev Only owner can withdraw
+     * @dev Protected against reentrancy attacks
      * @param amount Amount to withdraw (0 for entire balance)
      */
-    function withdrawETH(uint256 amount) external onlyOwner {
+    function withdrawETH(uint256 amount) external onlyOwner nonReentrant {
         uint256 balance = address(this).balance;
         uint256 withdrawAmount = amount == 0 ? balance : amount;
         require(withdrawAmount <= balance, "Insufficient balance");
