@@ -163,8 +163,13 @@ contract MarketImplV2 is IMarketV2, UUPSUpgradeable, OwnableUpgradeable {
         if (buyerTakerFeeBps_ >= BPS_DENOMINATOR) revert MarketInvalidInitializeData("buyerTakerFeeBps");
 
         // logical check - taker fee must be >= maker fee
-        if (sellerTakerFeeBps_ < sellerMakerFeeBps_) revert MarketInvalidInitializeData("sellerMakerFeeBps");
-        if (buyerTakerFeeBps_ < buyerMakerFeeBps_) revert MarketInvalidInitializeData("buyerMakerFeeBps");
+        // 🔥 NEW: logical check - taker fee must be >= maker fee
+        if (sellerTakerFeeBps_ < sellerMakerFeeBps_) {
+            revert MarketInvalidFeeStructure(sellerMakerFeeBps_, sellerTakerFeeBps_);
+        }
+        if (buyerTakerFeeBps_ < buyerMakerFeeBps_) {
+            revert MarketInvalidFeeStructure(buyerMakerFeeBps_, buyerTakerFeeBps_);
+        }
 
         // set
         _feeConfig = FeeConfig({
