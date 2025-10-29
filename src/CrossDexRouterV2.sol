@@ -169,7 +169,7 @@ contract CrossDexRouterV2 is
         IPairV2(pair).submitMarketOrder(order, amount, _toMaxMatchCount(_maxMatchCount));
     }
 
-    function submitBuyMarket(address pair, uint256 amount, uint256 _maxMatchCount)
+    function submitBuyMarket(address pair, uint256 quoteVolume, uint256 _maxMatchCount)
         external
         payable
         nonReentrant
@@ -181,14 +181,14 @@ contract CrossDexRouterV2 is
 
         IERC20 QUOTE = info.QUOTE;
         {
-            uint256 volume = _calculateRequireBuyVolume(pair, amount);
+            uint256 volume = _calculateRequireBuyVolume(pair, quoteVolume);
             if (address(QUOTE) == address(CROSS)) CROSS.mintTo{value: volume}(pair);
             else QUOTE.safeTransferFrom(_owner, pair, volume);
         }
 
         IPair.Order memory order =
             IPair.Order({side: IPair.OrderSide.BUY, owner: _owner, feeBps: 0, price: 0, amount: 0});
-        IPairV2(pair).submitMarketOrder(order, amount, _toMaxMatchCount(_maxMatchCount));
+        IPairV2(pair).submitMarketOrder(order, quoteVolume, _toMaxMatchCount(_maxMatchCount));
     }
 
     function cancelOrder(address pair, uint256[] calldata orderIds) external nonReentrant validPair(pair) {
