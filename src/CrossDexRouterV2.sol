@@ -142,7 +142,7 @@ contract CrossDexRouterV2 is
             volume = _calculateRequireBuyVolume(pair, volume);
 
             if (address(info.QUOTE) == address(CROSS)) CROSS.mintTo{value: volume}(pair);
-            else info.QUOTE.safeTransferFrom(_owner, address(pair), volume);
+            else info.QUOTE.safeTransferFrom(_owner, pair, volume);
         }
 
         IPair.Order memory order =
@@ -161,8 +161,8 @@ contract CrossDexRouterV2 is
         IPairV2.Config memory info = IPairV2(pair).getConfig();
 
         IERC20 BASE = info.BASE;
-        if (address(BASE) == address(CROSS)) CROSS.mintTo{value: amount}(address(pair));
-        else BASE.safeTransferFrom(_owner, address(pair), amount);
+        if (address(BASE) == address(CROSS)) CROSS.mintTo{value: amount}(pair);
+        else BASE.safeTransferFrom(_owner, pair, amount);
 
         IPair.Order memory order =
             IPair.Order({side: IPair.OrderSide.SELL, owner: _owner, feeBps: 0, price: 0, amount: 0});
@@ -182,8 +182,8 @@ contract CrossDexRouterV2 is
         IERC20 QUOTE = info.QUOTE;
         {
             uint256 volume = _calculateRequireBuyVolume(pair, amount);
-            if (address(QUOTE) == address(CROSS)) CROSS.mintTo{value: volume}(address(pair));
-            else QUOTE.safeTransferFrom(_owner, address(pair), volume);
+            if (address(QUOTE) == address(CROSS)) CROSS.mintTo{value: volume}(pair);
+            else QUOTE.safeTransferFrom(_owner, pair, volume);
         }
 
         IPair.Order memory order =
