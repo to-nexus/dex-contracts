@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
+import {AccessControl} from "@openzeppelin-contracts-5.2.0/access/AccessControl.sol";
 import {Ownable} from "@openzeppelin-contracts-5.2.0/access/Ownable.sol";
 import {IERC20} from "@openzeppelin-contracts-5.2.0/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin-contracts-5.2.0/token/ERC20/utils/SafeERC20.sol";
@@ -11,10 +12,16 @@ import {IRouter} from "./interfaces/IRouter.sol";
 /**
  * @title BuyBot
  * @notice A bot contract that automatically buys tokens at market price using its balance
- * @dev Only owner or authorized buyer can trigger the buy function
+ * @dev Uses AccessControl for role-based permissions (BUYER_ROLE, MANAGER_ROLE)
  */
-contract BuyBot is Ownable {
+contract BuyBot is Ownable, AccessControl {
     using SafeERC20 for IERC20;
+
+    /// @notice Role for executing buyMarket function
+    bytes32 public constant BUYER_ROLE = keccak256("BUYER_ROLE");
+
+    /// @notice Role for setting minOrderAmount and interval
+    bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
 
     /// @notice Address representing native coin (ETH)
     address public constant NATIVE_COIN = address(1);
@@ -26,6 +33,8 @@ contract BuyBot is Ownable {
     error BuyBotInvalidAmount(uint256);
     error BuyBotIntervalNotPassed(uint256 timeSinceLastBuy, uint256 requiredInterval);
     error BuyBotUnauthorizedCaller(address caller);
+    error BuyBotInvalidBuyer(address buyer);
+    error BuyBotInvalidManager(address manager);
 
     event MarketBuyExecuted(
         address indexed pair,
@@ -37,8 +46,6 @@ contract BuyBot is Ownable {
     event MinOrderAmountSet(uint256 indexed before, uint256 indexed current);
     event IntervalSet(uint256 indexed before, uint256 indexed current);
     event RecipientSet(address indexed before, address indexed current);
-    event BuyerSet(address indexed before, address indexed current);
-    event ManagerSet(address indexed before, address indexed current);
     event Withdrawn(address indexed token, address indexed to, uint256 amount);
 
     /// @notice CrossDexRouter address
@@ -56,21 +63,15 @@ contract BuyBot is Ownable {
     /// @notice Address to receive purchased BASE tokens
     address public recipient;
 
-    /// @notice Address authorized to execute buyMarket (in addition to owner)
-    address public buyer;
-
-    /// @notice Address authorized to set minOrderAmount and interval (in addition to owner)
-    address public manager;
-
     /**
      * @notice Contract constructor
-     * @param _owner Owner address
+     * @param _owner Owner address (also gets DEFAULT_ADMIN_ROLE)
      * @param _router CrossDexRouter address
      * @param _minOrderAmount Minimum order amount in QUOTE token
      * @param _interval Minimum time interval (in seconds) between buy executions
      * @param _recipient Address to receive purchased BASE tokens
-     * @param _buyer Address authorized to execute buyMarket
-     * @param _manager Address authorized to set minOrderAmount and interval
+     * @param _buyer Address authorized to execute buyMarket (gets BUYER_ROLE)
+     * @param _manager Address authorized to set minOrderAmount and interval (gets MANAGER_ROLE)
      */
     constructor(
         address _owner,
@@ -83,36 +84,43 @@ contract BuyBot is Ownable {
     ) Ownable(_owner) {
         if (_router == address(0)) revert BuyBotInvalidRouter(_router);
         if (_minOrderAmount == 0) revert BuyBotInvalidMinOrderAmount(_minOrderAmount);
+        if (_buyer == address(0)) revert BuyBotInvalidBuyer(_buyer);
+        if (_manager == address(0)) revert BuyBotInvalidManager(_manager);
 
         router = IRouter(_router);
         minOrderAmount = _minOrderAmount;
         interval = _interval;
         recipient = _recipient;
-        buyer = _buyer;
-        manager = _manager;
+
+        // Grant DEFAULT_ADMIN_ROLE to owner
+        _grantRole(DEFAULT_ADMIN_ROLE, _owner);
+
+        // Grant BUYER_ROLE
+        _grantRole(BUYER_ROLE, _buyer);
+
+        // Grant MANAGER_ROLE
+        _grantRole(MANAGER_ROLE, _manager);
 
         emit MinOrderAmountSet(0, _minOrderAmount);
         emit IntervalSet(0, _interval);
         emit RecipientSet(address(0), _recipient);
-        emit BuyerSet(address(0), _buyer);
-        emit ManagerSet(address(0), _manager);
     }
 
     // ===== MODIFIERS =====
 
     /**
-     * @notice Only owner or authorized buyer can call
+     * @notice Only addresses with BUYER_ROLE or owner can call
      */
     modifier onlyBuyer() {
-        if (msg.sender != owner() && msg.sender != buyer) revert BuyBotUnauthorizedCaller(msg.sender);
+        if (!hasRole(BUYER_ROLE, msg.sender) && msg.sender != owner()) revert BuyBotUnauthorizedCaller(msg.sender);
         _;
     }
 
     /**
-     * @notice Only owner or authorized manager can call
+     * @notice Only addresses with MANAGER_ROLE or owner can call
      */
     modifier onlyManager() {
-        if (msg.sender != owner() && msg.sender != manager) revert BuyBotUnauthorizedCaller(msg.sender);
+        if (!hasRole(MANAGER_ROLE, msg.sender) && msg.sender != owner()) revert BuyBotUnauthorizedCaller(msg.sender);
         _;
     }
 
@@ -245,23 +253,39 @@ contract BuyBot is Ownable {
     }
 
     /**
-     * @notice Set authorized buyer address
-     * @dev Only owner can set
-     * @param _buyer New buyer address
+     * @notice Grant BUYER_ROLE to an address
+     * @dev Only owner or admin can grant roles
+     * @param account Address to grant the role
      */
-    function setBuyer(address _buyer) external onlyOwner {
-        emit BuyerSet(buyer, _buyer);
-        buyer = _buyer;
+    function grantBuyerRole(address account) external onlyOwner {
+        grantRole(BUYER_ROLE, account);
     }
 
     /**
-     * @notice Set authorized manager address
-     * @dev Only owner can set
-     * @param _manager New manager address
+     * @notice Revoke BUYER_ROLE from an address
+     * @dev Only owner or admin can revoke roles
+     * @param account Address to revoke the role
      */
-    function setManager(address _manager) external onlyOwner {
-        emit ManagerSet(manager, _manager);
-        manager = _manager;
+    function revokeBuyerRole(address account) external onlyOwner {
+        revokeRole(BUYER_ROLE, account);
+    }
+
+    /**
+     * @notice Grant MANAGER_ROLE to an address
+     * @dev Only owner or admin can grant roles
+     * @param account Address to grant the role
+     */
+    function grantManagerRole(address account) external onlyOwner {
+        grantRole(MANAGER_ROLE, account);
+    }
+
+    /**
+     * @notice Revoke MANAGER_ROLE from an address
+     * @dev Only owner or admin can revoke roles
+     * @param account Address to revoke the role
+     */
+    function revokeManagerRole(address account) external onlyOwner {
+        revokeRole(MANAGER_ROLE, account);
     }
 
     // ===== VIEW FUNCTIONS =====
@@ -277,7 +301,7 @@ contract BuyBot is Ownable {
         if (pair == address(0)) return (false, 0);
 
         // Check authorization
-        if (caller != owner() && caller != buyer) return (false, 0);
+        if (!hasRole(BUYER_ROLE, caller) && caller != owner()) return (false, 0);
 
         IPair.Config memory config = IPair(pair).getConfig();
         balance = config.QUOTE.balanceOf(address(this));

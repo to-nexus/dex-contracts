@@ -221,6 +221,16 @@ contract BuyBotTest is Test {
         assertEq(buyer.minOrderAmount(), MIN_ORDER_AMOUNT);
     }
 
+    function test_RevertWhen_BuyerIsZeroAddress() public {
+        vm.expectRevert(abi.encodeWithSelector(BuyBot.BuyBotInvalidBuyer.selector, address(0)));
+        new BuyBot(owner, address(router), MIN_ORDER_AMOUNT, 0, recipient, address(0), managerRole);
+    }
+
+    function test_RevertWhen_ManagerIsZeroAddress() public {
+        vm.expectRevert(abi.encodeWithSelector(BuyBot.BuyBotInvalidManager.selector, address(0)));
+        new BuyBot(owner, address(router), MIN_ORDER_AMOUNT, 0, recipient, buyerRole, address(0));
+    }
+
     function test_BuyMarketWithSufficientBalance() public {
         // Give buyer contract USDC
         uint256 buyAmount = 200e18;
@@ -741,15 +751,13 @@ contract BuyBotTest is Test {
         buyer.setRecipient(newRecipient);
     }
 
-    function test_OwnerCanSetBuyer() public {
+    function test_OwnerCanGrantBuyerRole() public {
         address newBuyer = makeAddr("newBuyer");
 
         vm.prank(owner);
-        vm.expectEmit(true, true, false, false);
-        emit BuyBot.BuyerSet(buyerRole, newBuyer);
-        buyer.setBuyer(newBuyer);
+        buyer.grantBuyerRole(newBuyer);
 
-        assertEq(buyer.buyer(), newBuyer);
+        assertTrue(buyer.hasRole(buyer.BUYER_ROLE(), newBuyer));
 
         // New buyer can now call buyMarket
         uint256 buyAmount = 200e18;
@@ -758,12 +766,26 @@ contract BuyBotTest is Test {
         buyer.buyMarket(address(pair), buyAmount, 0);
     }
 
-    function test_RevertWhen_NonOwnerTriesToSetBuyer() public {
+    function test_OwnerCanRevokeBuyerRole() public {
+        vm.prank(owner);
+        buyer.revokeBuyerRole(buyerRole);
+
+        assertFalse(buyer.hasRole(buyer.BUYER_ROLE(), buyerRole));
+
+        // Revoked buyer cannot call buyMarket
+        uint256 buyAmount = 200e18;
+        quoteToken.mint(address(buyer), buyAmount);
+        vm.prank(buyerRole);
+        vm.expectRevert(abi.encodeWithSelector(BuyBot.BuyBotUnauthorizedCaller.selector, buyerRole));
+        buyer.buyMarket(address(pair), buyAmount, 0);
+    }
+
+    function test_RevertWhen_NonOwnerTriesToGrantBuyerRole() public {
         address newBuyer = makeAddr("newBuyer");
 
         vm.prank(user);
         vm.expectRevert();
-        buyer.setBuyer(newBuyer);
+        buyer.grantBuyerRole(newBuyer);
     }
 
     function test_SetRecipientToZeroKeepsTokensInContract() public {
@@ -854,15 +876,13 @@ contract BuyBotTest is Test {
         assertEq(buyer.interval(), newInterval);
     }
 
-    function test_OwnerCanSetManager() public {
+    function test_OwnerCanGrantManagerRole() public {
         address newManager = makeAddr("newManager");
 
         vm.prank(owner);
-        vm.expectEmit(true, true, false, false);
-        emit BuyBot.ManagerSet(managerRole, newManager);
-        buyer.setManager(newManager);
+        buyer.grantManagerRole(newManager);
 
-        assertEq(buyer.manager(), newManager);
+        assertTrue(buyer.hasRole(buyer.MANAGER_ROLE(), newManager));
 
         // New manager can now set minOrderAmount
         uint256 newAmount = 500e18;
@@ -871,12 +891,24 @@ contract BuyBotTest is Test {
         assertEq(buyer.minOrderAmount(), newAmount);
     }
 
-    function test_RevertWhen_NonOwnerTriesToSetManager() public {
+    function test_OwnerCanRevokeManagerRole() public {
+        vm.prank(owner);
+        buyer.revokeManagerRole(managerRole);
+
+        assertFalse(buyer.hasRole(buyer.MANAGER_ROLE(), managerRole));
+
+        // Revoked manager cannot set minOrderAmount
+        vm.prank(managerRole);
+        vm.expectRevert(abi.encodeWithSelector(BuyBot.BuyBotUnauthorizedCaller.selector, managerRole));
+        buyer.setMinOrderAmount(500e18);
+    }
+
+    function test_RevertWhen_NonOwnerTriesToGrantManagerRole() public {
         address newManager = makeAddr("newManager");
 
         vm.prank(user);
         vm.expectRevert();
-        buyer.setManager(newManager);
+        buyer.grantManagerRole(newManager);
     }
 
     function test_RevertWhen_UnauthorizedUserTriesToSetMinOrderAmount() public {

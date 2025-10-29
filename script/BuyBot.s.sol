@@ -96,23 +96,43 @@ contract BuyBotScript is Script {
     }
 
     /**
-     * @notice Set authorized buyer address
+     * @notice Grant BUYER_ROLE to an address
      * @param buyBot BuyBot contract address
-     * @param buyer New buyer address
+     * @param account Address to grant the role
      */
-    function setBuyer(address buyBot, address buyer) external {
+    function grantBuyerRole(address buyBot, address account) external {
         vm.broadcast();
-        BuyBot(payable(buyBot)).setBuyer(buyer);
+        BuyBot(payable(buyBot)).grantBuyerRole(account);
     }
 
     /**
-     * @notice Set authorized manager address
+     * @notice Revoke BUYER_ROLE from an address
      * @param buyBot BuyBot contract address
-     * @param manager New manager address
+     * @param account Address to revoke the role
      */
-    function setManager(address buyBot, address manager) external {
+    function revokeBuyerRole(address buyBot, address account) external {
         vm.broadcast();
-        BuyBot(payable(buyBot)).setManager(manager);
+        BuyBot(payable(buyBot)).revokeBuyerRole(account);
+    }
+
+    /**
+     * @notice Grant MANAGER_ROLE to an address
+     * @param buyBot BuyBot contract address
+     * @param account Address to grant the role
+     */
+    function grantManagerRole(address buyBot, address account) external {
+        vm.broadcast();
+        BuyBot(payable(buyBot)).grantManagerRole(account);
+    }
+
+    /**
+     * @notice Revoke MANAGER_ROLE from an address
+     * @param buyBot BuyBot contract address
+     * @param account Address to revoke the role
+     */
+    function revokeManagerRole(address buyBot, address account) external {
+        vm.broadcast();
+        BuyBot(payable(buyBot)).revokeManagerRole(account);
     }
 
     /**
@@ -138,12 +158,12 @@ contract BuyBotScript is Script {
         console.log("Owner:", bot.owner());
         console.log("Router:", address(bot.router()));
         console.log("Recipient:", bot.recipient());
-        console.log("Buyer:", bot.buyer());
-        console.log("Manager:", bot.manager());
         console.log("------------------------------------------");
         console.log("Min Order Amount:", bot.minOrderAmount());
         console.log("Interval:", bot.interval(), "seconds");
         console.log("Last Buy Time:", bot.lastBuyTime());
+        console.log("------------------------------------------");
+        console.log("Note: Check BUYER_ROLE and MANAGER_ROLE via hasRole()");
         console.log("==========================================");
     }
 
