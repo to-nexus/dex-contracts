@@ -99,7 +99,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     // Pair-specific fee configuration
     FeeConfig public feeConfig;
 
-    uint256[31] private __gap;
+    uint256[24] private __gap;
 
     modifier onlyOwner() {
         // The Pair is the same as the Owner of the Market.

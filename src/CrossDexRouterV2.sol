@@ -52,7 +52,7 @@ contract CrossDexRouterV2 is
 
     EnumerableSet.AddressSet private whitelistedCodeAccounts;
 
-    uint256[44] private __gap;
+    uint256[43] private __gap;
 
     modifier checkSubmit() {
         _checkAccountCode(_msgSender());

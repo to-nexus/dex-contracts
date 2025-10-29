@@ -40,7 +40,7 @@ contract CrossDexImplV2 is ICrossDex, UUPSUpgradeable, OwnableUpgradeable {
 
     address public tickSizeSetter;
 
-    uint256[44] __gap;
+    uint256[42] __gap;
 
     modifier onlyMarket() {
         if (!isMarket(_msgSender())) revert CrossDexInvalidMarketAddress(_msgSender());
