@@ -822,8 +822,10 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         assembly {
             _latestPrice := tload(_matchedPriceSlot)
         }
-        if (_latestPrice != 0 && _latestPrice != matchedPrice) matchedPrice = _latestPrice;
-        if (matchedAt != block.timestamp) matchedAt = block.timestamp;
+        if (_latestPrice != 0) {
+            if (_latestPrice != matchedPrice) matchedPrice = _latestPrice;
+            if (matchedAt != block.timestamp) matchedAt = block.timestamp;
+        }
     }
 
     function _setFeeBps(
