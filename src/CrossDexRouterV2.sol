@@ -243,7 +243,7 @@ contract CrossDexRouterV2 is
     }
 
     function setMaxMatchCount(uint256 _maxMatchCount) external onlyOwner {
-        if (_maxMatchCount == 0) revert RouterInvalidInputData("_maxMatchCount");
+        if (_maxMatchCount == 0) revert RouterInvalidInputData("maxMatchCount");
         emit MaxMatchCountChanged(maxMatchCount, _maxMatchCount);
         maxMatchCount = _maxMatchCount;
     }
