@@ -251,15 +251,6 @@ contract BuyBot is AccessControlDefaultAdminRules, ReentrancyGuard {
     // ===== VIEW FUNCTIONS =====
 
     /**
-     * @notice Get the owner (default admin) address
-     * @dev Wrapper for defaultAdmin() for compatibility
-     * @return The address of the default admin
-     */
-    function owner() public view override returns (address) {
-        return defaultAdmin();
-    }
-
-    /**
      * @notice Check if market buy can be executed
      * @param pair Trading pair address
      * @param caller Address of the caller to check authorization
