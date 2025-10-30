@@ -31,8 +31,8 @@ var (
 
 // BuyBotMetaData contains all meta data concerning the BuyBot contract.
 var BuyBotMetaData = &bind.MetaData{
-	ABI: "[{\"type\":\"constructor\",\"inputs\":[{\"name\":\"_owner\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"_router\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"_minOrderAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"_interval\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"_recipient\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"_buyer\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"_manager\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"receive\",\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"NATIVE_COIN\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"buyMarket\",\"inputs\":[{\"name\":\"pair\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"maxMatchCount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"buyer\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"canBuyMarket\",\"inputs\":[{\"name\":\"pair\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"caller\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"canBuy\",\"type\":\"bool\",\"internalType\":\"bool\"},{\"name\":\"balance\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getBalance\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"balance\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"interval\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"lastBuyTime\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"manager\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"minOrderAmount\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"owner\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"recipient\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"renounceOwnership\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"router\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"contractIRouter\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"setBuyer\",\"inputs\":[{\"name\":\"_buyer\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setInterval\",\"inputs\":[{\"name\":\"_interval\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setManager\",\"inputs\":[{\"name\":\"_manager\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setMinOrderAmount\",\"inputs\":[{\"name\":\"_minOrderAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setRecipient\",\"inputs\":[{\"name\":\"_recipient\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"transferOwnership\",\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"withdraw\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"withdrawETH\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"BuyerSet\",\"inputs\":[{\"name\":\"before\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"current\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"IntervalSet\",\"inputs\":[{\"name\":\"before\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"current\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ManagerSet\",\"inputs\":[{\"name\":\"before\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"current\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"MarketBuyExecuted\",\"inputs\":[{\"name\":\"pair\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"quoteToken\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"baseToken\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"quoteAmount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"executor\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"MinOrderAmountSet\",\"inputs\":[{\"name\":\"before\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"current\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OwnershipTransferred\",\"inputs\":[{\"name\":\"previousOwner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"newOwner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RecipientSet\",\"inputs\":[{\"name\":\"before\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"current\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Withdrawn\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"to\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"BuyBotInsufficientBalance\",\"inputs\":[{\"name\":\"balance\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"minOrderAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"BuyBotIntervalNotPassed\",\"inputs\":[{\"name\":\"timeSinceLastBuy\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"requiredInterval\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"BuyBotInvalidAmount\",\"inputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"BuyBotInvalidMinOrderAmount\",\"inputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"BuyBotInvalidPair\",\"inputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"BuyBotInvalidRouter\",\"inputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"BuyBotUnauthorizedCaller\",\"inputs\":[{\"name\":\"caller\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"OwnableInvalidOwner\",\"inputs\":[{\"name\":\"owner\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"OwnableUnauthorizedAccount\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"SafeERC20FailedOperation\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"}]}]",
-	Bin: "0x608060405234801561000f575f5ffd5b50604051611d16380380611d1683398101604081905261002e9161027d565b866001600160a01b03811661005d57604051631e4fbdf760e01b81525f60048201526024015b60405180910390fd5b61006681610213565b506001600160a01b03861661009957604051631561f27b60e21b81526001600160a01b0387166004820152602401610054565b845f036100bc576040516328bfc81960e11b815260048101869052602401610054565b600180546001600160a01b038089166001600160a01b031992831617909255600287905560038690556005805486841690831617905560068054858416908316179055600780549284169290911691909117905560405185905f907fd6d62b78d21fc4f5151029ca37079020e8a8815c5a488b28ee7499d4c2a19e55908290a360405184905f907f3fb677206c0b314c404bae3da94bee6bda11375c9fe986f266fb033d6cddbbd7908290a36040516001600160a01b038416905f907fc1416b5cdab50a9fbc872236e1aa54566c6deb40024e63a4b1737ecacf09d6f9908290a36040516001600160a01b038316905f907fe4eacf1aafd9e6b52cd356977b5c4ac221b6a852023bd3691b98600a9fb093d0908290a36040516001600160a01b038216905f907fc64707e618a83637fc41ad1e3aa4242bd5fdd353f3d60bc0faf40db0d7d86078908290a3505050505050506102f1565b5f80546001600160a01b038381166001600160a01b0319831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b80516001600160a01b0381168114610278575f5ffd5b919050565b5f5f5f5f5f5f5f60e0888a031215610293575f5ffd5b61029c88610262565b96506102aa60208901610262565b604089015160608a0151919750955093506102c760808901610262565b92506102d560a08901610262565b91506102e360c08901610262565b905092959891949750929550565b611a18806102fe5f395ff3fe608060405260043610610165575f3560e01c80638da5cb5b116100c6578063f14210a61161007c578063f3fef3a311610057578063f3fef3a3146103ec578063f887ea401461040b578063f8b2cb4f14610437575f5ffd5b8063f14210a614610399578063f29f4d0b146103b8578063f2fde38b146103cd575f5ffd5b8063a3b8ef04116100ac578063a3b8ef041461033c578063a3f09ad61461035b578063d0ebdbe71461037a575f5ffd5b80638da5cb5b146102fe578063947a36fb14610327575f5ffd5b8063481c6a751161011b57806367ea88eb1161010157806367ea88eb1461029f578063715018a6146102be5780637150d8ae146102d2575f5ffd5b8063481c6a751461024757806366d003ac14610273575f5ffd5b80632aaa96281161014b5780632aaa9628146101cf5780633bbed4a01461020557806346b62c4a14610224575f5ffd5b806304a411591461017057806322a90082146101ae575f5ffd5b3661016c57005b5f5ffd5b34801561017b575f5ffd5b50610184600181565b60405173ffffffffffffffffffffffffffffffffffffffff90911681526020015b60405180910390f35b3480156101b9575f5ffd5b506101cd6101c8366004611816565b610456565b005b3480156101da575f5ffd5b506101ee6101e936600461184e565b610506565b6040805192151583526020830191909152016101a5565b348015610210575f5ffd5b506101cd61021f366004611885565b6106df565b34801561022f575f5ffd5b5061023960025481565b6040519081526020016101a5565b348015610252575f5ffd5b506007546101849073ffffffffffffffffffffffffffffffffffffffff1681565b34801561027e575f5ffd5b506005546101849073ffffffffffffffffffffffffffffffffffffffff1681565b3480156102aa575f5ffd5b506101cd6102b93660046118a7565b610774565b3480156102c9575f5ffd5b506101cd610e1f565b3480156102dd575f5ffd5b506006546101849073ffffffffffffffffffffffffffffffffffffffff1681565b348015610309575f5ffd5b505f5473ffffffffffffffffffffffffffffffffffffffff16610184565b348015610332575f5ffd5b5061023960035481565b348015610347575f5ffd5b506101cd610356366004611816565b610e32565b348015610366575f5ffd5b506101cd610375366004611885565b610f19565b348015610385575f5ffd5b506101cd610394366004611885565b610fae565b3480156103a4575f5ffd5b506101cd6103b3366004611816565b611043565b3480156103c3575f5ffd5b5061023960045481565b3480156103d8575f5ffd5b506101cd6103e7366004611885565b6111e5565b3480156103f7575f5ffd5b506101cd6104063660046118d9565b611248565b348015610416575f5ffd5b506001546101849073ffffffffffffffffffffffffffffffffffffffff1681565b348015610442575f5ffd5b50610239610451366004611885565b611421565b5f5473ffffffffffffffffffffffffffffffffffffffff163314801590610495575060075473ffffffffffffffffffffffffffffffffffffffff163314155b156104d3576040517fd9ad42d70000000000000000000000000000000000000000000000000000000081523360048201526024015b60405180910390fd5b6003546040518291907f3fb677206c0b314c404bae3da94bee6bda11375c9fe986f266fb033d6cddbbd7905f90a3600355565b5f8073ffffffffffffffffffffffffffffffffffffffff841661052d57505f9050806106d8565b5f5473ffffffffffffffffffffffffffffffffffffffff848116911614801590610572575060065473ffffffffffffffffffffffffffffffffffffffff848116911614155b1561058157505f9050806106d8565b5f8473ffffffffffffffffffffffffffffffffffffffff1663c3f909d46040518163ffffffff1660e01b8152600401606060405180830381865afa1580156105cb573d5f5f3e3d5ffd5b505050506040513d601f19601f820116820180604052508101906105ef9190611903565b80516040517f70a0823100000000000000000000000000000000000000000000000000000000815230600482015291925073ffffffffffffffffffffffffffffffffffffffff16906370a0823190602401602060405180830381865afa15801561065b573d5f5f3e3d5ffd5b505050506040513d601f19601f8201168201806040525081019061067f9190611993565b9150600254821015610694575f9250506106d8565b5f6003541180156106a657505f600454115b156106d2575f600454426106ba91906119aa565b90506003548110156106d0575f935050506106d8565b505b60019250505b9250929050565b6106e76114f8565b60055460405173ffffffffffffffffffffffffffffffffffffffff8084169216907fc1416b5cdab50a9fbc872236e1aa54566c6deb40024e63a4b1737ecacf09d6f9905f90a3600580547fffffffffffffffffffffffff00000000000000000000000000000000000000001673ffffffffffffffffffffffffffffffffffffffff92909216919091179055565b5f5473ffffffffffffffffffffffffffffffffffffffff1633148015906107b3575060065473ffffffffffffffffffffffffffffffffffffffff163314155b156107ec576040517fd9ad42d70000000000000000000000000000000000000000000000000000000081523360048201526024016104ca565b73ffffffffffffffffffffffffffffffffffffffff8316610851576040517f235aafe400000000000000000000000000000000000000000000000000000000815273ffffffffffffffffffffffffffffffffffffffff841660048201526024016104ca565b815f0361088d576040517f9717f35f000000000000000000000000000000000000000000000000000000008152600481018390526024016104ca565b5f60035411801561089f57505f600454115b15610901575f600454426108b391906119aa565b90506003548110156108ff576003546040517f1e3799060000000000000000000000000000000000000000000000000000000081526104ca918391600401918252602082015260400190565b505b5f8373ffffffffffffffffffffffffffffffffffffffff1663c3f909d46040518163ffffffff1660e01b8152600401606060405180830381865afa15801561094b573d5f5f3e3d5ffd5b505050506040513d601f19601f8201168201806040525081019061096f9190611903565b805160208201516040517f70a0823100000000000000000000000000000000000000000000000000000000815230600482015292935090915f9073ffffffffffffffffffffffffffffffffffffffff8416906370a0823190602401602060405180830381865afa1580156109e5573d5f5f3e3d5ffd5b505050506040513d601f19601f82011682018060405250810190610a099190611993565b9050600254861015610a55576002546040517f013fafe20000000000000000000000000000000000000000000000000000000081526104ca918891600401918252602082015260400190565b80861115610a99576040517f013fafe200000000000000000000000000000000000000000000000000000000815260048101829052602481018790526044016104ca565b6001546040517fdd62ed3e00000000000000000000000000000000000000000000000000000000815230600482015273ffffffffffffffffffffffffffffffffffffffff918216602482018190529188919086169063dd62ed3e90604401602060405180830381865afa158015610b12573d5f5f3e3d5ffd5b505050506040513d601f19601f82011682018060405250810190610b369190611993565b1015610b7d57610b7d73ffffffffffffffffffffffffffffffffffffffff8516827fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff61154a565b6001546040517f1e92008400000000000000000000000000000000000000000000000000000000815273ffffffffffffffffffffffffffffffffffffffff8a81166004830152602482018a90526044820189905290911690631e920084906064015f604051808303815f87803b158015610bf5575f5ffd5b505af1158015610c07573d5f5f3e3d5ffd5b5050604080518a815233602082015273ffffffffffffffffffffffffffffffffffffffff808816945088811693508c16917fc7b4d815bd0a3b8348577971cb55a9334c80a0b3ccdfe287b55b5a6320d8480a910160405180910390a44260045560055473ffffffffffffffffffffffffffffffffffffffff1615610e1557478015610d55576005546040515f9173ffffffffffffffffffffffffffffffffffffffff169083908381818185875af1925050503d805f8114610ce3576040519150601f19603f3d011682016040523d82523d5f602084013e610ce8565b606091505b5050905080610d53576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601360248201527f455448207472616e73666572206661696c65640000000000000000000000000060448201526064016104ca565b505b6040517f70a082310000000000000000000000000000000000000000000000000000000081523060048201525f9073ffffffffffffffffffffffffffffffffffffffff8616906370a0823190602401602060405180830381865afa158015610dbf573d5f5f3e3d5ffd5b505050506040513d601f19601f82011682018060405250810190610de39190611993565b90508015610e1257600554610e129073ffffffffffffffffffffffffffffffffffffffff87811691168361166a565b50505b5050505050505050565b610e276114f8565b610e305f6116ad565b565b5f5473ffffffffffffffffffffffffffffffffffffffff163314801590610e71575060075473ffffffffffffffffffffffffffffffffffffffff163314155b15610eaa576040517fd9ad42d70000000000000000000000000000000000000000000000000000000081523360048201526024016104ca565b805f03610ee6576040517f517f9032000000000000000000000000000000000000000000000000000000008152600481018290526024016104ca565b6002546040518291907fd6d62b78d21fc4f5151029ca37079020e8a8815c5a488b28ee7499d4c2a19e55905f90a3600255565b610f216114f8565b60065460405173ffffffffffffffffffffffffffffffffffffffff8084169216907fe4eacf1aafd9e6b52cd356977b5c4ac221b6a852023bd3691b98600a9fb093d0905f90a3600680547fffffffffffffffffffffffff00000000000000000000000000000000000000001673ffffffffffffffffffffffffffffffffffffffff92909216919091179055565b610fb66114f8565b60075460405173ffffffffffffffffffffffffffffffffffffffff8084169216907fc64707e618a83637fc41ad1e3aa4242bd5fdd353f3d60bc0faf40db0d7d86078905f90a3600780547fffffffffffffffffffffffff00000000000000000000000000000000000000001673ffffffffffffffffffffffffffffffffffffffff92909216919091179055565b61104b6114f8565b475f8215611059578261105b565b815b9050818111156110c7576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601460248201527f496e73756666696369656e742062616c616e636500000000000000000000000060448201526064016104ca565b5f805460405173ffffffffffffffffffffffffffffffffffffffff9091169083908381818185875af1925050503d805f811461111e576040519150601f19603f3d011682016040523d82523d5f602084013e611123565b606091505b505090508061118e576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601360248201527f455448207472616e73666572206661696c65640000000000000000000000000060448201526064016104ca565b5f5460405183815273ffffffffffffffffffffffffffffffffffffffff909116906001907fd1c19fbcd4551a5edfb66d43d2e337c04837afda3482b42bdf569a8fccdae5fb9060200160405180910390a350505050565b6111ed6114f8565b73ffffffffffffffffffffffffffffffffffffffff811661123c576040517f1e4fbdf70000000000000000000000000000000000000000000000000000000081525f60048201526024016104ca565b611245816116ad565b50565b6112506114f8565b6040517f70a0823100000000000000000000000000000000000000000000000000000000815230600482015282905f9073ffffffffffffffffffffffffffffffffffffffff8316906370a0823190602401602060405180830381865afa1580156112bc573d5f5f3e3d5ffd5b505050506040513d601f19601f820116820180604052508101906112e09190611993565b90505f83156112ef57836112f1565b815b90508181111561135d576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601460248201527f496e73756666696369656e742062616c616e636500000000000000000000000060448201526064016104ca565b61139c61137e5f5473ffffffffffffffffffffffffffffffffffffffff1690565b73ffffffffffffffffffffffffffffffffffffffff8516908361166a565b5f5473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168573ffffffffffffffffffffffffffffffffffffffff167fd1c19fbcd4551a5edfb66d43d2e337c04837afda3482b42bdf569a8fccdae5fb8360405161141291815260200190565b60405180910390a35050505050565b5f7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff73ffffffffffffffffffffffffffffffffffffffff831601611466575047919050565b6040517f70a0823100000000000000000000000000000000000000000000000000000000815230600482015273ffffffffffffffffffffffffffffffffffffffff8316906370a0823190602401602060405180830381865afa1580156114ce573d5f5f3e3d5ffd5b505050506040513d601f19601f820116820180604052508101906114f29190611993565b92915050565b5f5473ffffffffffffffffffffffffffffffffffffffff163314610e30576040517f118cdaa70000000000000000000000000000000000000000000000000000000081523360048201526024016104ca565b6040805173ffffffffffffffffffffffffffffffffffffffff8416602482015260448082018490528251808303909101815260649091019091526020810180517bffffffffffffffffffffffffffffffffffffffffffffffffffffffff167f095ea7b3000000000000000000000000000000000000000000000000000000001790526115d68482611721565b6116645760405173ffffffffffffffffffffffffffffffffffffffff84811660248301525f604483015261165a91869182169063095ea7b3906064015b604051602081830303815290604052915060e01b6020820180517bffffffffffffffffffffffffffffffffffffffffffffffffffffffff8381831617835250505050611777565b6116648482611777565b50505050565b60405173ffffffffffffffffffffffffffffffffffffffff8381166024830152604482018390526116a891859182169063a9059cbb90606401611613565b505050565b5f805473ffffffffffffffffffffffffffffffffffffffff8381167fffffffffffffffffffffffff0000000000000000000000000000000000000000831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b5f5f5f5f60205f8651602088015f8a5af192503d91505f51905082801561176d57508115611752578060011461176d565b5f8673ffffffffffffffffffffffffffffffffffffffff163b115b9695505050505050565b5f5f60205f8451602086015f885af180611796576040513d5f823e3d81fd5b50505f513d915081156117ad5780600114156117c7565b73ffffffffffffffffffffffffffffffffffffffff84163b155b15611664576040517f5274afe700000000000000000000000000000000000000000000000000000000815273ffffffffffffffffffffffffffffffffffffffff851660048201526024016104ca565b5f60208284031215611826575f5ffd5b5035919050565b73ffffffffffffffffffffffffffffffffffffffff81168114611245575f5ffd5b5f5f6040838503121561185f575f5ffd5b823561186a8161182d565b9150602083013561187a8161182d565b809150509250929050565b5f60208284031215611895575f5ffd5b81356118a08161182d565b9392505050565b5f5f5f606084860312156118b9575f5ffd5b83356118c48161182d565b95602085013595506040909401359392505050565b5f5f604083850312156118ea575f5ffd5b82356118f58161182d565b946020939093013593505050565b5f6060828403128015611914575f5ffd5b506040516060810167ffffffffffffffff8111828210171561195d577f4e487b71000000000000000000000000000000000000000000000000000000005f52604160045260245ffd5b604052825161196b8161182d565b8152602083015161197b8161182d565b60208201526040928301519281019290925250919050565b5f602082840312156119a3575f5ffd5b5051919050565b818103818111156114f2577f4e487b71000000000000000000000000000000000000000000000000000000005f52601160045260245ffdfea2646970667358221220b96aa758ca83ff357fe4e7717fb3d16ef281efeaad12afa2611da80313fae03c64736f6c634300081c0033",
+	ABI: "[{\"type\":\"constructor\",\"inputs\":[{\"name\":\"_initialDelay\",\"type\":\"uint48\",\"internalType\":\"uint48\"},{\"name\":\"_owner\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"_router\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"_minOrderAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"_interval\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"_recipient\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"_buyer\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"_manager\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"receive\",\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"BUYER_ROLE\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"DEFAULT_ADMIN_ROLE\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"MANAGER_ROLE\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"NATIVE_COIN\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"acceptDefaultAdminTransfer\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"beginDefaultAdminTransfer\",\"inputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"buyMarket\",\"inputs\":[{\"name\":\"pair\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"maxMatchCount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"canBuyMarket\",\"inputs\":[{\"name\":\"pair\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"caller\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"canBuy\",\"type\":\"bool\",\"internalType\":\"bool\"},{\"name\":\"balance\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"cancelDefaultAdminTransfer\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"changeDefaultAdminDelay\",\"inputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"defaultAdmin\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"defaultAdminDelay\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"defaultAdminDelayIncreaseWait\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getBalance\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"balance\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRoleAdmin\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"grantRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"hasRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"interval\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"lastBuyTime\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"minOrderAmount\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"owner\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pendingDefaultAdmin\",\"inputs\":[],\"outputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"pendingDefaultAdminDelay\",\"inputs\":[],\"outputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"internalType\":\"uint48\"},{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"recipient\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"renounceRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"revokeRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"rollbackDefaultAdminDelay\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"router\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"contractIRouter\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"setInterval\",\"inputs\":[{\"name\":\"_interval\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setMinOrderAmount\",\"inputs\":[{\"name\":\"_minOrderAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setRecipient\",\"inputs\":[{\"name\":\"_recipient\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"supportsInterface\",\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"withdraw\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"withdrawETH\",\"inputs\":[{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"DefaultAdminDelayChangeCanceled\",\"inputs\":[],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminDelayChangeScheduled\",\"inputs\":[{\"name\":\"newDelay\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"},{\"name\":\"effectSchedule\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminTransferCanceled\",\"inputs\":[],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DefaultAdminTransferScheduled\",\"inputs\":[{\"name\":\"newAdmin\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"acceptSchedule\",\"type\":\"uint48\",\"indexed\":false,\"internalType\":\"uint48\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"IntervalSet\",\"inputs\":[{\"name\":\"before\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"current\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"MarketBuyExecuted\",\"inputs\":[{\"name\":\"pair\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"quoteToken\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"baseToken\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"quoteAmount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"executor\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"MinOrderAmountSet\",\"inputs\":[{\"name\":\"before\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"current\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RecipientSet\",\"inputs\":[{\"name\":\"before\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"current\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleAdminChanged\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"previousAdminRole\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"newAdminRole\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleGranted\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleRevoked\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Withdrawn\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"to\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"AccessControlBadConfirmation\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"AccessControlEnforcedDefaultAdminDelay\",\"inputs\":[{\"name\":\"schedule\",\"type\":\"uint48\",\"internalType\":\"uint48\"}]},{\"type\":\"error\",\"name\":\"AccessControlEnforcedDefaultAdminRules\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"AccessControlInvalidDefaultAdmin\",\"inputs\":[{\"name\":\"defaultAdmin\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"AccessControlUnauthorizedAccount\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"neededRole\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"type\":\"error\",\"name\":\"BuyBotInsufficientBalance\",\"inputs\":[{\"name\":\"balance\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"minOrderAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"BuyBotIntervalNotPassed\",\"inputs\":[{\"name\":\"timeSinceLastBuy\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"requiredInterval\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"BuyBotInvalidAmount\",\"inputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"BuyBotInvalidBuyer\",\"inputs\":[{\"name\":\"buyer\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"BuyBotInvalidManager\",\"inputs\":[{\"name\":\"manager\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"BuyBotInvalidMinOrderAmount\",\"inputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"BuyBotInvalidPair\",\"inputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"BuyBotInvalidRouter\",\"inputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"ReentrancyGuardReentrantCall\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"SafeCastOverflowedUintDowncast\",\"inputs\":[{\"name\":\"bits\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"value\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"SafeERC20FailedOperation\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"}]}]",
+	Bin: "0x608060405234801561000f575f5ffd5b50604051612d01380380612d0183398101604081905261002e91610451565b87876001600160a01b03811661005e57604051636116401160e11b81525f60048201526024015b60405180910390fd5b600180546001600160d01b0316600160d01b65ffffffffffff8516021790556100875f826102aa565b50506001600355506001600160a01b0386166100c157604051631561f27b60e21b81526001600160a01b0387166004820152602401610055565b845f036100e4576040516328bfc81960e11b815260048101869052602401610055565b6001600160a01b03821661011657604051632a7409a960e01b81526001600160a01b0383166004820152602401610055565b6001600160a01b0381166101485760405163192178dd60e11b81526001600160a01b0382166004820152602401610055565b600480546001600160a01b038089166001600160a01b0319928316179092556005879055600686905560088054928616929091169190911790556101995f516020612ce15f395f51905f525f610319565b6101b05f516020612cc15f395f51905f525f610319565b6101c75f516020612ce15f395f51905f52886102aa565b506101df5f516020612ce15f395f51905f52836102aa565b506101f75f516020612cc15f395f51905f52886102aa565b5061020f5f516020612cc15f395f51905f52826102aa565b5060405185905f907fd6d62b78d21fc4f5151029ca37079020e8a8815c5a488b28ee7499d4c2a19e55908290a360405184905f907f3fb677206c0b314c404bae3da94bee6bda11375c9fe986f266fb033d6cddbbd7908290a36040516001600160a01b038416905f907fc1416b5cdab50a9fbc872236e1aa54566c6deb40024e63a4b1737ecacf09d6f9908290a350505050505050506104e2565b5f82610306575f6102c36002546001600160a01b031690565b6001600160a01b0316146102ea57604051631fe1e13d60e11b815260040160405180910390fd5b600280546001600160a01b0319166001600160a01b0384161790555b6103108383610345565b90505b92915050565b8161033757604051631fe1e13d60e11b815260040160405180910390fd5b61034182826103ec565b5050565b5f828152602081815260408083206001600160a01b038516845290915281205460ff166103e5575f838152602081815260408083206001600160a01b03861684529091529020805460ff1916600117905561039d3390565b6001600160a01b0316826001600160a01b0316847f2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d60405160405180910390a4506001610313565b505f610313565b5f82815260208190526040808220600101805490849055905190918391839186917fbd79b86ffe0ab8e8776151514217cd7cacd52c909f66475c3af44e129f0b00ff9190a4505050565b80516001600160a01b038116811461044c575f5ffd5b919050565b5f5f5f5f5f5f5f5f610100898b031215610469575f5ffd5b885165ffffffffffff8116811461047e575f5ffd5b975061048c60208a01610436565b965061049a60408a01610436565b60608a015160808b0151919750955093506104b760a08a01610436565b92506104c560c08a01610436565b91506104d360e08a01610436565b90509295985092959890939650565b6127d2806104ef5f395ff3fe608060405260043610610212575f3560e01c80638da5cb5b11610117578063cf6eefb7116100ac578063f14210a61161007c578063f3fef3a311610062578063f3fef3a3146106a8578063f887ea40146106c7578063f8b2cb4f146106f3575f5ffd5b8063f14210a614610674578063f29f4d0b14610693575f5ffd5b8063cf6eefb7146105b6578063d547741f1461060e578063d602b9fd1461062d578063ec87621c14610641575f5ffd5b8063a217fddf116100e7578063a217fddf1461055c578063a3b8ef041461056f578063cc8463c81461058e578063cefc1429146105a2575f5ffd5b80638da5cb5b146104b157806391d14854146104c5578063947a36fb14610514578063a1eda53c14610529575f5ffd5b806336568abe116101a7578063649a5ec71161017757806367ea88eb1161015d57806367ea88eb146104355780637a01a1da1461045457806384ef8ffc14610487575f5ffd5b8063649a5ec7146103ea57806366d003ac14610409575f5ffd5b806336568abe146103785780633bbed4a01461039757806346b62c4a146103b6578063634e93da146103cb575f5ffd5b806322a90082116101e257806322a90082146102c8578063248a9ca3146102e75780632aaa9628146103235780632f2ff15d14610359575f5ffd5b806301ffc9a71461021d578063022d63fb1461025157806304a41159146102795780630aa6220b146102b2575f5ffd5b3661021957005b5f5ffd5b348015610228575f5ffd5b5061023c61023736600461250c565b610712565b60405190151581526020015b60405180910390f35b34801561025c575f5ffd5b50620697805b60405165ffffffffffff9091168152602001610248565b348015610284575f5ffd5b5061028d600181565b60405173ffffffffffffffffffffffffffffffffffffffff9091168152602001610248565b3480156102bd575f5ffd5b506102c661076d565b005b3480156102d3575f5ffd5b506102c66102e236600461254b565b610782565b3480156102f2575f5ffd5b5061031561030136600461254b565b5f9081526020819052604090206001015490565b604051908152602001610248565b34801561032e575f5ffd5b5061034261033d366004612583565b6107e0565b604080519215158352602083019190915201610248565b348015610364575f5ffd5b506102c66103733660046125ba565b6109ba565b348015610383575f5ffd5b506102c66103923660046125ba565b6109ff565b3480156103a2575f5ffd5b506102c66103b13660046125dd565b610b09565b3480156103c1575f5ffd5b5061031560055481565b3480156103d6575f5ffd5b506102c66103e53660046125dd565b610ba1565b3480156103f5575f5ffd5b506102c66104043660046125f8565b610bb4565b348015610414575f5ffd5b5060085461028d9073ffffffffffffffffffffffffffffffffffffffff1681565b348015610440575f5ffd5b506102c661044f36600461261d565b610bc7565b34801561045f575f5ffd5b506103157ff8cd32ed93fc2f9fc78152a14807c9609af3d99c5fe4dc6b106a801aaddfe90e81565b348015610492575f5ffd5b5060025473ffffffffffffffffffffffffffffffffffffffff1661028d565b3480156104bc575f5ffd5b5061028d61123b565b3480156104d0575f5ffd5b5061023c6104df3660046125ba565b5f9182526020828152604080842073ffffffffffffffffffffffffffffffffffffffff93909316845291905290205460ff1690565b34801561051f575f5ffd5b5061031560065481565b348015610534575f5ffd5b5061053d611260565b6040805165ffffffffffff938416815292909116602083015201610248565b348015610567575f5ffd5b506103155f81565b34801561057a575f5ffd5b506102c661058936600461254b565b6112da565b348015610599575f5ffd5b50610262611374565b3480156105ad575f5ffd5b506102c6611411565b3480156105c1575f5ffd5b506001546040805173ffffffffffffffffffffffffffffffffffffffff831681527401000000000000000000000000000000000000000090920465ffffffffffff16602083015201610248565b348015610619575f5ffd5b506102c66106283660046125ba565b61146d565b348015610638575f5ffd5b506102c66114ae565b34801561064c575f5ffd5b506103157f241ecf16d79d0f8dbfb92cbc07fe17840425976cf0667f022fe9877caa831b0881565b34801561067f575f5ffd5b506102c661068e36600461254b565b6114c0565b34801561069e575f5ffd5b5061031560075481565b3480156106b3575f5ffd5b506102c66106c236600461264f565b611692565b3480156106d2575f5ffd5b5060045461028d9073ffffffffffffffffffffffffffffffffffffffff1681565b3480156106fe575f5ffd5b5061031561070d3660046125dd565b61187e565b5f7fffffffff0000000000000000000000000000000000000000000000000000000082167f3149878600000000000000000000000000000000000000000000000000000000148061076757506107678261194f565b92915050565b5f610777816119e5565b61077f6119ef565b50565b7f241ecf16d79d0f8dbfb92cbc07fe17840425976cf0667f022fe9877caa831b086107ac816119e5565b6006546040518391907f3fb677206c0b314c404bae3da94bee6bda11375c9fe986f266fb033d6cddbbd7905f90a350600655565b5f8073ffffffffffffffffffffffffffffffffffffffff841661080757505f9050806109b3565b73ffffffffffffffffffffffffffffffffffffffff83165f9081527ff3fa603c74bfe2a4719960e47343678c3dc690d2b27a2295acc6fc430833aaf9602052604090205460ff1661085c57505f9050806109b3565b5f8473ffffffffffffffffffffffffffffffffffffffff1663c3f909d46040518163ffffffff1660e01b8152600401606060405180830381865afa1580156108a6573d5f5f3e3d5ffd5b505050506040513d601f19601f820116820180604052508101906108ca9190612679565b80516040517f70a0823100000000000000000000000000000000000000000000000000000000815230600482015291925073ffffffffffffffffffffffffffffffffffffffff16906370a0823190602401602060405180830381865afa158015610936573d5f5f3e3d5ffd5b505050506040513d601f19601f8201168201806040525081019061095a9190612709565b915060055482101561096f575f9250506109b3565b5f60065411801561098157505f600754115b156109ad575f60075442610995919061274d565b90506006548110156109ab575f935050506109b3565b505b60019250505b9250929050565b816109f1576040517f3fc3c27a00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b6109fb82826119fb565b5050565b81158015610a27575060025473ffffffffffffffffffffffffffffffffffffffff8281169116145b15610aff5760015473ffffffffffffffffffffffffffffffffffffffff81169074010000000000000000000000000000000000000000900465ffffffffffff1681151580610a7b575065ffffffffffff8116155b80610a8e57504265ffffffffffff821610155b15610ad4576040517f19ca5ebb00000000000000000000000000000000000000000000000000000000815265ffffffffffff821660048201526024015b60405180910390fd5b5050600180547fffffffffffff000000000000ffffffffffffffffffffffffffffffffffffffff1690555b6109fb8282611a25565b5f610b13816119e5565b60085460405173ffffffffffffffffffffffffffffffffffffffff8085169216907fc1416b5cdab50a9fbc872236e1aa54566c6deb40024e63a4b1737ecacf09d6f9905f90a350600880547fffffffffffffffffffffffff00000000000000000000000000000000000000001673ffffffffffffffffffffffffffffffffffffffff92909216919091179055565b5f610bab816119e5565b6109fb82611a7e565b5f610bbe816119e5565b6109fb82611afd565b610bcf611b6c565b7ff8cd32ed93fc2f9fc78152a14807c9609af3d99c5fe4dc6b106a801aaddfe90e610bf9816119e5565b73ffffffffffffffffffffffffffffffffffffffff8416610c5e576040517f235aafe400000000000000000000000000000000000000000000000000000000815273ffffffffffffffffffffffffffffffffffffffff85166004820152602401610acb565b825f03610c9a576040517f9717f35f00000000000000000000000000000000000000000000000000000000815260048101849052602401610acb565b5f600654118015610cac57505f600754115b15610d0e575f60075442610cc0919061274d565b9050600654811015610d0c576006546040517f1e379906000000000000000000000000000000000000000000000000000000008152610acb918391600401918252602082015260400190565b505b5f8473ffffffffffffffffffffffffffffffffffffffff1663c3f909d46040518163ffffffff1660e01b8152600401606060405180830381865afa158015610d58573d5f5f3e3d5ffd5b505050506040513d601f19601f82011682018060405250810190610d7c9190612679565b805160208201516040517f70a0823100000000000000000000000000000000000000000000000000000000815230600482015292935090915f9073ffffffffffffffffffffffffffffffffffffffff8416906370a0823190602401602060405180830381865afa158015610df2573d5f5f3e3d5ffd5b505050506040513d601f19601f82011682018060405250810190610e169190612709565b9050600554871015610e62576005546040517f013fafe2000000000000000000000000000000000000000000000000000000008152610acb918991600401918252602082015260400190565b80871115610ea6576040517f013fafe20000000000000000000000000000000000000000000000000000000081526004810182905260248101889052604401610acb565b600480546040517fdd62ed3e000000000000000000000000000000000000000000000000000000008152309281019290925273ffffffffffffffffffffffffffffffffffffffff9081166024830181905291899186169063dd62ed3e90604401602060405180830381865afa158015610f21573d5f5f3e3d5ffd5b505050506040513d601f19601f82011682018060405250810190610f459190612709565b1015610f8c57610f8c73ffffffffffffffffffffffffffffffffffffffff8516827fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff611baf565b600480546040517f1e92008400000000000000000000000000000000000000000000000000000000815273ffffffffffffffffffffffffffffffffffffffff8c811693820193909352602481018b9052604481018a9052911690631e920084906064015f604051808303815f87803b158015611006575f5ffd5b505af1158015611018573d5f5f3e3d5ffd5b5050604080518b815233602082015273ffffffffffffffffffffffffffffffffffffffff808816945088811693508d16917fc7b4d815bd0a3b8348577971cb55a9334c80a0b3ccdfe287b55b5a6320d8480a910160405180910390a44260075560085473ffffffffffffffffffffffffffffffffffffffff161561122657478015611166576008546040515f9173ffffffffffffffffffffffffffffffffffffffff169083908381818185875af1925050503d805f81146110f4576040519150601f19603f3d011682016040523d82523d5f602084013e6110f9565b606091505b5050905080611164576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601360248201527f455448207472616e73666572206661696c6564000000000000000000000000006044820152606401610acb565b505b6040517f70a082310000000000000000000000000000000000000000000000000000000081523060048201525f9073ffffffffffffffffffffffffffffffffffffffff8616906370a0823190602401602060405180830381865afa1580156111d0573d5f5f3e3d5ffd5b505050506040513d601f19601f820116820180604052508101906111f49190612709565b90508015611223576008546112239073ffffffffffffffffffffffffffffffffffffffff878116911683611cc9565b50505b5050505050506112366001600355565b505050565b5f61125b60025473ffffffffffffffffffffffffffffffffffffffff1690565b905090565b6002545f907a010000000000000000000000000000000000000000000000000000900465ffffffffffff1680151580156112a257504265ffffffffffff821610155b6112ad575f5f6112d2565b60025474010000000000000000000000000000000000000000900465ffffffffffff16815b915091509091565b7f241ecf16d79d0f8dbfb92cbc07fe17840425976cf0667f022fe9877caa831b08611304816119e5565b815f03611340576040517f517f903200000000000000000000000000000000000000000000000000000000815260048101839052602401610acb565b6005546040518391907fd6d62b78d21fc4f5151029ca37079020e8a8815c5a488b28ee7499d4c2a19e55905f90a350600555565b6002545f907a010000000000000000000000000000000000000000000000000000900465ffffffffffff1680151580156113b557504265ffffffffffff8216105b6113e7576001547a010000000000000000000000000000000000000000000000000000900465ffffffffffff1661140b565b60025474010000000000000000000000000000000000000000900465ffffffffffff165b91505090565b60015473ffffffffffffffffffffffffffffffffffffffff16338114611465576040517fc22c8022000000000000000000000000000000000000000000000000000000008152336004820152602401610acb565b61077f611d07565b816114a4576040517f3fc3c27a00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b6109fb8282611df8565b5f6114b8816119e5565b61077f611e1c565b6114c8611b6c565b5f6114d2816119e5565b475f83156114e057836114e2565b815b90508181111561154e576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601460248201527f496e73756666696369656e742062616c616e63650000000000000000000000006044820152606401610acb565b5f61156e60025473ffffffffffffffffffffffffffffffffffffffff1690565b73ffffffffffffffffffffffffffffffffffffffff16826040515f6040518083038185875af1925050503d805f81146115c2576040519150601f19603f3d011682016040523d82523d5f602084013e6115c7565b606091505b5050905080611632576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601360248201527f455448207472616e73666572206661696c6564000000000000000000000000006044820152606401610acb565b60025460405183815273ffffffffffffffffffffffffffffffffffffffff909116906001907fd1c19fbcd4551a5edfb66d43d2e337c04837afda3482b42bdf569a8fccdae5fb9060200160405180910390a35050505061077f6001600355565b61169a611b6c565b5f6116a4816119e5565b6040517f70a0823100000000000000000000000000000000000000000000000000000000815230600482015283905f9073ffffffffffffffffffffffffffffffffffffffff8316906370a0823190602401602060405180830381865afa158015611710573d5f5f3e3d5ffd5b505050506040513d601f19601f820116820180604052508101906117349190612709565b90505f84156117435784611745565b815b9050818111156117b1576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601460248201527f496e73756666696369656e742062616c616e63650000000000000000000000006044820152606401610acb565b6117f16117d360025473ffffffffffffffffffffffffffffffffffffffff1690565b73ffffffffffffffffffffffffffffffffffffffff85169083611cc9565b60025473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168673ffffffffffffffffffffffffffffffffffffffff167fd1c19fbcd4551a5edfb66d43d2e337c04837afda3482b42bdf569a8fccdae5fb8360405161186891815260200190565b60405180910390a3505050506109fb6001600355565b5f7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff73ffffffffffffffffffffffffffffffffffffffff8316016118c3575047919050565b6040517f70a0823100000000000000000000000000000000000000000000000000000000815230600482015273ffffffffffffffffffffffffffffffffffffffff8316906370a0823190602401602060405180830381865afa15801561192b573d5f5f3e3d5ffd5b505050506040513d601f19601f820116820180604052508101906107679190612709565b5f7fffffffff0000000000000000000000000000000000000000000000000000000082167f7965db0b00000000000000000000000000000000000000000000000000000000148061076757507f01ffc9a7000000000000000000000000000000000000000000000000000000007fffffffff00000000000000000000000000000000000000000000000000000000831614610767565b61077f8133611e26565b6119f95f5f611eab565b565b5f82815260208190526040902060010154611a15816119e5565b611a1f8383612004565b50505050565b73ffffffffffffffffffffffffffffffffffffffff81163314611a74576040517f6697b23200000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b61123682826120c9565b5f611a87611374565b611a904261212a565b611a9a9190612760565b9050611aa68282612179565b60405165ffffffffffff8216815273ffffffffffffffffffffffffffffffffffffffff8316907f3377dc44241e779dd06afab5b788a35ca5f3b778836e2990bdb26a2a4b2e5ed69060200160405180910390a25050565b5f611b0782612214565b611b104261212a565b611b1a9190612760565b9050611b268282611eab565b6040805165ffffffffffff8085168252831660208201527ff1038c18cf84a56e432fdbfaf746924b7ea511dfe03a6506a0ceba4888788d9b910160405180910390a15050565b600260035403611ba8576040517f3ee5aeb500000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b6002600355565b6040805173ffffffffffffffffffffffffffffffffffffffff8416602482015260448082018490528251808303909101815260649091019091526020810180517bffffffffffffffffffffffffffffffffffffffffffffffffffffffff167f095ea7b300000000000000000000000000000000000000000000000000000000179052611c3b8482612265565b611a1f5760405173ffffffffffffffffffffffffffffffffffffffff84811660248301525f6044830152611cbf91869182169063095ea7b3906064015b604051602081830303815290604052915060e01b6020820180517bffffffffffffffffffffffffffffffffffffffffffffffffffffffff83818316178352505050506122bb565b611a1f84826122bb565b60405173ffffffffffffffffffffffffffffffffffffffff83811660248301526044820183905261123691859182169063a9059cbb90606401611c78565b60015473ffffffffffffffffffffffffffffffffffffffff81169074010000000000000000000000000000000000000000900465ffffffffffff16801580611d5757504265ffffffffffff821610155b15611d98576040517f19ca5ebb00000000000000000000000000000000000000000000000000000000815265ffffffffffff82166004820152602401610acb565b611dc05f611dbb60025473ffffffffffffffffffffffffffffffffffffffff1690565b6120c9565b50611dcb5f83612004565b5050600180547fffffffffffff000000000000000000000000000000000000000000000000000016905550565b5f82815260208190526040902060010154611e12816119e5565b611a1f83836120c9565b6119f95f5f612179565b5f8281526020818152604080832073ffffffffffffffffffffffffffffffffffffffff8516845290915290205460ff166109fb576040517fe2517d3f00000000000000000000000000000000000000000000000000000000815273ffffffffffffffffffffffffffffffffffffffff8216600482015260248101839052604401610acb565b6002547a010000000000000000000000000000000000000000000000000000900465ffffffffffff168015611f7f574265ffffffffffff82161015611f56576002546001805479ffffffffffffffffffffffffffffffffffffffffffffffffffff167401000000000000000000000000000000000000000090920465ffffffffffff167a01000000000000000000000000000000000000000000000000000002919091179055611f7f565b6040517f2b1fa2edafe6f7b9e97c1a9e0c3660e645beb2dcaa2d45bdbf9beaf5472e1ec5905f90a15b506002805473ffffffffffffffffffffffffffffffffffffffff167401000000000000000000000000000000000000000065ffffffffffff9485160279ffffffffffffffffffffffffffffffffffffffffffffffffffff16177a0100000000000000000000000000000000000000000000000000009290931691909102919091179055565b5f826120b8575f61202a60025473ffffffffffffffffffffffffffffffffffffffff1690565b73ffffffffffffffffffffffffffffffffffffffff1614612077576040517f3fc3c27a00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b600280547fffffffffffffffffffffffff00000000000000000000000000000000000000001673ffffffffffffffffffffffffffffffffffffffff84161790555b6120c2838361235a565b9392505050565b5f821580156120f2575060025473ffffffffffffffffffffffffffffffffffffffff8381169116145b1561212057600280547fffffffffffffffffffffffff00000000000000000000000000000000000000001690555b6120c28383612453565b5f65ffffffffffff821115612175576040517f6dfcc6500000000000000000000000000000000000000000000000000000000081526030600482015260248101839052604401610acb565b5090565b600180547401000000000000000000000000000000000000000065ffffffffffff84811682027fffffffffffff0000000000000000000000000000000000000000000000000000841673ffffffffffffffffffffffffffffffffffffffff881617179093559004168015611236576040517f8886ebfc4259abdbc16601dd8fb5678e54878f47b3c34836cfc51154a9605109905f90a1505050565b5f5f61221e611374565b90508065ffffffffffff168365ffffffffffff161161224657612241838261277e565b6120c2565b6120c265ffffffffffff8416620697805f8282188284100282186120c2565b5f5f5f5f60205f8651602088015f8a5af192503d91505f5190508280156122b15750811561229657806001146122b1565b5f8673ffffffffffffffffffffffffffffffffffffffff163b115b9695505050505050565b5f5f60205f8451602086015f885af1806122da576040513d5f823e3d81fd5b50505f513d915081156122f157806001141561230b565b73ffffffffffffffffffffffffffffffffffffffff84163b155b15611a1f576040517f5274afe700000000000000000000000000000000000000000000000000000000815273ffffffffffffffffffffffffffffffffffffffff85166004820152602401610acb565b5f8281526020818152604080832073ffffffffffffffffffffffffffffffffffffffff8516845290915281205460ff1661244c575f8381526020818152604080832073ffffffffffffffffffffffffffffffffffffffff86168452909152902080547fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff001660011790556123ea3390565b73ffffffffffffffffffffffffffffffffffffffff168273ffffffffffffffffffffffffffffffffffffffff16847f2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d60405160405180910390a4506001610767565b505f610767565b5f8281526020818152604080832073ffffffffffffffffffffffffffffffffffffffff8516845290915281205460ff161561244c575f8381526020818152604080832073ffffffffffffffffffffffffffffffffffffffff8616808552925280832080547fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0016905551339286917ff6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b9190a4506001610767565b5f6020828403121561251c575f5ffd5b81357fffffffff00000000000000000000000000000000000000000000000000000000811681146120c2575f5ffd5b5f6020828403121561255b575f5ffd5b5035919050565b73ffffffffffffffffffffffffffffffffffffffff8116811461077f575f5ffd5b5f5f60408385031215612594575f5ffd5b823561259f81612562565b915060208301356125af81612562565b809150509250929050565b5f5f604083850312156125cb575f5ffd5b8235915060208301356125af81612562565b5f602082840312156125ed575f5ffd5b81356120c281612562565b5f60208284031215612608575f5ffd5b813565ffffffffffff811681146120c2575f5ffd5b5f5f5f6060848603121561262f575f5ffd5b833561263a81612562565b95602085013595506040909401359392505050565b5f5f60408385031215612660575f5ffd5b823561266b81612562565b946020939093013593505050565b5f606082840312801561268a575f5ffd5b506040516060810167ffffffffffffffff811182821017156126d3577f4e487b71000000000000000000000000000000000000000000000000000000005f52604160045260245ffd5b60405282516126e181612562565b815260208301516126f181612562565b60208201526040928301519281019290925250919050565b5f60208284031215612719575f5ffd5b5051919050565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601160045260245ffd5b8181038181111561076757610767612720565b65ffffffffffff818116838216019081111561076757610767612720565b65ffffffffffff82811682821603908111156107675761076761272056fea264697066735822122069e6b81fbefe0733d09c225ef8bf2590d020ba608c1669c47e98780014d2810e64736f6c634300081c0033241ecf16d79d0f8dbfb92cbc07fe17840425976cf0667f022fe9877caa831b08f8cd32ed93fc2f9fc78152a14807c9609af3d99c5fe4dc6b106a801aaddfe90e",
 }
 
 // BuyBotABI is the input ABI used to generate the binding from.
@@ -44,7 +44,7 @@ var BuyBotABI = BuyBotMetaData.ABI
 var BuyBotBin = BuyBotMetaData.Bin
 
 // DeployBuyBot deploys a new Ethereum contract, binding an instance of BuyBot to it.
-func DeployBuyBot(auth *bind.TransactOpts, backend bind.ContractBackend, _owner common.Address, _router common.Address, _minOrderAmount *big.Int, _interval *big.Int, _recipient common.Address, _buyer common.Address, _manager common.Address) (common.Address, *types.Transaction, *BuyBot, error) {
+func DeployBuyBot(auth *bind.TransactOpts, backend bind.ContractBackend, _initialDelay *big.Int, _owner common.Address, _router common.Address, _minOrderAmount *big.Int, _interval *big.Int, _recipient common.Address, _buyer common.Address, _manager common.Address) (common.Address, *types.Transaction, *BuyBot, error) {
 	parsed, err := BuyBotMetaData.GetAbi()
 	if err != nil {
 		return common.Address{}, nil, nil, err
@@ -53,7 +53,7 @@ func DeployBuyBot(auth *bind.TransactOpts, backend bind.ContractBackend, _owner 
 		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
 	}
 
-	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(BuyBotBin), backend, _owner, _router, _minOrderAmount, _interval, _recipient, _buyer, _manager)
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(BuyBotBin), backend, _initialDelay, _owner, _router, _minOrderAmount, _interval, _recipient, _buyer, _manager)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
@@ -202,6 +202,99 @@ func (_BuyBot *BuyBotTransactorRaw) Transact(opts *bind.TransactOpts, method str
 	return _BuyBot.Contract.contract.Transact(opts, method, params...)
 }
 
+// BUYERROLE is a free data retrieval call binding the contract method 0x7a01a1da.
+//
+// Solidity: function BUYER_ROLE() view returns(bytes32)
+func (_BuyBot *BuyBotCaller) BUYERROLE(opts *bind.CallOpts) ([32]byte, error) {
+	var out []interface{}
+	err := _BuyBot.contract.Call(opts, &out, "BUYER_ROLE")
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
+}
+
+// BUYERROLE is a free data retrieval call binding the contract method 0x7a01a1da.
+//
+// Solidity: function BUYER_ROLE() view returns(bytes32)
+func (_BuyBot *BuyBotSession) BUYERROLE() ([32]byte, error) {
+	return _BuyBot.Contract.BUYERROLE(&_BuyBot.CallOpts)
+}
+
+// BUYERROLE is a free data retrieval call binding the contract method 0x7a01a1da.
+//
+// Solidity: function BUYER_ROLE() view returns(bytes32)
+func (_BuyBot *BuyBotCallerSession) BUYERROLE() ([32]byte, error) {
+	return _BuyBot.Contract.BUYERROLE(&_BuyBot.CallOpts)
+}
+
+// DEFAULTADMINROLE is a free data retrieval call binding the contract method 0xa217fddf.
+//
+// Solidity: function DEFAULT_ADMIN_ROLE() view returns(bytes32)
+func (_BuyBot *BuyBotCaller) DEFAULTADMINROLE(opts *bind.CallOpts) ([32]byte, error) {
+	var out []interface{}
+	err := _BuyBot.contract.Call(opts, &out, "DEFAULT_ADMIN_ROLE")
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
+}
+
+// DEFAULTADMINROLE is a free data retrieval call binding the contract method 0xa217fddf.
+//
+// Solidity: function DEFAULT_ADMIN_ROLE() view returns(bytes32)
+func (_BuyBot *BuyBotSession) DEFAULTADMINROLE() ([32]byte, error) {
+	return _BuyBot.Contract.DEFAULTADMINROLE(&_BuyBot.CallOpts)
+}
+
+// DEFAULTADMINROLE is a free data retrieval call binding the contract method 0xa217fddf.
+//
+// Solidity: function DEFAULT_ADMIN_ROLE() view returns(bytes32)
+func (_BuyBot *BuyBotCallerSession) DEFAULTADMINROLE() ([32]byte, error) {
+	return _BuyBot.Contract.DEFAULTADMINROLE(&_BuyBot.CallOpts)
+}
+
+// MANAGERROLE is a free data retrieval call binding the contract method 0xec87621c.
+//
+// Solidity: function MANAGER_ROLE() view returns(bytes32)
+func (_BuyBot *BuyBotCaller) MANAGERROLE(opts *bind.CallOpts) ([32]byte, error) {
+	var out []interface{}
+	err := _BuyBot.contract.Call(opts, &out, "MANAGER_ROLE")
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
+}
+
+// MANAGERROLE is a free data retrieval call binding the contract method 0xec87621c.
+//
+// Solidity: function MANAGER_ROLE() view returns(bytes32)
+func (_BuyBot *BuyBotSession) MANAGERROLE() ([32]byte, error) {
+	return _BuyBot.Contract.MANAGERROLE(&_BuyBot.CallOpts)
+}
+
+// MANAGERROLE is a free data retrieval call binding the contract method 0xec87621c.
+//
+// Solidity: function MANAGER_ROLE() view returns(bytes32)
+func (_BuyBot *BuyBotCallerSession) MANAGERROLE() ([32]byte, error) {
+	return _BuyBot.Contract.MANAGERROLE(&_BuyBot.CallOpts)
+}
+
 // NATIVECOIN is a free data retrieval call binding the contract method 0x04a41159.
 //
 // Solidity: function NATIVE_COIN() view returns(address)
@@ -231,37 +324,6 @@ func (_BuyBot *BuyBotSession) NATIVECOIN() (common.Address, error) {
 // Solidity: function NATIVE_COIN() view returns(address)
 func (_BuyBot *BuyBotCallerSession) NATIVECOIN() (common.Address, error) {
 	return _BuyBot.Contract.NATIVECOIN(&_BuyBot.CallOpts)
-}
-
-// Buyer is a free data retrieval call binding the contract method 0x7150d8ae.
-//
-// Solidity: function buyer() view returns(address)
-func (_BuyBot *BuyBotCaller) Buyer(opts *bind.CallOpts) (common.Address, error) {
-	var out []interface{}
-	err := _BuyBot.contract.Call(opts, &out, "buyer")
-
-	if err != nil {
-		return *new(common.Address), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-
-	return out0, err
-
-}
-
-// Buyer is a free data retrieval call binding the contract method 0x7150d8ae.
-//
-// Solidity: function buyer() view returns(address)
-func (_BuyBot *BuyBotSession) Buyer() (common.Address, error) {
-	return _BuyBot.Contract.Buyer(&_BuyBot.CallOpts)
-}
-
-// Buyer is a free data retrieval call binding the contract method 0x7150d8ae.
-//
-// Solidity: function buyer() view returns(address)
-func (_BuyBot *BuyBotCallerSession) Buyer() (common.Address, error) {
-	return _BuyBot.Contract.Buyer(&_BuyBot.CallOpts)
 }
 
 // CanBuyMarket is a free data retrieval call binding the contract method 0x2aaa9628.
@@ -309,6 +371,99 @@ func (_BuyBot *BuyBotCallerSession) CanBuyMarket(pair common.Address, caller com
 	return _BuyBot.Contract.CanBuyMarket(&_BuyBot.CallOpts, pair, caller)
 }
 
+// DefaultAdmin is a free data retrieval call binding the contract method 0x84ef8ffc.
+//
+// Solidity: function defaultAdmin() view returns(address)
+func (_BuyBot *BuyBotCaller) DefaultAdmin(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _BuyBot.contract.Call(opts, &out, "defaultAdmin")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// DefaultAdmin is a free data retrieval call binding the contract method 0x84ef8ffc.
+//
+// Solidity: function defaultAdmin() view returns(address)
+func (_BuyBot *BuyBotSession) DefaultAdmin() (common.Address, error) {
+	return _BuyBot.Contract.DefaultAdmin(&_BuyBot.CallOpts)
+}
+
+// DefaultAdmin is a free data retrieval call binding the contract method 0x84ef8ffc.
+//
+// Solidity: function defaultAdmin() view returns(address)
+func (_BuyBot *BuyBotCallerSession) DefaultAdmin() (common.Address, error) {
+	return _BuyBot.Contract.DefaultAdmin(&_BuyBot.CallOpts)
+}
+
+// DefaultAdminDelay is a free data retrieval call binding the contract method 0xcc8463c8.
+//
+// Solidity: function defaultAdminDelay() view returns(uint48)
+func (_BuyBot *BuyBotCaller) DefaultAdminDelay(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _BuyBot.contract.Call(opts, &out, "defaultAdminDelay")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// DefaultAdminDelay is a free data retrieval call binding the contract method 0xcc8463c8.
+//
+// Solidity: function defaultAdminDelay() view returns(uint48)
+func (_BuyBot *BuyBotSession) DefaultAdminDelay() (*big.Int, error) {
+	return _BuyBot.Contract.DefaultAdminDelay(&_BuyBot.CallOpts)
+}
+
+// DefaultAdminDelay is a free data retrieval call binding the contract method 0xcc8463c8.
+//
+// Solidity: function defaultAdminDelay() view returns(uint48)
+func (_BuyBot *BuyBotCallerSession) DefaultAdminDelay() (*big.Int, error) {
+	return _BuyBot.Contract.DefaultAdminDelay(&_BuyBot.CallOpts)
+}
+
+// DefaultAdminDelayIncreaseWait is a free data retrieval call binding the contract method 0x022d63fb.
+//
+// Solidity: function defaultAdminDelayIncreaseWait() view returns(uint48)
+func (_BuyBot *BuyBotCaller) DefaultAdminDelayIncreaseWait(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _BuyBot.contract.Call(opts, &out, "defaultAdminDelayIncreaseWait")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// DefaultAdminDelayIncreaseWait is a free data retrieval call binding the contract method 0x022d63fb.
+//
+// Solidity: function defaultAdminDelayIncreaseWait() view returns(uint48)
+func (_BuyBot *BuyBotSession) DefaultAdminDelayIncreaseWait() (*big.Int, error) {
+	return _BuyBot.Contract.DefaultAdminDelayIncreaseWait(&_BuyBot.CallOpts)
+}
+
+// DefaultAdminDelayIncreaseWait is a free data retrieval call binding the contract method 0x022d63fb.
+//
+// Solidity: function defaultAdminDelayIncreaseWait() view returns(uint48)
+func (_BuyBot *BuyBotCallerSession) DefaultAdminDelayIncreaseWait() (*big.Int, error) {
+	return _BuyBot.Contract.DefaultAdminDelayIncreaseWait(&_BuyBot.CallOpts)
+}
+
 // GetBalance is a free data retrieval call binding the contract method 0xf8b2cb4f.
 //
 // Solidity: function getBalance(address token) view returns(uint256 balance)
@@ -338,6 +493,68 @@ func (_BuyBot *BuyBotSession) GetBalance(token common.Address) (*big.Int, error)
 // Solidity: function getBalance(address token) view returns(uint256 balance)
 func (_BuyBot *BuyBotCallerSession) GetBalance(token common.Address) (*big.Int, error) {
 	return _BuyBot.Contract.GetBalance(&_BuyBot.CallOpts, token)
+}
+
+// GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
+//
+// Solidity: function getRoleAdmin(bytes32 role) view returns(bytes32)
+func (_BuyBot *BuyBotCaller) GetRoleAdmin(opts *bind.CallOpts, role [32]byte) ([32]byte, error) {
+	var out []interface{}
+	err := _BuyBot.contract.Call(opts, &out, "getRoleAdmin", role)
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
+}
+
+// GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
+//
+// Solidity: function getRoleAdmin(bytes32 role) view returns(bytes32)
+func (_BuyBot *BuyBotSession) GetRoleAdmin(role [32]byte) ([32]byte, error) {
+	return _BuyBot.Contract.GetRoleAdmin(&_BuyBot.CallOpts, role)
+}
+
+// GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
+//
+// Solidity: function getRoleAdmin(bytes32 role) view returns(bytes32)
+func (_BuyBot *BuyBotCallerSession) GetRoleAdmin(role [32]byte) ([32]byte, error) {
+	return _BuyBot.Contract.GetRoleAdmin(&_BuyBot.CallOpts, role)
+}
+
+// HasRole is a free data retrieval call binding the contract method 0x91d14854.
+//
+// Solidity: function hasRole(bytes32 role, address account) view returns(bool)
+func (_BuyBot *BuyBotCaller) HasRole(opts *bind.CallOpts, role [32]byte, account common.Address) (bool, error) {
+	var out []interface{}
+	err := _BuyBot.contract.Call(opts, &out, "hasRole", role, account)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
+}
+
+// HasRole is a free data retrieval call binding the contract method 0x91d14854.
+//
+// Solidity: function hasRole(bytes32 role, address account) view returns(bool)
+func (_BuyBot *BuyBotSession) HasRole(role [32]byte, account common.Address) (bool, error) {
+	return _BuyBot.Contract.HasRole(&_BuyBot.CallOpts, role, account)
+}
+
+// HasRole is a free data retrieval call binding the contract method 0x91d14854.
+//
+// Solidity: function hasRole(bytes32 role, address account) view returns(bool)
+func (_BuyBot *BuyBotCallerSession) HasRole(role [32]byte, account common.Address) (bool, error) {
+	return _BuyBot.Contract.HasRole(&_BuyBot.CallOpts, role, account)
 }
 
 // Interval is a free data retrieval call binding the contract method 0x947a36fb.
@@ -402,37 +619,6 @@ func (_BuyBot *BuyBotCallerSession) LastBuyTime() (*big.Int, error) {
 	return _BuyBot.Contract.LastBuyTime(&_BuyBot.CallOpts)
 }
 
-// Manager is a free data retrieval call binding the contract method 0x481c6a75.
-//
-// Solidity: function manager() view returns(address)
-func (_BuyBot *BuyBotCaller) Manager(opts *bind.CallOpts) (common.Address, error) {
-	var out []interface{}
-	err := _BuyBot.contract.Call(opts, &out, "manager")
-
-	if err != nil {
-		return *new(common.Address), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-
-	return out0, err
-
-}
-
-// Manager is a free data retrieval call binding the contract method 0x481c6a75.
-//
-// Solidity: function manager() view returns(address)
-func (_BuyBot *BuyBotSession) Manager() (common.Address, error) {
-	return _BuyBot.Contract.Manager(&_BuyBot.CallOpts)
-}
-
-// Manager is a free data retrieval call binding the contract method 0x481c6a75.
-//
-// Solidity: function manager() view returns(address)
-func (_BuyBot *BuyBotCallerSession) Manager() (common.Address, error) {
-	return _BuyBot.Contract.Manager(&_BuyBot.CallOpts)
-}
-
 // MinOrderAmount is a free data retrieval call binding the contract method 0x46b62c4a.
 //
 // Solidity: function minOrderAmount() view returns(uint256)
@@ -493,6 +679,96 @@ func (_BuyBot *BuyBotSession) Owner() (common.Address, error) {
 // Solidity: function owner() view returns(address)
 func (_BuyBot *BuyBotCallerSession) Owner() (common.Address, error) {
 	return _BuyBot.Contract.Owner(&_BuyBot.CallOpts)
+}
+
+// PendingDefaultAdmin is a free data retrieval call binding the contract method 0xcf6eefb7.
+//
+// Solidity: function pendingDefaultAdmin() view returns(address newAdmin, uint48 schedule)
+func (_BuyBot *BuyBotCaller) PendingDefaultAdmin(opts *bind.CallOpts) (struct {
+	NewAdmin common.Address
+	Schedule *big.Int
+}, error) {
+	var out []interface{}
+	err := _BuyBot.contract.Call(opts, &out, "pendingDefaultAdmin")
+
+	outstruct := new(struct {
+		NewAdmin common.Address
+		Schedule *big.Int
+	})
+	if err != nil {
+		return *outstruct, err
+	}
+
+	outstruct.NewAdmin = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+	outstruct.Schedule = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+
+	return *outstruct, err
+
+}
+
+// PendingDefaultAdmin is a free data retrieval call binding the contract method 0xcf6eefb7.
+//
+// Solidity: function pendingDefaultAdmin() view returns(address newAdmin, uint48 schedule)
+func (_BuyBot *BuyBotSession) PendingDefaultAdmin() (struct {
+	NewAdmin common.Address
+	Schedule *big.Int
+}, error) {
+	return _BuyBot.Contract.PendingDefaultAdmin(&_BuyBot.CallOpts)
+}
+
+// PendingDefaultAdmin is a free data retrieval call binding the contract method 0xcf6eefb7.
+//
+// Solidity: function pendingDefaultAdmin() view returns(address newAdmin, uint48 schedule)
+func (_BuyBot *BuyBotCallerSession) PendingDefaultAdmin() (struct {
+	NewAdmin common.Address
+	Schedule *big.Int
+}, error) {
+	return _BuyBot.Contract.PendingDefaultAdmin(&_BuyBot.CallOpts)
+}
+
+// PendingDefaultAdminDelay is a free data retrieval call binding the contract method 0xa1eda53c.
+//
+// Solidity: function pendingDefaultAdminDelay() view returns(uint48 newDelay, uint48 schedule)
+func (_BuyBot *BuyBotCaller) PendingDefaultAdminDelay(opts *bind.CallOpts) (struct {
+	NewDelay *big.Int
+	Schedule *big.Int
+}, error) {
+	var out []interface{}
+	err := _BuyBot.contract.Call(opts, &out, "pendingDefaultAdminDelay")
+
+	outstruct := new(struct {
+		NewDelay *big.Int
+		Schedule *big.Int
+	})
+	if err != nil {
+		return *outstruct, err
+	}
+
+	outstruct.NewDelay = *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	outstruct.Schedule = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+
+	return *outstruct, err
+
+}
+
+// PendingDefaultAdminDelay is a free data retrieval call binding the contract method 0xa1eda53c.
+//
+// Solidity: function pendingDefaultAdminDelay() view returns(uint48 newDelay, uint48 schedule)
+func (_BuyBot *BuyBotSession) PendingDefaultAdminDelay() (struct {
+	NewDelay *big.Int
+	Schedule *big.Int
+}, error) {
+	return _BuyBot.Contract.PendingDefaultAdminDelay(&_BuyBot.CallOpts)
+}
+
+// PendingDefaultAdminDelay is a free data retrieval call binding the contract method 0xa1eda53c.
+//
+// Solidity: function pendingDefaultAdminDelay() view returns(uint48 newDelay, uint48 schedule)
+func (_BuyBot *BuyBotCallerSession) PendingDefaultAdminDelay() (struct {
+	NewDelay *big.Int
+	Schedule *big.Int
+}, error) {
+	return _BuyBot.Contract.PendingDefaultAdminDelay(&_BuyBot.CallOpts)
 }
 
 // Recipient is a free data retrieval call binding the contract method 0x66d003ac.
@@ -557,6 +833,79 @@ func (_BuyBot *BuyBotCallerSession) Router() (common.Address, error) {
 	return _BuyBot.Contract.Router(&_BuyBot.CallOpts)
 }
 
+// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
+//
+// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
+func (_BuyBot *BuyBotCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
+	var out []interface{}
+	err := _BuyBot.contract.Call(opts, &out, "supportsInterface", interfaceId)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
+}
+
+// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
+//
+// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
+func (_BuyBot *BuyBotSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
+	return _BuyBot.Contract.SupportsInterface(&_BuyBot.CallOpts, interfaceId)
+}
+
+// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
+//
+// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
+func (_BuyBot *BuyBotCallerSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
+	return _BuyBot.Contract.SupportsInterface(&_BuyBot.CallOpts, interfaceId)
+}
+
+// AcceptDefaultAdminTransfer is a paid mutator transaction binding the contract method 0xcefc1429.
+//
+// Solidity: function acceptDefaultAdminTransfer() returns()
+func (_BuyBot *BuyBotTransactor) AcceptDefaultAdminTransfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _BuyBot.contract.Transact(opts, "acceptDefaultAdminTransfer")
+}
+
+// AcceptDefaultAdminTransfer is a paid mutator transaction binding the contract method 0xcefc1429.
+//
+// Solidity: function acceptDefaultAdminTransfer() returns()
+func (_BuyBot *BuyBotSession) AcceptDefaultAdminTransfer() (*types.Transaction, error) {
+	return _BuyBot.Contract.AcceptDefaultAdminTransfer(&_BuyBot.TransactOpts)
+}
+
+// AcceptDefaultAdminTransfer is a paid mutator transaction binding the contract method 0xcefc1429.
+//
+// Solidity: function acceptDefaultAdminTransfer() returns()
+func (_BuyBot *BuyBotTransactorSession) AcceptDefaultAdminTransfer() (*types.Transaction, error) {
+	return _BuyBot.Contract.AcceptDefaultAdminTransfer(&_BuyBot.TransactOpts)
+}
+
+// BeginDefaultAdminTransfer is a paid mutator transaction binding the contract method 0x634e93da.
+//
+// Solidity: function beginDefaultAdminTransfer(address newAdmin) returns()
+func (_BuyBot *BuyBotTransactor) BeginDefaultAdminTransfer(opts *bind.TransactOpts, newAdmin common.Address) (*types.Transaction, error) {
+	return _BuyBot.contract.Transact(opts, "beginDefaultAdminTransfer", newAdmin)
+}
+
+// BeginDefaultAdminTransfer is a paid mutator transaction binding the contract method 0x634e93da.
+//
+// Solidity: function beginDefaultAdminTransfer(address newAdmin) returns()
+func (_BuyBot *BuyBotSession) BeginDefaultAdminTransfer(newAdmin common.Address) (*types.Transaction, error) {
+	return _BuyBot.Contract.BeginDefaultAdminTransfer(&_BuyBot.TransactOpts, newAdmin)
+}
+
+// BeginDefaultAdminTransfer is a paid mutator transaction binding the contract method 0x634e93da.
+//
+// Solidity: function beginDefaultAdminTransfer(address newAdmin) returns()
+func (_BuyBot *BuyBotTransactorSession) BeginDefaultAdminTransfer(newAdmin common.Address) (*types.Transaction, error) {
+	return _BuyBot.Contract.BeginDefaultAdminTransfer(&_BuyBot.TransactOpts, newAdmin)
+}
+
 // BuyMarket is a paid mutator transaction binding the contract method 0x67ea88eb.
 //
 // Solidity: function buyMarket(address pair, uint256 amount, uint256 maxMatchCount) returns()
@@ -578,46 +927,130 @@ func (_BuyBot *BuyBotTransactorSession) BuyMarket(pair common.Address, amount *b
 	return _BuyBot.Contract.BuyMarket(&_BuyBot.TransactOpts, pair, amount, maxMatchCount)
 }
 
-// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
+// CancelDefaultAdminTransfer is a paid mutator transaction binding the contract method 0xd602b9fd.
 //
-// Solidity: function renounceOwnership() returns()
-func (_BuyBot *BuyBotTransactor) RenounceOwnership(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _BuyBot.contract.Transact(opts, "renounceOwnership")
+// Solidity: function cancelDefaultAdminTransfer() returns()
+func (_BuyBot *BuyBotTransactor) CancelDefaultAdminTransfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _BuyBot.contract.Transact(opts, "cancelDefaultAdminTransfer")
 }
 
-// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
+// CancelDefaultAdminTransfer is a paid mutator transaction binding the contract method 0xd602b9fd.
 //
-// Solidity: function renounceOwnership() returns()
-func (_BuyBot *BuyBotSession) RenounceOwnership() (*types.Transaction, error) {
-	return _BuyBot.Contract.RenounceOwnership(&_BuyBot.TransactOpts)
+// Solidity: function cancelDefaultAdminTransfer() returns()
+func (_BuyBot *BuyBotSession) CancelDefaultAdminTransfer() (*types.Transaction, error) {
+	return _BuyBot.Contract.CancelDefaultAdminTransfer(&_BuyBot.TransactOpts)
 }
 
-// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
+// CancelDefaultAdminTransfer is a paid mutator transaction binding the contract method 0xd602b9fd.
 //
-// Solidity: function renounceOwnership() returns()
-func (_BuyBot *BuyBotTransactorSession) RenounceOwnership() (*types.Transaction, error) {
-	return _BuyBot.Contract.RenounceOwnership(&_BuyBot.TransactOpts)
+// Solidity: function cancelDefaultAdminTransfer() returns()
+func (_BuyBot *BuyBotTransactorSession) CancelDefaultAdminTransfer() (*types.Transaction, error) {
+	return _BuyBot.Contract.CancelDefaultAdminTransfer(&_BuyBot.TransactOpts)
 }
 
-// SetBuyer is a paid mutator transaction binding the contract method 0xa3f09ad6.
+// ChangeDefaultAdminDelay is a paid mutator transaction binding the contract method 0x649a5ec7.
 //
-// Solidity: function setBuyer(address _buyer) returns()
-func (_BuyBot *BuyBotTransactor) SetBuyer(opts *bind.TransactOpts, _buyer common.Address) (*types.Transaction, error) {
-	return _BuyBot.contract.Transact(opts, "setBuyer", _buyer)
+// Solidity: function changeDefaultAdminDelay(uint48 newDelay) returns()
+func (_BuyBot *BuyBotTransactor) ChangeDefaultAdminDelay(opts *bind.TransactOpts, newDelay *big.Int) (*types.Transaction, error) {
+	return _BuyBot.contract.Transact(opts, "changeDefaultAdminDelay", newDelay)
 }
 
-// SetBuyer is a paid mutator transaction binding the contract method 0xa3f09ad6.
+// ChangeDefaultAdminDelay is a paid mutator transaction binding the contract method 0x649a5ec7.
 //
-// Solidity: function setBuyer(address _buyer) returns()
-func (_BuyBot *BuyBotSession) SetBuyer(_buyer common.Address) (*types.Transaction, error) {
-	return _BuyBot.Contract.SetBuyer(&_BuyBot.TransactOpts, _buyer)
+// Solidity: function changeDefaultAdminDelay(uint48 newDelay) returns()
+func (_BuyBot *BuyBotSession) ChangeDefaultAdminDelay(newDelay *big.Int) (*types.Transaction, error) {
+	return _BuyBot.Contract.ChangeDefaultAdminDelay(&_BuyBot.TransactOpts, newDelay)
 }
 
-// SetBuyer is a paid mutator transaction binding the contract method 0xa3f09ad6.
+// ChangeDefaultAdminDelay is a paid mutator transaction binding the contract method 0x649a5ec7.
 //
-// Solidity: function setBuyer(address _buyer) returns()
-func (_BuyBot *BuyBotTransactorSession) SetBuyer(_buyer common.Address) (*types.Transaction, error) {
-	return _BuyBot.Contract.SetBuyer(&_BuyBot.TransactOpts, _buyer)
+// Solidity: function changeDefaultAdminDelay(uint48 newDelay) returns()
+func (_BuyBot *BuyBotTransactorSession) ChangeDefaultAdminDelay(newDelay *big.Int) (*types.Transaction, error) {
+	return _BuyBot.Contract.ChangeDefaultAdminDelay(&_BuyBot.TransactOpts, newDelay)
+}
+
+// GrantRole is a paid mutator transaction binding the contract method 0x2f2ff15d.
+//
+// Solidity: function grantRole(bytes32 role, address account) returns()
+func (_BuyBot *BuyBotTransactor) GrantRole(opts *bind.TransactOpts, role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _BuyBot.contract.Transact(opts, "grantRole", role, account)
+}
+
+// GrantRole is a paid mutator transaction binding the contract method 0x2f2ff15d.
+//
+// Solidity: function grantRole(bytes32 role, address account) returns()
+func (_BuyBot *BuyBotSession) GrantRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _BuyBot.Contract.GrantRole(&_BuyBot.TransactOpts, role, account)
+}
+
+// GrantRole is a paid mutator transaction binding the contract method 0x2f2ff15d.
+//
+// Solidity: function grantRole(bytes32 role, address account) returns()
+func (_BuyBot *BuyBotTransactorSession) GrantRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _BuyBot.Contract.GrantRole(&_BuyBot.TransactOpts, role, account)
+}
+
+// RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
+//
+// Solidity: function renounceRole(bytes32 role, address account) returns()
+func (_BuyBot *BuyBotTransactor) RenounceRole(opts *bind.TransactOpts, role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _BuyBot.contract.Transact(opts, "renounceRole", role, account)
+}
+
+// RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
+//
+// Solidity: function renounceRole(bytes32 role, address account) returns()
+func (_BuyBot *BuyBotSession) RenounceRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _BuyBot.Contract.RenounceRole(&_BuyBot.TransactOpts, role, account)
+}
+
+// RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
+//
+// Solidity: function renounceRole(bytes32 role, address account) returns()
+func (_BuyBot *BuyBotTransactorSession) RenounceRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _BuyBot.Contract.RenounceRole(&_BuyBot.TransactOpts, role, account)
+}
+
+// RevokeRole is a paid mutator transaction binding the contract method 0xd547741f.
+//
+// Solidity: function revokeRole(bytes32 role, address account) returns()
+func (_BuyBot *BuyBotTransactor) RevokeRole(opts *bind.TransactOpts, role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _BuyBot.contract.Transact(opts, "revokeRole", role, account)
+}
+
+// RevokeRole is a paid mutator transaction binding the contract method 0xd547741f.
+//
+// Solidity: function revokeRole(bytes32 role, address account) returns()
+func (_BuyBot *BuyBotSession) RevokeRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _BuyBot.Contract.RevokeRole(&_BuyBot.TransactOpts, role, account)
+}
+
+// RevokeRole is a paid mutator transaction binding the contract method 0xd547741f.
+//
+// Solidity: function revokeRole(bytes32 role, address account) returns()
+func (_BuyBot *BuyBotTransactorSession) RevokeRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _BuyBot.Contract.RevokeRole(&_BuyBot.TransactOpts, role, account)
+}
+
+// RollbackDefaultAdminDelay is a paid mutator transaction binding the contract method 0x0aa6220b.
+//
+// Solidity: function rollbackDefaultAdminDelay() returns()
+func (_BuyBot *BuyBotTransactor) RollbackDefaultAdminDelay(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _BuyBot.contract.Transact(opts, "rollbackDefaultAdminDelay")
+}
+
+// RollbackDefaultAdminDelay is a paid mutator transaction binding the contract method 0x0aa6220b.
+//
+// Solidity: function rollbackDefaultAdminDelay() returns()
+func (_BuyBot *BuyBotSession) RollbackDefaultAdminDelay() (*types.Transaction, error) {
+	return _BuyBot.Contract.RollbackDefaultAdminDelay(&_BuyBot.TransactOpts)
+}
+
+// RollbackDefaultAdminDelay is a paid mutator transaction binding the contract method 0x0aa6220b.
+//
+// Solidity: function rollbackDefaultAdminDelay() returns()
+func (_BuyBot *BuyBotTransactorSession) RollbackDefaultAdminDelay() (*types.Transaction, error) {
+	return _BuyBot.Contract.RollbackDefaultAdminDelay(&_BuyBot.TransactOpts)
 }
 
 // SetInterval is a paid mutator transaction binding the contract method 0x22a90082.
@@ -639,27 +1072,6 @@ func (_BuyBot *BuyBotSession) SetInterval(_interval *big.Int) (*types.Transactio
 // Solidity: function setInterval(uint256 _interval) returns()
 func (_BuyBot *BuyBotTransactorSession) SetInterval(_interval *big.Int) (*types.Transaction, error) {
 	return _BuyBot.Contract.SetInterval(&_BuyBot.TransactOpts, _interval)
-}
-
-// SetManager is a paid mutator transaction binding the contract method 0xd0ebdbe7.
-//
-// Solidity: function setManager(address _manager) returns()
-func (_BuyBot *BuyBotTransactor) SetManager(opts *bind.TransactOpts, _manager common.Address) (*types.Transaction, error) {
-	return _BuyBot.contract.Transact(opts, "setManager", _manager)
-}
-
-// SetManager is a paid mutator transaction binding the contract method 0xd0ebdbe7.
-//
-// Solidity: function setManager(address _manager) returns()
-func (_BuyBot *BuyBotSession) SetManager(_manager common.Address) (*types.Transaction, error) {
-	return _BuyBot.Contract.SetManager(&_BuyBot.TransactOpts, _manager)
-}
-
-// SetManager is a paid mutator transaction binding the contract method 0xd0ebdbe7.
-//
-// Solidity: function setManager(address _manager) returns()
-func (_BuyBot *BuyBotTransactorSession) SetManager(_manager common.Address) (*types.Transaction, error) {
-	return _BuyBot.Contract.SetManager(&_BuyBot.TransactOpts, _manager)
 }
 
 // SetMinOrderAmount is a paid mutator transaction binding the contract method 0xa3b8ef04.
@@ -702,27 +1114,6 @@ func (_BuyBot *BuyBotSession) SetRecipient(_recipient common.Address) (*types.Tr
 // Solidity: function setRecipient(address _recipient) returns()
 func (_BuyBot *BuyBotTransactorSession) SetRecipient(_recipient common.Address) (*types.Transaction, error) {
 	return _BuyBot.Contract.SetRecipient(&_BuyBot.TransactOpts, _recipient)
-}
-
-// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
-//
-// Solidity: function transferOwnership(address newOwner) returns()
-func (_BuyBot *BuyBotTransactor) TransferOwnership(opts *bind.TransactOpts, newOwner common.Address) (*types.Transaction, error) {
-	return _BuyBot.contract.Transact(opts, "transferOwnership", newOwner)
-}
-
-// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
-//
-// Solidity: function transferOwnership(address newOwner) returns()
-func (_BuyBot *BuyBotSession) TransferOwnership(newOwner common.Address) (*types.Transaction, error) {
-	return _BuyBot.Contract.TransferOwnership(&_BuyBot.TransactOpts, newOwner)
-}
-
-// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
-//
-// Solidity: function transferOwnership(address newOwner) returns()
-func (_BuyBot *BuyBotTransactorSession) TransferOwnership(newOwner common.Address) (*types.Transaction, error) {
-	return _BuyBot.Contract.TransferOwnership(&_BuyBot.TransactOpts, newOwner)
 }
 
 // Withdraw is a paid mutator transaction binding the contract method 0xf3fef3a3.
@@ -788,9 +1179,9 @@ func (_BuyBot *BuyBotTransactorSession) Receive() (*types.Transaction, error) {
 	return _BuyBot.Contract.Receive(&_BuyBot.TransactOpts)
 }
 
-// BuyBotBuyerSetIterator is returned from FilterBuyerSet and is used to iterate over the raw logs and unpacked data for BuyerSet events raised by the BuyBot contract.
-type BuyBotBuyerSetIterator struct {
-	Event *BuyBotBuyerSet // Event containing the contract specifics and raw log
+// BuyBotDefaultAdminDelayChangeCanceledIterator is returned from FilterDefaultAdminDelayChangeCanceled and is used to iterate over the raw logs and unpacked data for DefaultAdminDelayChangeCanceled events raised by the BuyBot contract.
+type BuyBotDefaultAdminDelayChangeCanceledIterator struct {
+	Event *BuyBotDefaultAdminDelayChangeCanceled // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -804,7 +1195,7 @@ type BuyBotBuyerSetIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *BuyBotBuyerSetIterator) Next() bool {
+func (it *BuyBotDefaultAdminDelayChangeCanceledIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -813,7 +1204,7 @@ func (it *BuyBotBuyerSetIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(BuyBotBuyerSet)
+			it.Event = new(BuyBotDefaultAdminDelayChangeCanceled)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -828,7 +1219,7 @@ func (it *BuyBotBuyerSetIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(BuyBotBuyerSet)
+		it.Event = new(BuyBotDefaultAdminDelayChangeCanceled)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -844,60 +1235,40 @@ func (it *BuyBotBuyerSetIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *BuyBotBuyerSetIterator) Error() error {
+func (it *BuyBotDefaultAdminDelayChangeCanceledIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *BuyBotBuyerSetIterator) Close() error {
+func (it *BuyBotDefaultAdminDelayChangeCanceledIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// BuyBotBuyerSet represents a BuyerSet event raised by the BuyBot contract.
-type BuyBotBuyerSet struct {
-	Before  common.Address
-	Current common.Address
-	Raw     types.Log // Blockchain specific contextual infos
+// BuyBotDefaultAdminDelayChangeCanceled represents a DefaultAdminDelayChangeCanceled event raised by the BuyBot contract.
+type BuyBotDefaultAdminDelayChangeCanceled struct {
+	Raw types.Log // Blockchain specific contextual infos
 }
 
-// FilterBuyerSet is a free log retrieval operation binding the contract event 0xe4eacf1aafd9e6b52cd356977b5c4ac221b6a852023bd3691b98600a9fb093d0.
+// FilterDefaultAdminDelayChangeCanceled is a free log retrieval operation binding the contract event 0x2b1fa2edafe6f7b9e97c1a9e0c3660e645beb2dcaa2d45bdbf9beaf5472e1ec5.
 //
-// Solidity: event BuyerSet(address indexed before, address indexed current)
-func (_BuyBot *BuyBotFilterer) FilterBuyerSet(opts *bind.FilterOpts, before []common.Address, current []common.Address) (*BuyBotBuyerSetIterator, error) {
+// Solidity: event DefaultAdminDelayChangeCanceled()
+func (_BuyBot *BuyBotFilterer) FilterDefaultAdminDelayChangeCanceled(opts *bind.FilterOpts) (*BuyBotDefaultAdminDelayChangeCanceledIterator, error) {
 
-	var beforeRule []interface{}
-	for _, beforeItem := range before {
-		beforeRule = append(beforeRule, beforeItem)
-	}
-	var currentRule []interface{}
-	for _, currentItem := range current {
-		currentRule = append(currentRule, currentItem)
-	}
-
-	logs, sub, err := _BuyBot.contract.FilterLogs(opts, "BuyerSet", beforeRule, currentRule)
+	logs, sub, err := _BuyBot.contract.FilterLogs(opts, "DefaultAdminDelayChangeCanceled")
 	if err != nil {
 		return nil, err
 	}
-	return &BuyBotBuyerSetIterator{contract: _BuyBot.contract, event: "BuyerSet", logs: logs, sub: sub}, nil
+	return &BuyBotDefaultAdminDelayChangeCanceledIterator{contract: _BuyBot.contract, event: "DefaultAdminDelayChangeCanceled", logs: logs, sub: sub}, nil
 }
 
-// WatchBuyerSet is a free log subscription operation binding the contract event 0xe4eacf1aafd9e6b52cd356977b5c4ac221b6a852023bd3691b98600a9fb093d0.
+// WatchDefaultAdminDelayChangeCanceled is a free log subscription operation binding the contract event 0x2b1fa2edafe6f7b9e97c1a9e0c3660e645beb2dcaa2d45bdbf9beaf5472e1ec5.
 //
-// Solidity: event BuyerSet(address indexed before, address indexed current)
-func (_BuyBot *BuyBotFilterer) WatchBuyerSet(opts *bind.WatchOpts, sink chan<- *BuyBotBuyerSet, before []common.Address, current []common.Address) (event.Subscription, error) {
+// Solidity: event DefaultAdminDelayChangeCanceled()
+func (_BuyBot *BuyBotFilterer) WatchDefaultAdminDelayChangeCanceled(opts *bind.WatchOpts, sink chan<- *BuyBotDefaultAdminDelayChangeCanceled) (event.Subscription, error) {
 
-	var beforeRule []interface{}
-	for _, beforeItem := range before {
-		beforeRule = append(beforeRule, beforeItem)
-	}
-	var currentRule []interface{}
-	for _, currentItem := range current {
-		currentRule = append(currentRule, currentItem)
-	}
-
-	logs, sub, err := _BuyBot.contract.WatchLogs(opts, "BuyerSet", beforeRule, currentRule)
+	logs, sub, err := _BuyBot.contract.WatchLogs(opts, "DefaultAdminDelayChangeCanceled")
 	if err != nil {
 		return nil, err
 	}
@@ -907,8 +1278,8 @@ func (_BuyBot *BuyBotFilterer) WatchBuyerSet(opts *bind.WatchOpts, sink chan<- *
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(BuyBotBuyerSet)
-				if err := _BuyBot.contract.UnpackLog(event, "BuyerSet", log); err != nil {
+				event := new(BuyBotDefaultAdminDelayChangeCanceled)
+				if err := _BuyBot.contract.UnpackLog(event, "DefaultAdminDelayChangeCanceled", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -929,12 +1300,425 @@ func (_BuyBot *BuyBotFilterer) WatchBuyerSet(opts *bind.WatchOpts, sink chan<- *
 	}), nil
 }
 
-// ParseBuyerSet is a log parse operation binding the contract event 0xe4eacf1aafd9e6b52cd356977b5c4ac221b6a852023bd3691b98600a9fb093d0.
+// ParseDefaultAdminDelayChangeCanceled is a log parse operation binding the contract event 0x2b1fa2edafe6f7b9e97c1a9e0c3660e645beb2dcaa2d45bdbf9beaf5472e1ec5.
 //
-// Solidity: event BuyerSet(address indexed before, address indexed current)
-func (_BuyBot *BuyBotFilterer) ParseBuyerSet(log types.Log) (*BuyBotBuyerSet, error) {
-	event := new(BuyBotBuyerSet)
-	if err := _BuyBot.contract.UnpackLog(event, "BuyerSet", log); err != nil {
+// Solidity: event DefaultAdminDelayChangeCanceled()
+func (_BuyBot *BuyBotFilterer) ParseDefaultAdminDelayChangeCanceled(log types.Log) (*BuyBotDefaultAdminDelayChangeCanceled, error) {
+	event := new(BuyBotDefaultAdminDelayChangeCanceled)
+	if err := _BuyBot.contract.UnpackLog(event, "DefaultAdminDelayChangeCanceled", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// BuyBotDefaultAdminDelayChangeScheduledIterator is returned from FilterDefaultAdminDelayChangeScheduled and is used to iterate over the raw logs and unpacked data for DefaultAdminDelayChangeScheduled events raised by the BuyBot contract.
+type BuyBotDefaultAdminDelayChangeScheduledIterator struct {
+	Event *BuyBotDefaultAdminDelayChangeScheduled // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *BuyBotDefaultAdminDelayChangeScheduledIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(BuyBotDefaultAdminDelayChangeScheduled)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(BuyBotDefaultAdminDelayChangeScheduled)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *BuyBotDefaultAdminDelayChangeScheduledIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *BuyBotDefaultAdminDelayChangeScheduledIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// BuyBotDefaultAdminDelayChangeScheduled represents a DefaultAdminDelayChangeScheduled event raised by the BuyBot contract.
+type BuyBotDefaultAdminDelayChangeScheduled struct {
+	NewDelay       *big.Int
+	EffectSchedule *big.Int
+	Raw            types.Log // Blockchain specific contextual infos
+}
+
+// FilterDefaultAdminDelayChangeScheduled is a free log retrieval operation binding the contract event 0xf1038c18cf84a56e432fdbfaf746924b7ea511dfe03a6506a0ceba4888788d9b.
+//
+// Solidity: event DefaultAdminDelayChangeScheduled(uint48 newDelay, uint48 effectSchedule)
+func (_BuyBot *BuyBotFilterer) FilterDefaultAdminDelayChangeScheduled(opts *bind.FilterOpts) (*BuyBotDefaultAdminDelayChangeScheduledIterator, error) {
+
+	logs, sub, err := _BuyBot.contract.FilterLogs(opts, "DefaultAdminDelayChangeScheduled")
+	if err != nil {
+		return nil, err
+	}
+	return &BuyBotDefaultAdminDelayChangeScheduledIterator{contract: _BuyBot.contract, event: "DefaultAdminDelayChangeScheduled", logs: logs, sub: sub}, nil
+}
+
+// WatchDefaultAdminDelayChangeScheduled is a free log subscription operation binding the contract event 0xf1038c18cf84a56e432fdbfaf746924b7ea511dfe03a6506a0ceba4888788d9b.
+//
+// Solidity: event DefaultAdminDelayChangeScheduled(uint48 newDelay, uint48 effectSchedule)
+func (_BuyBot *BuyBotFilterer) WatchDefaultAdminDelayChangeScheduled(opts *bind.WatchOpts, sink chan<- *BuyBotDefaultAdminDelayChangeScheduled) (event.Subscription, error) {
+
+	logs, sub, err := _BuyBot.contract.WatchLogs(opts, "DefaultAdminDelayChangeScheduled")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(BuyBotDefaultAdminDelayChangeScheduled)
+				if err := _BuyBot.contract.UnpackLog(event, "DefaultAdminDelayChangeScheduled", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseDefaultAdminDelayChangeScheduled is a log parse operation binding the contract event 0xf1038c18cf84a56e432fdbfaf746924b7ea511dfe03a6506a0ceba4888788d9b.
+//
+// Solidity: event DefaultAdminDelayChangeScheduled(uint48 newDelay, uint48 effectSchedule)
+func (_BuyBot *BuyBotFilterer) ParseDefaultAdminDelayChangeScheduled(log types.Log) (*BuyBotDefaultAdminDelayChangeScheduled, error) {
+	event := new(BuyBotDefaultAdminDelayChangeScheduled)
+	if err := _BuyBot.contract.UnpackLog(event, "DefaultAdminDelayChangeScheduled", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// BuyBotDefaultAdminTransferCanceledIterator is returned from FilterDefaultAdminTransferCanceled and is used to iterate over the raw logs and unpacked data for DefaultAdminTransferCanceled events raised by the BuyBot contract.
+type BuyBotDefaultAdminTransferCanceledIterator struct {
+	Event *BuyBotDefaultAdminTransferCanceled // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *BuyBotDefaultAdminTransferCanceledIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(BuyBotDefaultAdminTransferCanceled)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(BuyBotDefaultAdminTransferCanceled)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *BuyBotDefaultAdminTransferCanceledIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *BuyBotDefaultAdminTransferCanceledIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// BuyBotDefaultAdminTransferCanceled represents a DefaultAdminTransferCanceled event raised by the BuyBot contract.
+type BuyBotDefaultAdminTransferCanceled struct {
+	Raw types.Log // Blockchain specific contextual infos
+}
+
+// FilterDefaultAdminTransferCanceled is a free log retrieval operation binding the contract event 0x8886ebfc4259abdbc16601dd8fb5678e54878f47b3c34836cfc51154a9605109.
+//
+// Solidity: event DefaultAdminTransferCanceled()
+func (_BuyBot *BuyBotFilterer) FilterDefaultAdminTransferCanceled(opts *bind.FilterOpts) (*BuyBotDefaultAdminTransferCanceledIterator, error) {
+
+	logs, sub, err := _BuyBot.contract.FilterLogs(opts, "DefaultAdminTransferCanceled")
+	if err != nil {
+		return nil, err
+	}
+	return &BuyBotDefaultAdminTransferCanceledIterator{contract: _BuyBot.contract, event: "DefaultAdminTransferCanceled", logs: logs, sub: sub}, nil
+}
+
+// WatchDefaultAdminTransferCanceled is a free log subscription operation binding the contract event 0x8886ebfc4259abdbc16601dd8fb5678e54878f47b3c34836cfc51154a9605109.
+//
+// Solidity: event DefaultAdminTransferCanceled()
+func (_BuyBot *BuyBotFilterer) WatchDefaultAdminTransferCanceled(opts *bind.WatchOpts, sink chan<- *BuyBotDefaultAdminTransferCanceled) (event.Subscription, error) {
+
+	logs, sub, err := _BuyBot.contract.WatchLogs(opts, "DefaultAdminTransferCanceled")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(BuyBotDefaultAdminTransferCanceled)
+				if err := _BuyBot.contract.UnpackLog(event, "DefaultAdminTransferCanceled", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseDefaultAdminTransferCanceled is a log parse operation binding the contract event 0x8886ebfc4259abdbc16601dd8fb5678e54878f47b3c34836cfc51154a9605109.
+//
+// Solidity: event DefaultAdminTransferCanceled()
+func (_BuyBot *BuyBotFilterer) ParseDefaultAdminTransferCanceled(log types.Log) (*BuyBotDefaultAdminTransferCanceled, error) {
+	event := new(BuyBotDefaultAdminTransferCanceled)
+	if err := _BuyBot.contract.UnpackLog(event, "DefaultAdminTransferCanceled", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// BuyBotDefaultAdminTransferScheduledIterator is returned from FilterDefaultAdminTransferScheduled and is used to iterate over the raw logs and unpacked data for DefaultAdminTransferScheduled events raised by the BuyBot contract.
+type BuyBotDefaultAdminTransferScheduledIterator struct {
+	Event *BuyBotDefaultAdminTransferScheduled // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *BuyBotDefaultAdminTransferScheduledIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(BuyBotDefaultAdminTransferScheduled)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(BuyBotDefaultAdminTransferScheduled)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *BuyBotDefaultAdminTransferScheduledIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *BuyBotDefaultAdminTransferScheduledIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// BuyBotDefaultAdminTransferScheduled represents a DefaultAdminTransferScheduled event raised by the BuyBot contract.
+type BuyBotDefaultAdminTransferScheduled struct {
+	NewAdmin       common.Address
+	AcceptSchedule *big.Int
+	Raw            types.Log // Blockchain specific contextual infos
+}
+
+// FilterDefaultAdminTransferScheduled is a free log retrieval operation binding the contract event 0x3377dc44241e779dd06afab5b788a35ca5f3b778836e2990bdb26a2a4b2e5ed6.
+//
+// Solidity: event DefaultAdminTransferScheduled(address indexed newAdmin, uint48 acceptSchedule)
+func (_BuyBot *BuyBotFilterer) FilterDefaultAdminTransferScheduled(opts *bind.FilterOpts, newAdmin []common.Address) (*BuyBotDefaultAdminTransferScheduledIterator, error) {
+
+	var newAdminRule []interface{}
+	for _, newAdminItem := range newAdmin {
+		newAdminRule = append(newAdminRule, newAdminItem)
+	}
+
+	logs, sub, err := _BuyBot.contract.FilterLogs(opts, "DefaultAdminTransferScheduled", newAdminRule)
+	if err != nil {
+		return nil, err
+	}
+	return &BuyBotDefaultAdminTransferScheduledIterator{contract: _BuyBot.contract, event: "DefaultAdminTransferScheduled", logs: logs, sub: sub}, nil
+}
+
+// WatchDefaultAdminTransferScheduled is a free log subscription operation binding the contract event 0x3377dc44241e779dd06afab5b788a35ca5f3b778836e2990bdb26a2a4b2e5ed6.
+//
+// Solidity: event DefaultAdminTransferScheduled(address indexed newAdmin, uint48 acceptSchedule)
+func (_BuyBot *BuyBotFilterer) WatchDefaultAdminTransferScheduled(opts *bind.WatchOpts, sink chan<- *BuyBotDefaultAdminTransferScheduled, newAdmin []common.Address) (event.Subscription, error) {
+
+	var newAdminRule []interface{}
+	for _, newAdminItem := range newAdmin {
+		newAdminRule = append(newAdminRule, newAdminItem)
+	}
+
+	logs, sub, err := _BuyBot.contract.WatchLogs(opts, "DefaultAdminTransferScheduled", newAdminRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(BuyBotDefaultAdminTransferScheduled)
+				if err := _BuyBot.contract.UnpackLog(event, "DefaultAdminTransferScheduled", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseDefaultAdminTransferScheduled is a log parse operation binding the contract event 0x3377dc44241e779dd06afab5b788a35ca5f3b778836e2990bdb26a2a4b2e5ed6.
+//
+// Solidity: event DefaultAdminTransferScheduled(address indexed newAdmin, uint48 acceptSchedule)
+func (_BuyBot *BuyBotFilterer) ParseDefaultAdminTransferScheduled(log types.Log) (*BuyBotDefaultAdminTransferScheduled, error) {
+	event := new(BuyBotDefaultAdminTransferScheduled)
+	if err := _BuyBot.contract.UnpackLog(event, "DefaultAdminTransferScheduled", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -1088,159 +1872,6 @@ func (_BuyBot *BuyBotFilterer) WatchIntervalSet(opts *bind.WatchOpts, sink chan<
 func (_BuyBot *BuyBotFilterer) ParseIntervalSet(log types.Log) (*BuyBotIntervalSet, error) {
 	event := new(BuyBotIntervalSet)
 	if err := _BuyBot.contract.UnpackLog(event, "IntervalSet", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// BuyBotManagerSetIterator is returned from FilterManagerSet and is used to iterate over the raw logs and unpacked data for ManagerSet events raised by the BuyBot contract.
-type BuyBotManagerSetIterator struct {
-	Event *BuyBotManagerSet // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *BuyBotManagerSetIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(BuyBotManagerSet)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(BuyBotManagerSet)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *BuyBotManagerSetIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *BuyBotManagerSetIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// BuyBotManagerSet represents a ManagerSet event raised by the BuyBot contract.
-type BuyBotManagerSet struct {
-	Before  common.Address
-	Current common.Address
-	Raw     types.Log // Blockchain specific contextual infos
-}
-
-// FilterManagerSet is a free log retrieval operation binding the contract event 0xc64707e618a83637fc41ad1e3aa4242bd5fdd353f3d60bc0faf40db0d7d86078.
-//
-// Solidity: event ManagerSet(address indexed before, address indexed current)
-func (_BuyBot *BuyBotFilterer) FilterManagerSet(opts *bind.FilterOpts, before []common.Address, current []common.Address) (*BuyBotManagerSetIterator, error) {
-
-	var beforeRule []interface{}
-	for _, beforeItem := range before {
-		beforeRule = append(beforeRule, beforeItem)
-	}
-	var currentRule []interface{}
-	for _, currentItem := range current {
-		currentRule = append(currentRule, currentItem)
-	}
-
-	logs, sub, err := _BuyBot.contract.FilterLogs(opts, "ManagerSet", beforeRule, currentRule)
-	if err != nil {
-		return nil, err
-	}
-	return &BuyBotManagerSetIterator{contract: _BuyBot.contract, event: "ManagerSet", logs: logs, sub: sub}, nil
-}
-
-// WatchManagerSet is a free log subscription operation binding the contract event 0xc64707e618a83637fc41ad1e3aa4242bd5fdd353f3d60bc0faf40db0d7d86078.
-//
-// Solidity: event ManagerSet(address indexed before, address indexed current)
-func (_BuyBot *BuyBotFilterer) WatchManagerSet(opts *bind.WatchOpts, sink chan<- *BuyBotManagerSet, before []common.Address, current []common.Address) (event.Subscription, error) {
-
-	var beforeRule []interface{}
-	for _, beforeItem := range before {
-		beforeRule = append(beforeRule, beforeItem)
-	}
-	var currentRule []interface{}
-	for _, currentItem := range current {
-		currentRule = append(currentRule, currentItem)
-	}
-
-	logs, sub, err := _BuyBot.contract.WatchLogs(opts, "ManagerSet", beforeRule, currentRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(BuyBotManagerSet)
-				if err := _BuyBot.contract.UnpackLog(event, "ManagerSet", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseManagerSet is a log parse operation binding the contract event 0xc64707e618a83637fc41ad1e3aa4242bd5fdd353f3d60bc0faf40db0d7d86078.
-//
-// Solidity: event ManagerSet(address indexed before, address indexed current)
-func (_BuyBot *BuyBotFilterer) ParseManagerSet(log types.Log) (*BuyBotManagerSet, error) {
-	event := new(BuyBotManagerSet)
-	if err := _BuyBot.contract.UnpackLog(event, "ManagerSet", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -1564,159 +2195,6 @@ func (_BuyBot *BuyBotFilterer) ParseMinOrderAmountSet(log types.Log) (*BuyBotMin
 	return event, nil
 }
 
-// BuyBotOwnershipTransferredIterator is returned from FilterOwnershipTransferred and is used to iterate over the raw logs and unpacked data for OwnershipTransferred events raised by the BuyBot contract.
-type BuyBotOwnershipTransferredIterator struct {
-	Event *BuyBotOwnershipTransferred // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *BuyBotOwnershipTransferredIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(BuyBotOwnershipTransferred)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(BuyBotOwnershipTransferred)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *BuyBotOwnershipTransferredIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *BuyBotOwnershipTransferredIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// BuyBotOwnershipTransferred represents a OwnershipTransferred event raised by the BuyBot contract.
-type BuyBotOwnershipTransferred struct {
-	PreviousOwner common.Address
-	NewOwner      common.Address
-	Raw           types.Log // Blockchain specific contextual infos
-}
-
-// FilterOwnershipTransferred is a free log retrieval operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
-//
-// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
-func (_BuyBot *BuyBotFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*BuyBotOwnershipTransferredIterator, error) {
-
-	var previousOwnerRule []interface{}
-	for _, previousOwnerItem := range previousOwner {
-		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
-	}
-	var newOwnerRule []interface{}
-	for _, newOwnerItem := range newOwner {
-		newOwnerRule = append(newOwnerRule, newOwnerItem)
-	}
-
-	logs, sub, err := _BuyBot.contract.FilterLogs(opts, "OwnershipTransferred", previousOwnerRule, newOwnerRule)
-	if err != nil {
-		return nil, err
-	}
-	return &BuyBotOwnershipTransferredIterator{contract: _BuyBot.contract, event: "OwnershipTransferred", logs: logs, sub: sub}, nil
-}
-
-// WatchOwnershipTransferred is a free log subscription operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
-//
-// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
-func (_BuyBot *BuyBotFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *BuyBotOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
-	var previousOwnerRule []interface{}
-	for _, previousOwnerItem := range previousOwner {
-		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
-	}
-	var newOwnerRule []interface{}
-	for _, newOwnerItem := range newOwner {
-		newOwnerRule = append(newOwnerRule, newOwnerItem)
-	}
-
-	logs, sub, err := _BuyBot.contract.WatchLogs(opts, "OwnershipTransferred", previousOwnerRule, newOwnerRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(BuyBotOwnershipTransferred)
-				if err := _BuyBot.contract.UnpackLog(event, "OwnershipTransferred", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseOwnershipTransferred is a log parse operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
-//
-// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
-func (_BuyBot *BuyBotFilterer) ParseOwnershipTransferred(log types.Log) (*BuyBotOwnershipTransferred, error) {
-	event := new(BuyBotOwnershipTransferred)
-	if err := _BuyBot.contract.UnpackLog(event, "OwnershipTransferred", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
 // BuyBotRecipientSetIterator is returned from FilterRecipientSet and is used to iterate over the raw logs and unpacked data for RecipientSet events raised by the BuyBot contract.
 type BuyBotRecipientSetIterator struct {
 	Event *BuyBotRecipientSet // Event containing the contract specifics and raw log
@@ -1864,6 +2342,492 @@ func (_BuyBot *BuyBotFilterer) WatchRecipientSet(opts *bind.WatchOpts, sink chan
 func (_BuyBot *BuyBotFilterer) ParseRecipientSet(log types.Log) (*BuyBotRecipientSet, error) {
 	event := new(BuyBotRecipientSet)
 	if err := _BuyBot.contract.UnpackLog(event, "RecipientSet", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// BuyBotRoleAdminChangedIterator is returned from FilterRoleAdminChanged and is used to iterate over the raw logs and unpacked data for RoleAdminChanged events raised by the BuyBot contract.
+type BuyBotRoleAdminChangedIterator struct {
+	Event *BuyBotRoleAdminChanged // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *BuyBotRoleAdminChangedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(BuyBotRoleAdminChanged)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(BuyBotRoleAdminChanged)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *BuyBotRoleAdminChangedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *BuyBotRoleAdminChangedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// BuyBotRoleAdminChanged represents a RoleAdminChanged event raised by the BuyBot contract.
+type BuyBotRoleAdminChanged struct {
+	Role              [32]byte
+	PreviousAdminRole [32]byte
+	NewAdminRole      [32]byte
+	Raw               types.Log // Blockchain specific contextual infos
+}
+
+// FilterRoleAdminChanged is a free log retrieval operation binding the contract event 0xbd79b86ffe0ab8e8776151514217cd7cacd52c909f66475c3af44e129f0b00ff.
+//
+// Solidity: event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole)
+func (_BuyBot *BuyBotFilterer) FilterRoleAdminChanged(opts *bind.FilterOpts, role [][32]byte, previousAdminRole [][32]byte, newAdminRole [][32]byte) (*BuyBotRoleAdminChangedIterator, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var previousAdminRoleRule []interface{}
+	for _, previousAdminRoleItem := range previousAdminRole {
+		previousAdminRoleRule = append(previousAdminRoleRule, previousAdminRoleItem)
+	}
+	var newAdminRoleRule []interface{}
+	for _, newAdminRoleItem := range newAdminRole {
+		newAdminRoleRule = append(newAdminRoleRule, newAdminRoleItem)
+	}
+
+	logs, sub, err := _BuyBot.contract.FilterLogs(opts, "RoleAdminChanged", roleRule, previousAdminRoleRule, newAdminRoleRule)
+	if err != nil {
+		return nil, err
+	}
+	return &BuyBotRoleAdminChangedIterator{contract: _BuyBot.contract, event: "RoleAdminChanged", logs: logs, sub: sub}, nil
+}
+
+// WatchRoleAdminChanged is a free log subscription operation binding the contract event 0xbd79b86ffe0ab8e8776151514217cd7cacd52c909f66475c3af44e129f0b00ff.
+//
+// Solidity: event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole)
+func (_BuyBot *BuyBotFilterer) WatchRoleAdminChanged(opts *bind.WatchOpts, sink chan<- *BuyBotRoleAdminChanged, role [][32]byte, previousAdminRole [][32]byte, newAdminRole [][32]byte) (event.Subscription, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var previousAdminRoleRule []interface{}
+	for _, previousAdminRoleItem := range previousAdminRole {
+		previousAdminRoleRule = append(previousAdminRoleRule, previousAdminRoleItem)
+	}
+	var newAdminRoleRule []interface{}
+	for _, newAdminRoleItem := range newAdminRole {
+		newAdminRoleRule = append(newAdminRoleRule, newAdminRoleItem)
+	}
+
+	logs, sub, err := _BuyBot.contract.WatchLogs(opts, "RoleAdminChanged", roleRule, previousAdminRoleRule, newAdminRoleRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(BuyBotRoleAdminChanged)
+				if err := _BuyBot.contract.UnpackLog(event, "RoleAdminChanged", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRoleAdminChanged is a log parse operation binding the contract event 0xbd79b86ffe0ab8e8776151514217cd7cacd52c909f66475c3af44e129f0b00ff.
+//
+// Solidity: event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole)
+func (_BuyBot *BuyBotFilterer) ParseRoleAdminChanged(log types.Log) (*BuyBotRoleAdminChanged, error) {
+	event := new(BuyBotRoleAdminChanged)
+	if err := _BuyBot.contract.UnpackLog(event, "RoleAdminChanged", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// BuyBotRoleGrantedIterator is returned from FilterRoleGranted and is used to iterate over the raw logs and unpacked data for RoleGranted events raised by the BuyBot contract.
+type BuyBotRoleGrantedIterator struct {
+	Event *BuyBotRoleGranted // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *BuyBotRoleGrantedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(BuyBotRoleGranted)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(BuyBotRoleGranted)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *BuyBotRoleGrantedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *BuyBotRoleGrantedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// BuyBotRoleGranted represents a RoleGranted event raised by the BuyBot contract.
+type BuyBotRoleGranted struct {
+	Role    [32]byte
+	Account common.Address
+	Sender  common.Address
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterRoleGranted is a free log retrieval operation binding the contract event 0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d.
+//
+// Solidity: event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)
+func (_BuyBot *BuyBotFilterer) FilterRoleGranted(opts *bind.FilterOpts, role [][32]byte, account []common.Address, sender []common.Address) (*BuyBotRoleGrantedIterator, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+
+	logs, sub, err := _BuyBot.contract.FilterLogs(opts, "RoleGranted", roleRule, accountRule, senderRule)
+	if err != nil {
+		return nil, err
+	}
+	return &BuyBotRoleGrantedIterator{contract: _BuyBot.contract, event: "RoleGranted", logs: logs, sub: sub}, nil
+}
+
+// WatchRoleGranted is a free log subscription operation binding the contract event 0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d.
+//
+// Solidity: event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)
+func (_BuyBot *BuyBotFilterer) WatchRoleGranted(opts *bind.WatchOpts, sink chan<- *BuyBotRoleGranted, role [][32]byte, account []common.Address, sender []common.Address) (event.Subscription, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+
+	logs, sub, err := _BuyBot.contract.WatchLogs(opts, "RoleGranted", roleRule, accountRule, senderRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(BuyBotRoleGranted)
+				if err := _BuyBot.contract.UnpackLog(event, "RoleGranted", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRoleGranted is a log parse operation binding the contract event 0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d.
+//
+// Solidity: event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)
+func (_BuyBot *BuyBotFilterer) ParseRoleGranted(log types.Log) (*BuyBotRoleGranted, error) {
+	event := new(BuyBotRoleGranted)
+	if err := _BuyBot.contract.UnpackLog(event, "RoleGranted", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// BuyBotRoleRevokedIterator is returned from FilterRoleRevoked and is used to iterate over the raw logs and unpacked data for RoleRevoked events raised by the BuyBot contract.
+type BuyBotRoleRevokedIterator struct {
+	Event *BuyBotRoleRevoked // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *BuyBotRoleRevokedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(BuyBotRoleRevoked)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(BuyBotRoleRevoked)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *BuyBotRoleRevokedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *BuyBotRoleRevokedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// BuyBotRoleRevoked represents a RoleRevoked event raised by the BuyBot contract.
+type BuyBotRoleRevoked struct {
+	Role    [32]byte
+	Account common.Address
+	Sender  common.Address
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterRoleRevoked is a free log retrieval operation binding the contract event 0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b.
+//
+// Solidity: event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)
+func (_BuyBot *BuyBotFilterer) FilterRoleRevoked(opts *bind.FilterOpts, role [][32]byte, account []common.Address, sender []common.Address) (*BuyBotRoleRevokedIterator, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+
+	logs, sub, err := _BuyBot.contract.FilterLogs(opts, "RoleRevoked", roleRule, accountRule, senderRule)
+	if err != nil {
+		return nil, err
+	}
+	return &BuyBotRoleRevokedIterator{contract: _BuyBot.contract, event: "RoleRevoked", logs: logs, sub: sub}, nil
+}
+
+// WatchRoleRevoked is a free log subscription operation binding the contract event 0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b.
+//
+// Solidity: event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)
+func (_BuyBot *BuyBotFilterer) WatchRoleRevoked(opts *bind.WatchOpts, sink chan<- *BuyBotRoleRevoked, role [][32]byte, account []common.Address, sender []common.Address) (event.Subscription, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+
+	logs, sub, err := _BuyBot.contract.WatchLogs(opts, "RoleRevoked", roleRule, accountRule, senderRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(BuyBotRoleRevoked)
+				if err := _BuyBot.contract.UnpackLog(event, "RoleRevoked", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRoleRevoked is a log parse operation binding the contract event 0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b.
+//
+// Solidity: event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)
+func (_BuyBot *BuyBotFilterer) ParseRoleRevoked(log types.Log) (*BuyBotRoleRevoked, error) {
+	event := new(BuyBotRoleRevoked)
+	if err := _BuyBot.contract.UnpackLog(event, "RoleRevoked", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
