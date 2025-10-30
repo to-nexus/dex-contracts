@@ -10,15 +10,17 @@ contract BuyBotScript is Script {
 
     /**
      * @notice Deploy a new BuyBot instance
-     * @param owner Owner address (can call all owner functions)
+     * @param initialDelay Delay (in seconds) for admin transfer (0 for no delay)
+     * @param owner Owner address (gets DEFAULT_ADMIN_ROLE)
      * @param router CrossDexRouter address
      * @param minOrderAmount Minimum order amount in QUOTE token
      * @param interval Minimum time interval (in seconds) between buy executions (0 to disable)
      * @param recipient Address to receive purchased BASE tokens (address(0) to keep in contract)
-     * @param buyer Address authorized to execute buyMarket (in addition to owner)
-     * @param manager Address authorized to set minOrderAmount and interval (in addition to owner)
+     * @param buyer Address authorized to execute buyMarket (gets BUYER_ROLE)
+     * @param manager Address authorized to set minOrderAmount and interval (gets MANAGER_ROLE)
      */
     function deployBuyBot(
+        uint48 initialDelay,
         address owner,
         address router,
         uint256 minOrderAmount,
@@ -28,7 +30,7 @@ contract BuyBotScript is Script {
         address manager
     ) external returns (address) {
         vm.broadcast();
-        BuyBot bot = new BuyBot(owner, router, minOrderAmount, interval, recipient, buyer, manager);
+        BuyBot bot = new BuyBot(initialDelay, owner, router, minOrderAmount, interval, recipient, buyer, manager);
         return address(bot);
     }
 
@@ -96,53 +98,44 @@ contract BuyBotScript is Script {
     }
 
     /**
-     * @notice Grant BUYER_ROLE to an address
+     * @notice Grant a role to an address
      * @param buyBot BuyBot contract address
+     * @param role Role to grant (use BUYER_ROLE or MANAGER_ROLE constants)
      * @param account Address to grant the role
      */
-    function grantBuyerRole(address buyBot, address account) external {
+    function grantRole(address buyBot, bytes32 role, address account) external {
         vm.broadcast();
-        BuyBot(payable(buyBot)).grantBuyerRole(account);
+        BuyBot(payable(buyBot)).grantRole(role, account);
     }
 
     /**
-     * @notice Revoke BUYER_ROLE from an address
+     * @notice Revoke a role from an address
      * @param buyBot BuyBot contract address
+     * @param role Role to revoke (use BUYER_ROLE or MANAGER_ROLE constants)
      * @param account Address to revoke the role
      */
-    function revokeBuyerRole(address buyBot, address account) external {
+    function revokeRole(address buyBot, bytes32 role, address account) external {
         vm.broadcast();
-        BuyBot(payable(buyBot)).revokeBuyerRole(account);
+        BuyBot(payable(buyBot)).revokeRole(role, account);
     }
 
     /**
-     * @notice Grant MANAGER_ROLE to an address
+     * @notice Begin admin transfer (if delay is set)
      * @param buyBot BuyBot contract address
-     * @param account Address to grant the role
+     * @param newAdmin New admin address
      */
-    function grantManagerRole(address buyBot, address account) external {
+    function beginDefaultAdminTransfer(address buyBot, address newAdmin) external {
         vm.broadcast();
-        BuyBot(payable(buyBot)).grantManagerRole(account);
+        BuyBot(payable(buyBot)).beginDefaultAdminTransfer(newAdmin);
     }
 
     /**
-     * @notice Revoke MANAGER_ROLE from an address
+     * @notice Accept admin transfer (if delay is set)
      * @param buyBot BuyBot contract address
-     * @param account Address to revoke the role
      */
-    function revokeManagerRole(address buyBot, address account) external {
+    function acceptDefaultAdminTransfer(address buyBot) external {
         vm.broadcast();
-        BuyBot(payable(buyBot)).revokeManagerRole(account);
-    }
-
-    /**
-     * @notice Transfer ownership of BuyBot
-     * @param buyBot BuyBot contract address
-     * @param newOwner New owner address
-     */
-    function transferOwnership(address buyBot, address newOwner) external {
-        vm.broadcast();
-        BuyBot(payable(buyBot)).transferOwnership(newOwner);
+        BuyBot(payable(buyBot)).acceptDefaultAdminTransfer();
     }
 
     /**
@@ -206,11 +199,12 @@ contract BuyBotScript is Script {
 
     /**
      * @notice Deploy BuyBot with default settings for testing
-     * @dev Default: 100e18 min order, 0 interval, owner as recipient/buyer/manager
+     * @dev Default: 0 delay, 100e18 min order, 0 interval, owner as recipient/buyer/manager
      */
     function deployBuyBotDefault(address owner, address router) external returns (address) {
         vm.broadcast();
         BuyBot bot = new BuyBot(
+            0, // initialDelay: 0 (no delay)
             owner, // owner
             router, // router
             100e18, // minOrderAmount: 100 tokens

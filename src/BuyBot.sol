@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {AccessControl} from "@openzeppelin-contracts-5.2.0/access/AccessControl.sol";
-import {Ownable} from "@openzeppelin-contracts-5.2.0/access/Ownable.sol";
-
+import {AccessControlDefaultAdminRules} from
+    "@openzeppelin-contracts-5.2.0/access/extensions/AccessControlDefaultAdminRules.sol";
 import {IERC20} from "@openzeppelin-contracts-5.2.0/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin-contracts-5.2.0/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin-contracts-5.2.0/utils/ReentrancyGuard.sol";
@@ -14,10 +13,11 @@ import {IRouter} from "./interfaces/IRouter.sol";
 /**
  * @title BuyBot
  * @notice A bot contract that automatically buys tokens at market price using its balance
- * @dev Uses AccessControl for role-based permissions (BUYER_ROLE, MANAGER_ROLE)
+ * @dev Uses AccessControlDefaultAdminRules for role-based permissions with admin transfer delay
+ * @dev Roles: DEFAULT_ADMIN_ROLE (owner), BUYER_ROLE, MANAGER_ROLE
  * @dev Uses ReentrancyGuard to prevent reentrancy attacks during external calls
  */
-contract BuyBot is Ownable, AccessControl, ReentrancyGuard {
+contract BuyBot is AccessControlDefaultAdminRules, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     /// @notice Role for executing buyMarket function
@@ -35,7 +35,6 @@ contract BuyBot is Ownable, AccessControl, ReentrancyGuard {
     error BuyBotInvalidMinOrderAmount(uint256);
     error BuyBotInvalidAmount(uint256);
     error BuyBotIntervalNotPassed(uint256 timeSinceLastBuy, uint256 requiredInterval);
-    error BuyBotUnauthorizedCaller(address caller);
     error BuyBotInvalidBuyer(address buyer);
     error BuyBotInvalidManager(address manager);
 
@@ -68,7 +67,8 @@ contract BuyBot is Ownable, AccessControl, ReentrancyGuard {
 
     /**
      * @notice Contract constructor
-     * @param _owner Owner address (also gets DEFAULT_ADMIN_ROLE)
+     * @param _initialDelay Delay (in seconds) for admin transfer (0 for no delay)
+     * @param _owner Owner address (gets DEFAULT_ADMIN_ROLE)
      * @param _router CrossDexRouter address
      * @param _minOrderAmount Minimum order amount in QUOTE token
      * @param _interval Minimum time interval (in seconds) between buy executions
@@ -77,6 +77,7 @@ contract BuyBot is Ownable, AccessControl, ReentrancyGuard {
      * @param _manager Address authorized to set minOrderAmount and interval (gets MANAGER_ROLE)
      */
     constructor(
+        uint48 _initialDelay,
         address _owner,
         address _router,
         uint256 _minOrderAmount,
@@ -84,7 +85,7 @@ contract BuyBot is Ownable, AccessControl, ReentrancyGuard {
         address _recipient,
         address _buyer,
         address _manager
-    ) Ownable(_owner) {
+    ) AccessControlDefaultAdminRules(_initialDelay, _owner) {
         if (_router == address(0)) revert BuyBotInvalidRouter(_router);
         if (_minOrderAmount == 0) revert BuyBotInvalidMinOrderAmount(_minOrderAmount);
         if (_buyer == address(0)) revert BuyBotInvalidBuyer(_buyer);
@@ -95,36 +96,21 @@ contract BuyBot is Ownable, AccessControl, ReentrancyGuard {
         interval = _interval;
         recipient = _recipient;
 
-        // Grant DEFAULT_ADMIN_ROLE to owner
-        _grantRole(DEFAULT_ADMIN_ROLE, _owner);
+        // Set DEFAULT_ADMIN_ROLE as admin for BUYER_ROLE and MANAGER_ROLE
+        _setRoleAdmin(BUYER_ROLE, DEFAULT_ADMIN_ROLE);
+        _setRoleAdmin(MANAGER_ROLE, DEFAULT_ADMIN_ROLE);
 
-        // Grant BUYER_ROLE
+        // Grant BUYER_ROLE to owner and buyer
+        _grantRole(BUYER_ROLE, _owner);
         _grantRole(BUYER_ROLE, _buyer);
 
-        // Grant MANAGER_ROLE
+        // Grant MANAGER_ROLE to owner and manager
+        _grantRole(MANAGER_ROLE, _owner);
         _grantRole(MANAGER_ROLE, _manager);
 
         emit MinOrderAmountSet(0, _minOrderAmount);
         emit IntervalSet(0, _interval);
         emit RecipientSet(address(0), _recipient);
-    }
-
-    // ===== MODIFIERS =====
-
-    /**
-     * @notice Only addresses with BUYER_ROLE or owner can call
-     */
-    modifier onlyBuyer() {
-        if (!hasRole(BUYER_ROLE, msg.sender) && msg.sender != owner()) revert BuyBotUnauthorizedCaller(msg.sender);
-        _;
-    }
-
-    /**
-     * @notice Only addresses with MANAGER_ROLE or owner can call
-     */
-    modifier onlyManager() {
-        if (!hasRole(MANAGER_ROLE, msg.sender) && msg.sender != owner()) revert BuyBotUnauthorizedCaller(msg.sender);
-        _;
     }
 
     // ===== PUBLIC FUNCTIONS =====
@@ -137,7 +123,11 @@ contract BuyBot is Ownable, AccessControl, ReentrancyGuard {
      * @param amount Amount to spend (must be greater than 0)
      * @param maxMatchCount Maximum number of orders to match (0 for router default)
      */
-    function buyMarket(address pair, uint256 amount, uint256 maxMatchCount) external onlyBuyer nonReentrant {
+    function buyMarket(address pair, uint256 amount, uint256 maxMatchCount)
+        external
+        nonReentrant
+        onlyRole(BUYER_ROLE)
+    {
         if (pair == address(0)) revert BuyBotInvalidPair(pair);
         if (amount == 0) revert BuyBotInvalidAmount(amount);
 
@@ -200,15 +190,15 @@ contract BuyBot is Ownable, AccessControl, ReentrancyGuard {
      * @param token Token address to withdraw
      * @param amount Amount to withdraw (0 for entire balance)
      */
-    function withdraw(address token, uint256 amount) external onlyOwner nonReentrant {
+    function withdraw(address token, uint256 amount) external nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
         IERC20 tokenContract = IERC20(token);
         uint256 balance = tokenContract.balanceOf(address(this));
 
         uint256 withdrawAmount = amount == 0 ? balance : amount;
         require(withdrawAmount <= balance, "Insufficient balance");
 
-        tokenContract.safeTransfer(owner(), withdrawAmount);
-        emit Withdrawn(token, owner(), withdrawAmount);
+        tokenContract.safeTransfer(defaultAdmin(), withdrawAmount);
+        emit Withdrawn(token, defaultAdmin(), withdrawAmount);
     }
 
     /**
@@ -217,14 +207,14 @@ contract BuyBot is Ownable, AccessControl, ReentrancyGuard {
      * @dev Protected against reentrancy attacks
      * @param amount Amount to withdraw (0 for entire balance)
      */
-    function withdrawETH(uint256 amount) external onlyOwner nonReentrant {
+    function withdrawETH(uint256 amount) external nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
         uint256 balance = address(this).balance;
         uint256 withdrawAmount = amount == 0 ? balance : amount;
         require(withdrawAmount <= balance, "Insufficient balance");
 
-        (bool success,) = owner().call{value: withdrawAmount}("");
+        (bool success,) = defaultAdmin().call{value: withdrawAmount}("");
         require(success, "ETH transfer failed");
-        emit Withdrawn(NATIVE_COIN, owner(), withdrawAmount);
+        emit Withdrawn(NATIVE_COIN, defaultAdmin(), withdrawAmount);
     }
 
     /**
@@ -232,7 +222,7 @@ contract BuyBot is Ownable, AccessControl, ReentrancyGuard {
      * @dev Only owner or manager can set
      * @param _minOrderAmount New minimum order amount
      */
-    function setMinOrderAmount(uint256 _minOrderAmount) external onlyManager {
+    function setMinOrderAmount(uint256 _minOrderAmount) external onlyRole(MANAGER_ROLE) {
         if (_minOrderAmount == 0) revert BuyBotInvalidMinOrderAmount(_minOrderAmount);
         emit MinOrderAmountSet(minOrderAmount, _minOrderAmount);
         minOrderAmount = _minOrderAmount;
@@ -243,7 +233,7 @@ contract BuyBot is Ownable, AccessControl, ReentrancyGuard {
      * @dev Only owner or manager can set
      * @param _interval New interval in seconds (0 to disable)
      */
-    function setInterval(uint256 _interval) external onlyManager {
+    function setInterval(uint256 _interval) external onlyRole(MANAGER_ROLE) {
         emit IntervalSet(interval, _interval);
         interval = _interval;
     }
@@ -253,48 +243,21 @@ contract BuyBot is Ownable, AccessControl, ReentrancyGuard {
      * @dev Only owner can set
      * @param _recipient New recipient address (address(0) to keep in contract)
      */
-    function setRecipient(address _recipient) external onlyOwner {
+    function setRecipient(address _recipient) external onlyRole(DEFAULT_ADMIN_ROLE) {
         emit RecipientSet(recipient, _recipient);
         recipient = _recipient;
     }
 
-    /**
-     * @notice Grant BUYER_ROLE to an address
-     * @dev Only owner or admin can grant roles
-     * @param account Address to grant the role
-     */
-    function grantBuyerRole(address account) external onlyOwner {
-        grantRole(BUYER_ROLE, account);
-    }
-
-    /**
-     * @notice Revoke BUYER_ROLE from an address
-     * @dev Only owner or admin can revoke roles
-     * @param account Address to revoke the role
-     */
-    function revokeBuyerRole(address account) external onlyOwner {
-        revokeRole(BUYER_ROLE, account);
-    }
-
-    /**
-     * @notice Grant MANAGER_ROLE to an address
-     * @dev Only owner or admin can grant roles
-     * @param account Address to grant the role
-     */
-    function grantManagerRole(address account) external onlyOwner {
-        grantRole(MANAGER_ROLE, account);
-    }
-
-    /**
-     * @notice Revoke MANAGER_ROLE from an address
-     * @dev Only owner or admin can revoke roles
-     * @param account Address to revoke the role
-     */
-    function revokeManagerRole(address account) external onlyOwner {
-        revokeRole(MANAGER_ROLE, account);
-    }
-
     // ===== VIEW FUNCTIONS =====
+
+    /**
+     * @notice Get the owner (default admin) address
+     * @dev Wrapper for defaultAdmin() for compatibility
+     * @return The address of the default admin
+     */
+    function owner() public view override returns (address) {
+        return defaultAdmin();
+    }
 
     /**
      * @notice Check if market buy can be executed
@@ -307,7 +270,7 @@ contract BuyBot is Ownable, AccessControl, ReentrancyGuard {
         if (pair == address(0)) return (false, 0);
 
         // Check authorization
-        if (!hasRole(BUYER_ROLE, caller) && caller != owner()) return (false, 0);
+        if (!hasRole(BUYER_ROLE, caller)) return (false, 0);
 
         IPair.Config memory config = IPair(pair).getConfig();
         balance = config.QUOTE.balanceOf(address(this));
