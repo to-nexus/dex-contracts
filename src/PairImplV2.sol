@@ -763,6 +763,8 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
 
     function _resolveEffectiveFees() private view returns (FeeConfig memory feeInfos) {
         IMarketV2.FeeConfig memory defaultFeeBps = IMarketV2(MARKET).getFeeConfig();
+
+        // Step 1: Resolve NO_FEE_BPS to actual values from Market
         feeInfos.sellerMakerFeeBps =
             feeConfig.sellerMakerFeeBps == NO_FEE_BPS ? defaultFeeBps.sellerMakerFeeBps : feeConfig.sellerMakerFeeBps;
         feeInfos.sellerTakerFeeBps =
@@ -771,6 +773,27 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
             feeConfig.buyerMakerFeeBps == NO_FEE_BPS ? defaultFeeBps.buyerMakerFeeBps : feeConfig.buyerMakerFeeBps;
         feeInfos.buyerTakerFeeBps =
             feeConfig.buyerTakerFeeBps == NO_FEE_BPS ? defaultFeeBps.buyerTakerFeeBps : feeConfig.buyerTakerFeeBps;
+
+        // Step 2: Ensure taker >= maker by adjusting inherited values
+        // If maker > taker, prioritize user-specified values and adjust inherited ones
+        if (feeInfos.sellerMakerFeeBps > feeInfos.sellerTakerFeeBps) {
+            if (feeConfig.sellerTakerFeeBps == NO_FEE_BPS) {
+                // Taker was inherited - adjust it to match maker
+                feeInfos.sellerTakerFeeBps = feeInfos.sellerMakerFeeBps;
+            } else {
+                // Maker was inherited - adjust it to match taker
+                feeInfos.sellerMakerFeeBps = feeInfos.sellerTakerFeeBps;
+            }
+        }
+        if (feeInfos.buyerMakerFeeBps > feeInfos.buyerTakerFeeBps) {
+            if (feeConfig.buyerTakerFeeBps == NO_FEE_BPS) {
+                // Taker was inherited - adjust it to match maker
+                feeInfos.buyerTakerFeeBps = feeInfos.buyerMakerFeeBps;
+            } else {
+                // Maker was inherited - adjust it to match taker
+                feeInfos.buyerMakerFeeBps = feeInfos.buyerTakerFeeBps;
+            }
+        }
     }
 
     function _feeCollector() private view returns (address feeCollector) {
