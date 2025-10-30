@@ -671,18 +671,18 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         returns (uint256 newQuoteReserve)
     {
         (bool ok, uint256 newReserve) = Math.trySub(_accountReserves[account][1], amount);
-        if (!ok) revert PairInvalidReserve(address(QUOTE));
+        if (!ok) revert PairInvalidAccountReserve(account, address(QUOTE));
         _accountReserves[account][1] = newReserve;
 
         (ok, newQuoteReserve) = Math.trySub(reserve, amount);
-        if (!ok) revert PairInvalidAccountReserve(account, address(QUOTE));
+        if (!ok) revert PairInvalidReserve(address(QUOTE));
         if (!inMatching) quoteReserve = newQuoteReserve;
     }
 
     // LimitSell
     function _addBaseReserve(address account, uint256 amount) private {
         (bool ok, uint256 newReserve) = Math.tryAdd(baseReserve, amount);
-        if (!ok) revert PairInvalidAccountReserve(account, address(BASE));
+        if (!ok) revert PairInvalidReserve(address(BASE));
         baseReserve = newReserve;
 
         (ok, newReserve) = Math.tryAdd(_accountReserves[account][0], amount);
@@ -700,7 +700,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         _accountReserves[account][0] = newReserve;
 
         (ok, newBaseReserve) = Math.trySub(reserve, amount);
-        if (!ok) revert PairInvalidAccountReserve(account, address(BASE));
+        if (!ok) revert PairInvalidReserve(address(BASE));
         if (!inMatching) baseReserve = newBaseReserve;
     }
 
