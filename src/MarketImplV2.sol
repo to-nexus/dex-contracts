@@ -9,21 +9,23 @@ import {EnumerableMap} from "@openzeppelin-contracts-5.2.0/utils/structs/Enumera
 
 import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/access/OwnableUpgradeable.sol";
 
-import {PairImpl} from "./PairImpl.sol";
+import {PairImplV2} from "./PairImplV2.sol";
 import {ICrossDex} from "./interfaces/ICrossDex.sol";
-import {IMarket, IMarketInitializer} from "./interfaces/IMarket.sol";
+import {BPS_DENOMINATOR, IMarketV2, NO_FEE_BPS} from "./interfaces/IMarket.sol";
 
-contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgradeable {
+contract MarketImplV2 is IMarketV2, UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableMap for EnumerableMap.AddressToAddressMap;
 
     error MarketInvalidInitializeData(bytes32);
     error MarketInvalidBaseAddress(address);
     error MarketAlreadyCreatedBaseAddress(address);
     error MarketDeployPair();
+    error MarketInvalidFeeStructure(uint32 makerFee, uint32 takerFee);
 
     event PairCreated(address indexed pair, address indexed base, uint256 timestamp);
     event FeeCollectorChanged(address indexed before, address indexed current);
-    event FeeBpsChanged(uint256 indexed before, uint256 indexed current);
+    event MarketFeesUpdated(uint32 sellerMakerFee, uint32 sellerTakerFee, uint32 buyerMakerFee, uint32 buyerTakerFee);
+    event PairImplSet(address indexed before, address indexed current);
 
     uint256 public deployed; // immutable
     ICrossDex public CROSS_DEX; // immutable
@@ -33,23 +35,25 @@ contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgr
     address public pairImpl;
 
     address public override feeCollector;
-    uint32 public override feeBps; // BPS: basis point (1/10000)
+    uint32 private _emptySlot;
 
     EnumerableMap.AddressToAddressMap private _allPairs; // base => pair
+    FeeConfig private _feeConfig;
 
-    uint256[41] private __gap;
+    uint256[40] private __gap;
 
     constructor() {
         _disableInitializers();
     }
 
+    // Initialize with 4 different fee rates encoded in bytes data
     function initialize(
         address _owner,
         address _router,
         address _quote,
         address _pairImpl,
         address _feeCollector,
-        uint256 _feeBPS
+        bytes memory feeData
     ) external override initializer {
         __Ownable_init(_owner);
 
@@ -58,16 +62,19 @@ contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgr
         if (_quote == address(0)) revert MarketInvalidInitializeData("quote");
         if (_pairImpl == address(0)) revert MarketInvalidInitializeData("pairImpl");
         if (_feeCollector == address(0)) revert MarketInvalidInitializeData("feeCollector");
-        if (_feeBPS > type(uint32).max) revert MarketInvalidInitializeData("feeBPS");
+
+        // Decode 4 different fee rates
+        (uint32 _sellerMakerFeeBps, uint32 _sellerTakerFeeBps, uint32 _buyerMakerFeeBps, uint32 _buyerTakerFeeBps) =
+            abi.decode(feeData, (uint32, uint32, uint32, uint32));
 
         deployed = block.number;
         CROSS_DEX = ICrossDex(_msgSender());
         QUOTE = _quote;
         ROUTER = _router;
         pairImpl = _pairImpl;
-
         feeCollector = _feeCollector;
-        feeBps = uint32(_feeBPS);
+
+        _setFeeBps(_sellerMakerFeeBps, _sellerTakerFeeBps, _buyerMakerFeeBps, _buyerTakerFeeBps);
     }
 
     function allPairs() external view returns (address[] memory bases, address[] memory pairs) {
@@ -87,11 +94,19 @@ contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgr
         CROSS_DEX.checkTickSizeRoles(account);
     }
 
+    function getFeeConfig() external view override returns (FeeConfig memory) {
+        return _feeConfig;
+    }
+
     function baseToPair(address base) external view returns (address) {
         return _allPairs.get(base);
     }
 
-    function createPair(address base, uint256 tickSize, uint256 lotSize) external onlyOwner returns (address) {
+    function createPair(address base, uint256 tickSize, uint256 lotSize, bytes memory feeData)
+        external
+        onlyOwner
+        returns (address)
+    {
         if (base == address(0) || base == address(QUOTE)) revert MarketInvalidBaseAddress(base);
         uint256 baseDecimals = IERC20Metadata(base).decimals();
         if (baseDecimals == 0) revert MarketInvalidBaseAddress(base);
@@ -99,7 +114,9 @@ contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgr
 
         bytes memory bytecode = abi.encodePacked(
             type(ERC1967Proxy).creationCode,
-            abi.encode(pairImpl, abi.encodeCall(PairImpl.initialize, (ROUTER, QUOTE, base, tickSize, lotSize)))
+            abi.encode(
+                pairImpl, abi.encodeCall(PairImplV2.initialize, (ROUTER, QUOTE, base, tickSize, lotSize, feeData))
+            )
         );
         bytes32 salt = keccak256(abi.encodePacked(base));
         address pair = Create2.deploy(0, salt, bytecode);
@@ -118,10 +135,50 @@ contract MarketImpl is IMarket, IMarketInitializer, UUPSUpgradeable, OwnableUpgr
         feeCollector = _feeCollector;
     }
 
-    function setFeeBps(uint256 _feeBps) external onlyOwner {
-        if (_feeBps > type(uint32).max) revert MarketInvalidInitializeData("feeBPS");
-        emit FeeBpsChanged(feeBps, _feeBps);
-        feeBps = uint32(_feeBps);
+    function setMarketFees(
+        uint32 _sellerMakerFeeBps,
+        uint32 _sellerTakerFeeBps,
+        uint32 _buyerMakerFeeBps,
+        uint32 _buyerTakerFeeBps
+    ) external onlyOwner {
+        _setFeeBps(_sellerMakerFeeBps, _sellerTakerFeeBps, _buyerMakerFeeBps, _buyerTakerFeeBps);
+    }
+
+    function setPairImpl(address _pairImpl) external onlyOwner {
+        if (_pairImpl == address(0)) revert MarketInvalidInitializeData("pairImpl");
+        emit PairImplSet(pairImpl, _pairImpl);
+        pairImpl = _pairImpl;
+    }
+
+    function _setFeeBps(
+        uint32 sellerMakerFeeBps_,
+        uint32 sellerTakerFeeBps_,
+        uint32 buyerMakerFeeBps_,
+        uint32 buyerTakerFeeBps_
+    ) private {
+        // range check
+        if (sellerMakerFeeBps_ >= BPS_DENOMINATOR) revert MarketInvalidInitializeData("sellerMakerFeeBps");
+        if (sellerTakerFeeBps_ >= BPS_DENOMINATOR) revert MarketInvalidInitializeData("sellerTakerFeeBps");
+        if (buyerMakerFeeBps_ >= BPS_DENOMINATOR) revert MarketInvalidInitializeData("buyerMakerFeeBps");
+        if (buyerTakerFeeBps_ >= BPS_DENOMINATOR) revert MarketInvalidInitializeData("buyerTakerFeeBps");
+
+        // logical check - taker fee must be >= maker fee
+        // 🔥 NEW: logical check - taker fee must be >= maker fee
+        if (sellerTakerFeeBps_ < sellerMakerFeeBps_) {
+            revert MarketInvalidFeeStructure(sellerMakerFeeBps_, sellerTakerFeeBps_);
+        }
+        if (buyerTakerFeeBps_ < buyerMakerFeeBps_) {
+            revert MarketInvalidFeeStructure(buyerMakerFeeBps_, buyerTakerFeeBps_);
+        }
+
+        // set
+        _feeConfig = FeeConfig({
+            sellerMakerFeeBps: sellerMakerFeeBps_,
+            sellerTakerFeeBps: sellerTakerFeeBps_,
+            buyerMakerFeeBps: buyerMakerFeeBps_,
+            buyerTakerFeeBps: buyerTakerFeeBps_
+        });
+        emit MarketFeesUpdated(sellerMakerFeeBps_, sellerTakerFeeBps_, buyerMakerFeeBps_, buyerTakerFeeBps_);
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
