@@ -12,6 +12,7 @@ A decentralized exchange (DEX) that enables trading of tokens through an order b
 - [Security](#security)
 - [License](#license)
 - [Disclaimer](#disclaimer)
+- [Technical Documentation](#technical-documentation)
 
 ## 🎯 What is DEX V1?
 
@@ -95,4 +96,6 @@ This software is provided "as is" without warranty. Users should conduct their o
 
 ---
 
-**Note**: For detailed technical documentation about the contract architecture and implementation, please refer to the contract source code and interfaces.
+## 📚 Technical Documentation
+
+For detailed technical documentation about the contract architecture, implementation details, and V2 changes, see [Technical Documentation](TECHNICAL.md).

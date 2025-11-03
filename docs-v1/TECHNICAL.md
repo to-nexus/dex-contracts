@@ -203,8 +203,6 @@ classDiagram
 **Key Functions:**
 - `submitBuyLimit()` / `submitSellLimit()`: Submit limit orders
 - `submitBuyMarket()` / `submitSellMarket()`: Submit market orders
-  - V1: `submitBuyMarket(address pair, uint256 amount, uint256 _maxMatchCount)`
-  - V2: `submitBuyMarket(address pair, uint256 quoteVolume, uint256 _maxMatchCount)`
 - `cancelOrder()`: Cancel pending orders (V2 adds `nonReentrant` modifier)
 - `isPair()`: Validate pair address
 - `getRequiredBuyVolume()` (V2): Calculate required QUOTE volume including buyer taker fee
@@ -465,24 +463,6 @@ graph LR
 - Used by `submitBuyLimit()` and `submitBuyMarket()` to transfer correct amount upfront
 - Formula: `quoteVolume + (quoteVolume * buyerTakerFeeBps / BPS_DENOMINATOR)`
 - Pair validates that user transferred sufficient funds including fee during order execution
-
-### 5. Storage Layout Changes
-
-**CrossDexImpl:**
-- V1: `uint256[44] __gap`
-- V2: `uint256[42] __gap` (2 slots used, but structure remains same - gap reduction due to reinitializer usage)
-
-**MarketImpl:**
-- V1: `uint32 public feeBps` + `uint256[41] __gap`
-- V2: `FeeConfig private _feeConfig` + `uint32 private _emptySlot` + `uint256[40] __gap`
-
-**Router:**
-- V1: `uint256[45] __gap`
-- V2: `EnumerableSet.AddressSet private whitelistedCodeAccounts` + `uint256[43] __gap`
-
-**PairImpl:**
-- V1: `uint256[32] __gap`
-- V2: `FeeConfig public feeConfig` + `uint256[24] __gap`
 
 ## 🔐 Security Considerations
 

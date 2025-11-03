@@ -203,8 +203,6 @@ classDiagram
 **주요 함수:**
 - `submitBuyLimit()` / `submitSellLimit()`: 지정가 주문 제출
 - `submitBuyMarket()` / `submitSellMarket()`: 시장가 주문 제출
-  - V1: `submitBuyMarket(address pair, uint256 amount, uint256 _maxMatchCount)`
-  - V2: `submitBuyMarket(address pair, uint256 quoteVolume, uint256 _maxMatchCount)`
 - `cancelOrder()`: 대기 중인 주문 취소 (V2는 `nonReentrant` 수정자 추가)
 - `isPair()`: 페어 주소 검증
 - `getRequiredBuyVolume()` (V2): 구매자 taker 수수료를 포함한 필요 QUOTE 볼륨 계산
@@ -465,24 +463,6 @@ graph LR
 - `submitBuyLimit()` 및 `submitBuyMarket()`에서 사전에 올바른 금액을 전송하는 데 사용됨
 - 공식: `quoteVolume + (quoteVolume * buyerTakerFeeBps / BPS_DENOMINATOR)`
 - 페어는 주문 실행 중 사용자가 수수료를 포함한 충분한 자금을 전송했는지 검증함
-
-### 5. 스토리지 레이아웃 변경
-
-**CrossDexImpl:**
-- V1: `uint256[44] __gap`
-- V2: `uint256[42] __gap` (구조는 동일 - gap 감소는 reinitializer 사용으로 인함)
-
-**MarketImpl:**
-- V1: `uint32 public feeBps` + `uint256[41] __gap`
-- V2: `FeeConfig private _feeConfig` + `uint32 private _emptySlot` + `uint256[40] __gap`
-
-**Router:**
-- V1: `uint256[45] __gap`
-- V2: `EnumerableSet.AddressSet private whitelistedCodeAccounts` + `uint256[43] __gap`
-
-**PairImpl:**
-- V1: `uint256[32] __gap`
-- V2: `FeeConfig public feeConfig` + `uint256[24] __gap`
 
 ## 🔐 보안 고려사항
 
