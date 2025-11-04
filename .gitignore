@@ -19,6 +19,7 @@ dependencies/
 *.txt
 
 .idea
-
+.vscode
+.DS_Store
 
 test/remote

@@ -1,10 +1,10 @@
-# DEX Contracts V2
+# DEX Contracts V1
 
-A decentralized exchange (DEX) that enables trading of tokens through an order book system. Trade limit and market orders with flexible fee structures and native CROSS coin support.
+A decentralized exchange (DEX) that enables trading of tokens through an order book system. Trade limit and market orders with a simple fee structure and native CROSS coin support.
 
 ## 📋 Table of Contents
 
-- [What is DEX V2?](#what-is-dex-v2)
+- [What is DEX V1?](#what-is-dex-v1)
 - [Key Features](#key-features)
 - [Order Types](#order-types)
 - [Fees](#fees)
@@ -14,15 +14,15 @@ A decentralized exchange (DEX) that enables trading of tokens through an order b
 - [Disclaimer](#disclaimer)
 - [Technical Documentation](#technical-documentation)
 
-## 🎯 What is DEX V2?
+## 🎯 What is DEX V1?
 
-DEX V2 is a decentralized exchange protocol that allows users to trade tokens through an order book. Unlike automated market makers (AMMs), this DEX uses a traditional order book model where buy and sell orders are matched at specified prices.
+DEX V1 is the original version of a decentralized exchange protocol that allows users to trade tokens through an order book. It provides a simple and straightforward trading experience with a single fee rate per market.
 
 ### Key Highlights
 
-- **Order Book Trading**: Buy and sell orders are matched through an order book, giving you control over your trade prices
-- **Flexible Fee Structure**: Each market can have different fee rates for makers and takers
-- **Multiple Markets**: Multiple markets can exist for the same quote token, each with different fee policies
+- **Order Book Trading**: Buy and sell orders are matched through an order book
+- **Simple Fee Structure**: Each market uses a single fee rate for all trades
+- **One Market per Quote Token**: Each quote token can have exactly one market
 - **Native CROSS Support**: Use Cross Chain's native CROSS coin directly without manual wrapping
 
 ## ✨ Key Features
@@ -52,25 +52,21 @@ The DEX seamlessly supports Cross Chain's native CROSS coin:
 
 ## 💰 Fees
 
-DEX V2 uses a flexible fee structure with four separate fee rates:
+DEX V1 uses a simple fee structure:
 
-1. **Seller Maker Fee**: Fee for sellers who place limit orders
-2. **Seller Taker Fee**: Fee for sellers who execute market orders
-3. **Buyer Maker Fee**: Fee for buyers who place limit orders
-4. **Buyer Taker Fee**: Fee for buyers who execute market orders
+- **Single Fee Rate**: Each market has one fee rate that applies to all trades
+- **Same for All**: The same fee percentage applies regardless of:
+  - Whether it's a buy or sell order
+  - Whether it's a limit order (maker) or market order (taker)
+- **Market-Level Configuration**: Each market sets its own fee rate
 
 ### How Fees Work
 
-- Each market sets its own fee rates
-- **Maker orders** (limit orders): Typically lower fees since you provide liquidity to the order book
-- **Taker orders** (market orders): Typically higher fees since you consume liquidity
-- Fees can be different for buy vs sell orders
-
-The fee structure allows markets to incentivize certain trading behaviors, such as encouraging limit orders by offering lower maker fees.
+When you trade, a percentage of the trade amount is taken as a fee. For example, if a market has a 0.3% fee rate and you trade 1000 tokens, 3 tokens will be collected as a fee.
 
 ## 🔒 Security
 
-The DEX contracts have been professionally audited to ensure security and reliability.
+The DEX contracts follow security best practices to ensure safe trading.
 
 ### Security Measures
 
@@ -79,11 +75,9 @@ The DEX contracts have been professionally audited to ensure security and reliab
 - Protection against reentrancy attacks
 - Access control for administrative functions
 
-For detailed security information, see the audit report in [`audits/REP-final-20251103T123743Z.pdf`](audits/REP-final-20251103T123743Z.pdf).
-
 ## 📄 License
 
-This project is licensed under the Business Source License 1.1 (BUSL-1.1). See the [LICENSE](./LICENSE) file for details.
+This project is licensed under the Business Source License 1.1 (BUSL-1.1). See the [LICENSE](../LICENSE) file for details.
 
 **License Terms:**
 - **Licensor**: Nexus Co., Ltd.
@@ -104,4 +98,4 @@ This software is provided "as is" without warranty. Users should conduct their o
 
 ## 📚 Technical Documentation
 
-For detailed technical documentation about the contract architecture, implementation details, and V2 changes, see [Technical Documentation](docs-v1/TECHNICAL.md).
+For detailed technical documentation about the contract architecture, implementation details, and V2 changes, see [Technical Documentation](TECHNICAL.md).
