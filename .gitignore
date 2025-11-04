@@ -20,5 +20,6 @@ dependencies/
 
 .idea
 .vscode
+.DS_Store
 
 test/remote
