@@ -19,6 +19,6 @@ dependencies/
 *.txt
 
 .idea
-
+.vscode
 
 test/remote

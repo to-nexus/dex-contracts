@@ -79,7 +79,7 @@ The DEX contracts have been professionally audited to ensure security and reliab
 - Protection against reentrancy attacks
 - Access control for administrative functions
 
-For detailed security information, see the audit report in `audits/AUDIT_REPORT_V2.md`.
+For detailed security information, see the audit report in [`audits/REP-final-20251103T123743Z.pdf`](audits/REP-final-20251103T123743Z.pdf).
 
 ## 📄 License
 
