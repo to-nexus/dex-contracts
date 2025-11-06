@@ -92,68 +92,6 @@ Markets:
 - Verse8 Market: 0xcb95777d0f8d2EfA5e836Cb65f814dF8C7261d83
 ```
 
-### TypeScript 설정 (ethers.js)
-
-#### 패키지 설치
-
-```bash
-npm install ethers
-```
-
-또는
-
-```bash
-yarn add ethers
-```
-
-#### 기본 설정
-
-```typescript
-import { ethers } from 'ethers';
-
-const provider = new ethers.JsonRpcProvider(RPC_URL);
-```
-
-### 프라이빗키를 사용한 Wallet 생성
-
-#### 방법 1: 환경 변수에서 가져오기 (권장)
-
-```typescript
-// .env 파일
-PRIVATE_KEY=your_private_key_here
-
-// TypeScript 코드
-const privateKey = process.env.PRIVATE_KEY;
-if (!privateKey) {
-    throw new Error('PRIVATE_KEY environment variable is not set');
-}
-const wallet = new ethers.Wallet(privateKey, provider);
-```
-
-#### 방법 2: 파일에서 가져오기
-
-```typescript
-import * as fs from 'fs';
-
-const privateKey = fs.readFileSync('.private-key', 'utf-8').trim();
-const wallet = new ethers.Wallet(privateKey, provider);
-```
-
-#### 방법 3: 직접 입력 (개발 환경만)
-
-```typescript
-// ⚠️ 주의: 프로덕션에서는 절대 사용하지 마세요!
-const privateKey = 'your_private_key_here';
-const wallet = new ethers.Wallet(privateKey, provider);
-```
-
-#### 보안 주의사항
-
-- ✅ 환경 변수 사용 권장
-- ✅ `.env` 파일을 `.gitignore`에 추가
-- ❌ 절대 코드에 프라이빗키를 하드코딩하지 마세요
-- ❌ 프라이빗키를 공개 저장소에 커밋하지 마세요
-
 ---
 
 ## 3. ERC20 토큰 Approve
@@ -689,11 +627,6 @@ Router는 내부적으로 CROSS 네이티브 코인을 자동으로 처리합니
 - [router-order-typescript-ko.ts](./examples/router-order-typescript-ko.ts) - 한국어 버전
 - [router-order-typescript-en.ts](./examples/router-order-typescript-en.ts) - 영어 버전
 
-### Foundry Script 예제
-
-완전한 예제 코드는 다음 파일을 참조하세요:
-- [router-order-script-ko.s.sol](./examples/router-order-script-ko.s.sol) - 한국어 버전
-- [router-order-script-en.s.sol](./examples/router-order-script-en.s.sol) - 영어 버전
 
 ### 완전한 예제: 토큰 Approve 후 매수 지정가 주문
 
@@ -736,26 +669,76 @@ async function exampleBuyLimitOrder() {
 }
 ```
 
+### TypeScript 설정 (ethers.js)
+
+#### 패키지 설치
+
+```bash
+npm install ethers
+```
+
+또는
+
+```bash
+yarn add ethers
+```
+
+#### 기본 설정
+
+```typescript
+import { ethers } from 'ethers';
+
+const provider = new ethers.JsonRpcProvider(RPC_URL);
+```
+
+### 프라이빗키를 사용한 Wallet 생성
+
+#### 방법 1: 환경 변수에서 가져오기 (권장)
+
+```typescript
+// .env 파일
+PRIVATE_KEY=your_private_key_here
+
+// TypeScript 코드
+const privateKey = process.env.PRIVATE_KEY;
+if (!privateKey) {
+    throw new Error('PRIVATE_KEY environment variable is not set');
+}
+const wallet = new ethers.Wallet(privateKey, provider);
+```
+
+#### 방법 2: 파일에서 가져오기
+
+```typescript
+import * as fs from 'fs';
+
+const privateKey = fs.readFileSync('.private-key', 'utf-8').trim();
+const wallet = new ethers.Wallet(privateKey, provider);
+```
+
+#### 방법 3: 직접 입력 (개발 환경만)
+
+```typescript
+// ⚠️ 주의: 프로덕션에서는 절대 사용하지 마세요!
+const privateKey = 'your_private_key_here';
+const wallet = new ethers.Wallet(privateKey, provider);
+```
+
+#### 보안 주의사항
+
+- ✅ 환경 변수 사용 권장
+- ✅ `.env` 파일을 `.gitignore`에 추가
+- ❌ 절대 코드에 프라이빗키를 하드코딩하지 마세요
+- ❌ 프라이빗키를 공개 저장소에 커밋하지 마세요
+
 ---
 
 ## 10. 고급 사용법
-
-### Batch 트랜잭션
-
-여러 주문을 한 번에 처리하려면 Multicall을 사용할 수 있습니다 (추가 구현 필요).
 
 ### 가스 최적화 팁
 
 1. **무제한 Approve 사용**: 반복적인 Approve 트랜잭션을 피할 수 있습니다
 2. **적절한 maxMatchCount 설정**: 너무 높으면 가스 소모가 클 수 있습니다
-3. **주문 취소는 배치로**: 여러 주문을 한 번에 취소하는 것이 효율적입니다
-
-### 주문 모니터링
-
-이벤트를 리스닝하여 주문 상태를 모니터링할 수 있습니다:
-- `OrderCreated`: 주문 생성
-- `OrderMatched`: 주문 매칭
-- `OrderClosed`: 주문 완료/취소
 
 ---
 
@@ -792,10 +775,4 @@ async function exampleBuyLimitOrder() {
 - 가스 가격을 조정하세요
 
 ---
-
-## 📚 참고 자료
-
-- [Router Contract Documentation](../src/CrossDexRouterV2.sol/contract.CrossDexRouterV2.md)
-- [Pair Contract Documentation](../src/PairImplV2.sol/contract.PairImplV2.md)
-- [Market Contract Documentation](../src/MarketImplV2.sol/contract.MarketImplV2.md)
 

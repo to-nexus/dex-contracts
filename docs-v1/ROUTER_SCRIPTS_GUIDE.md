@@ -92,68 +92,6 @@ Markets:
 - Verse8 Market: 0xcb95777d0f8d2EfA5e836Cb65f814dF8C7261d83
 ```
 
-### TypeScript Setup (ethers.js)
-
-#### Package Installation
-
-```bash
-npm install ethers
-```
-
-or
-
-```bash
-yarn add ethers
-```
-
-#### Basic Setup
-
-```typescript
-import { ethers } from 'ethers';
-
-const provider = new ethers.JsonRpcProvider(RPC_URL);
-```
-
-### Creating Wallet with Private Key
-
-#### Method 1: From Environment Variable (Recommended)
-
-```typescript
-// .env file
-PRIVATE_KEY=your_private_key_here
-
-// TypeScript code
-const privateKey = process.env.PRIVATE_KEY;
-if (!privateKey) {
-    throw new Error('PRIVATE_KEY environment variable is not set');
-}
-const wallet = new ethers.Wallet(privateKey, provider);
-```
-
-#### Method 2: From File
-
-```typescript
-import * as fs from 'fs';
-
-const privateKey = fs.readFileSync('.private-key', 'utf-8').trim();
-const wallet = new ethers.Wallet(privateKey, provider);
-```
-
-#### Method 3: Direct Input (Dev Only)
-
-```typescript
-// ⚠️ Warning: Never use in production!
-const privateKey = 'your_private_key_here';
-const wallet = new ethers.Wallet(privateKey, provider);
-```
-
-#### Security Notes
-
-- ✅ Use environment variables (recommended)
-- ✅ Add `.env` file to `.gitignore`
-- ❌ Never hardcode private keys in code
-- ❌ Never commit private keys to public repositories
-
 ---
 
 ## 3. ERC20 Token Approve
@@ -689,12 +627,6 @@ Complete example code can be found in:
 - [router-order-typescript-ko.ts](./examples/router-order-typescript-ko.ts) - Korean version
 - [router-order-typescript-en.ts](./examples/router-order-typescript-en.ts) - English version
 
-### Foundry Script Example
-
-Complete example code can be found in:
-- [router-order-script-ko.s.sol](./examples/router-order-script-ko.s.sol) - Korean version
-- [router-order-script-en.s.sol](./examples/router-order-script-en.s.sol) - English version
-
 ### Complete Example: Approve Token and Submit Buy Limit Order
 
 ```typescript
@@ -736,26 +668,76 @@ async function exampleBuyLimitOrder() {
 }
 ```
 
+### TypeScript Setup (ethers.js)
+
+#### Package Installation
+
+```bash
+npm install ethers
+```
+
+or
+
+```bash
+yarn add ethers
+```
+
+#### Basic Setup
+
+```typescript
+import { ethers } from 'ethers';
+
+const provider = new ethers.JsonRpcProvider(RPC_URL);
+```
+
+### Creating Wallet with Private Key
+
+#### Method 1: From Environment Variable (Recommended)
+
+```typescript
+// .env file
+PRIVATE_KEY=your_private_key_here
+
+// TypeScript code
+const privateKey = process.env.PRIVATE_KEY;
+if (!privateKey) {
+    throw new Error('PRIVATE_KEY environment variable is not set');
+}
+const wallet = new ethers.Wallet(privateKey, provider);
+```
+
+#### Method 2: From File
+
+```typescript
+import * as fs from 'fs';
+
+const privateKey = fs.readFileSync('.private-key', 'utf-8').trim();
+const wallet = new ethers.Wallet(privateKey, provider);
+```
+
+#### Method 3: Direct Input (Dev Only)
+
+```typescript
+// ⚠️ Warning: Never use in production!
+const privateKey = 'your_private_key_here';
+const wallet = new ethers.Wallet(privateKey, provider);
+```
+
+#### Security Notes
+
+- ✅ Use environment variables (recommended)
+- ✅ Add `.env` file to `.gitignore`
+- ❌ Never hardcode private keys in code
+- ❌ Never commit private keys to public repositories
+
 ---
 
 ## 10. Advanced Usage
-
-### Batch Transactions
-
-To process multiple orders at once, you can use Multicall (additional implementation needed).
 
 ### Gas Optimization Tips
 
 1. **Use Unlimited Approve**: Avoids repeated approve transactions
 2. **Set Appropriate maxMatchCount**: Too high can consume more gas
-3. **Cancel Orders in Batch**: More efficient to cancel multiple orders at once
-
-### Order Monitoring
-
-You can monitor order status by listening to events:
-- `OrderCreated`: Order created
-- `OrderMatched`: Order matched
-- `OrderClosed`: Order completed/canceled
 
 ---
 
@@ -792,10 +774,4 @@ You can monitor order status by listening to events:
 - Adjust gas price
 
 ---
-
-## 📚 References
-
-- [Router Contract Documentation](../src/CrossDexRouterV2.sol/contract.CrossDexRouterV2.md)
-- [Pair Contract Documentation](../src/PairImplV2.sol/contract.PairImplV2.md)
-- [Market Contract Documentation](../src/MarketImplV2.sol/contract.MarketImplV2.md)
 
