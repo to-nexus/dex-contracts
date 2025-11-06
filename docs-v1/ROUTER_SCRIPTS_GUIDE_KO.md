@@ -8,13 +8,14 @@ Router를 사용하여 주문을 넣는 방법에 대한 상세 가이드입니�
 2. [환경 설정 및 컨트랙트 주소](#2-환경-설정-및-컨트랙트-주소)
 3. [ERC20 토큰 Approve](#3-erc20-토큰-approve)
 4. [Pair 주소 조회 방법](#4-pair-주소-조회-방법)
-5. [지정가 주문 (Limit Order)](#5-지정가-주문-limit-order)
-6. [시장가 주문 (Market Order)](#6-시장가-주문-market-order)
-7. [주문 취소](#7-주문-취소)
-8. [CROSS 네이티브 코인 사용](#8-cross-네이티브-코인-사용)
-9. [예제 코드](#9-예제-코드)
-10. [고급 사용법](#10-고급-사용법)
-11. [트러블슈팅](#11-트러블슈팅)
+5. [Adjacent 파라미터 설명](#5-adjacent-파라미터-설명)
+6. [지정가 주문 (Limit Order)](#6-지정가-주문-limit-order)
+7. [시장가 주문 (Market Order)](#7-시장가-주문-market-order)
+8. [주문 취소](#8-주문-취소)
+9. [CROSS 네이티브 코인 사용](#9-cross-네이티브-코인-사용)
+10. [예제 코드](#10-예제-코드)
+11. [고급 사용법](#11-고급-사용법)
+12. [트러블슈팅](#12-트러블슈팅)
 
 ---
 
@@ -236,7 +237,102 @@ graph LR
 
 ---
 
-## 5. 지정가 주문 (Limit Order)
+## 5. Adjacent 파라미터 설명
+
+### Adjacent란?
+
+`adjacent`는 주문서에 주문을 삽입할 위치를 찾는 과정을 최적화하기 위한 힌트 파라미터입니다. 주문서는 정렬된 연결 리스트 구조로 되어 있어, 새로운 주문을 삽입할 때 적절한 위치를 찾아야 합니다.
+
+### 동작 원리
+
+주문서에서 주문을 삽입할 위치를 찾을 때:
+1. `adjacent[0]`이 주문서에 존재하는 가격이면, 해당 가격을 시작점으로 사용
+2. `adjacent[0]`이 없으면 `adjacent[1]` 확인
+3. 둘 다 없으면 주문서의 `head`(첫 번째 가격)부터 검색 시작
+
+이를 통해 주문서의 특정 위치 부근에서 검색을 시작할 수 있어, 가스 소모를 줄이고 검색 효율을 높일 수 있습니다.
+
+### 언제 사용하나?
+
+#### 기본 사용법 (힌트 없이)
+
+주문서의 현재 상태를 모르거나, 특정 최적화가 필요하지 않은 경우:
+
+```typescript
+const adjacent: [bigint, bigint] = [BigInt(0), BigInt(0)];
+```
+
+`[0, 0]`을 전달하면 주문서의 `head`부터 검색을 시작합니다.
+
+#### 고급 사용법 (힌트 제공)
+
+연속된 주문을 넣거나, 주문서의 특정 구간을 알고 있는 경우 이전 가격 정보를 힌트로 제공할 수 있습니다:
+
+```typescript
+// 예: 이전 주문의 가격이 100 CROSS였고, 현재 주문도 100 CROSS 근처에 넣는 경우
+const previousPrice = ethers.parseEther('100');
+const adjacent: [bigint, bigint] = [previousPrice, BigInt(0)];
+
+// 또는 두 개의 힌트 가격을 제공할 수 있습니다
+const nearbyPrice1 = ethers.parseEther('100');
+const nearbyPrice2 = ethers.parseEther('105');
+const adjacent: [bigint, bigint] = [nearbyPrice1, nearbyPrice2];
+```
+
+**주의사항**:
+- `adjacent`에 제공된 가격이 주문서에 존재하지 않으면 무시되고 `head`부터 검색합니다
+- 잘못된 가격을 제공해도 주문은 정상적으로 처리되지만, 최적화 효과가 없을 수 있습니다
+
+### 실제 사용 예시
+
+#### 시나리오 1: 연속된 주문 넣기
+
+같은 가격 근처에 여러 주문을 연속으로 넣는 경우:
+
+```typescript
+const targetPrice = ethers.parseEther('100');
+const adjacent: [bigint, bigint] = [targetPrice, BigInt(0)];
+
+// 첫 번째 주문
+await submitBuyLimitOrder(wallet, pair, targetPrice, amount1, constraints, adjacent);
+
+// 두 번째 주문 (같은 가격 근처)
+await submitBuyLimitOrder(wallet, pair, targetPrice, amount2, constraints, adjacent);
+```
+
+#### 시나리오 2: 주문서 상태를 알고 있는 경우
+
+주문서를 조회하여 특정 가격 구간을 알고 있는 경우:
+
+```typescript
+// 주문서에서 특정 가격 주변의 주문을 확인했다고 가정
+const knownPrice1 = ethers.parseEther('95');
+const knownPrice2 = ethers.parseEther('105');
+const adjacent: [bigint, bigint] = [knownPrice1, knownPrice2];
+
+// 100 CROSS 근처에 주문 넣기
+const orderPrice = ethers.parseEther('100');
+await submitBuyLimitOrder(wallet, pair, orderPrice, amount, constraints, adjacent);
+```
+
+### 가스 최적화
+
+`adjacent`를 올바르게 사용하면:
+- 주문서가 클 때 가스 소모를 줄일 수 있습니다
+- 특히 주문서의 중간 부분에 주문을 넣을 때 효과적입니다
+- 주문서의 처음이나 끝 부분에 주문을 넣을 때는 효과가 제한적일 수 있습니다
+
+### 요약
+
+| 상황 | 권장 adjacent 값 | 설명 |
+|------|-----------------|------|
+| 주문서 상태 모름 | `[0, 0]` | head부터 검색 |
+| 이전 주문 가격 알고 있음 | `[previousPrice, 0]` | 이전 가격부터 검색 |
+| 특정 가격 구간 알고 있음 | `[price1, price2]` | 두 가격 중 존재하는 것부터 검색 |
+
+---
+
+## 6. 지정가 주문 (Limit Order)
 
 ### 매수 지정가 주문 (`submitBuyLimit`)
 
@@ -250,7 +346,7 @@ graph LR
 | `price` | uint256 | 지정 가격 (tickSize로 나누어 떨어져야 함) |
 | `amount` | uint256 | 주문 수량 (lotSize로 나누어 떨어져야 함) |
 | `constraints` | uint8 | 주문 제약 조건 (0: GTC, 1: IOC, 2: FOK) |
-| `adjacent` | uint256[2] | 이전 가격 검색 범위 (일반적으로 [0, 0]) |
+| `adjacent` | uint256[2] | 주문서 검색 최적화 힌트 (자세한 내용은 [Adjacent 파라미터 설명](#5-adjacent-파라미터-설명) 참조) |
 | `maxMatchCount` | uint256 | 최대 매칭 횟수 (0이면 Router 기본값 사용) |
 
 #### 주문 제약 조건 (Constraints)
@@ -308,7 +404,8 @@ async function submitBuyLimitOrder(
     const requiredQuote = await routerContract.getRequiredBuyVolume(pair, quoteVolume);
     console.log('Required QUOTE (including fee):', ethers.formatEther(requiredQuote));
     
-    // adjacent 파라미터 (이전 가격 검색 범위)
+    // adjacent 파라미터 (주문서 검색 최적화 힌트)
+    // 주문서 상태를 모르는 경우 [0, 0] 사용
     const adjacent: [bigint, bigint] = [BigInt(0), BigInt(0)];
     
     // 트랜잭션 전송
@@ -398,7 +495,7 @@ sequenceDiagram
 
 ---
 
-## 6. 시장가 주문 (Market Order)
+## 7. 시장가 주문 (Market Order)
 
 ### 매수 시장가 주문 (`submitBuyMarket`)
 
@@ -511,7 +608,7 @@ sequenceDiagram
 
 ---
 
-## 7. 주문 취소 (`cancelOrder`)
+## 8. 주문 취소 (`cancelOrder`)
 
 ### 주문 취소 방법
 
@@ -556,7 +653,7 @@ async function cancelOrders(
 
 ---
 
-## 8. CROSS 네이티브 코인 사용
+## 9. CROSS 네이티브 코인 사용
 
 ### 네이티브 CROSS 전송
 
@@ -619,7 +716,7 @@ Router는 내부적으로 CROSS 네이티브 코인을 자동으로 처리합니
 
 ---
 
-## 9. 예제 코드
+## 10. 예제 코드
 
 ### TypeScript 예제 (ethers.js)
 
@@ -733,16 +830,17 @@ const wallet = new ethers.Wallet(privateKey, provider);
 
 ---
 
-## 10. 고급 사용법
+## 11. 고급 사용법
 
 ### 가스 최적화 팁
 
 1. **무제한 Approve 사용**: 반복적인 Approve 트랜잭션을 피할 수 있습니다
 2. **적절한 maxMatchCount 설정**: 너무 높으면 가스 소모가 클 수 있습니다
+3. **Adjacent 파라미터 활용**: 주문서 상태를 알고 있는 경우 `adjacent`를 활용하여 가스 소모를 줄일 수 있습니다 (자세한 내용은 [Adjacent 파라미터 설명](#5-adjacent-파라미터-설명) 참조)
 
 ---
 
-## 11. 트러블슈팅
+## 12. 트러블슈팅
 
 ### 일반적인 에러와 해결 방법
 

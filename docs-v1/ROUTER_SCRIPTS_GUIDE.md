@@ -8,13 +8,14 @@ A detailed guide on how to place orders using the Router.
 2. [Environment Setup and Contract Addresses](#2-environment-setup-and-contract-addresses)
 3. [ERC20 Token Approve](#3-erc20-token-approve)
 4. [Getting Pair Address](#4-getting-pair-address)
-5. [Limit Orders](#5-limit-orders)
-6. [Market Orders](#6-market-orders)
-7. [Canceling Orders](#7-canceling-orders)
-8. [Using Native CROSS Coin](#8-using-native-cross-coin)
-9. [Example Code](#9-example-code)
-10. [Advanced Usage](#10-advanced-usage)
-11. [Troubleshooting](#11-troubleshooting)
+5. [Adjacent Parameter Explanation](#5-adjacent-parameter-explanation)
+6. [Limit Orders](#6-limit-orders)
+7. [Market Orders](#7-market-orders)
+8. [Canceling Orders](#8-canceling-orders)
+9. [Using Native CROSS Coin](#9-using-native-cross-coin)
+10. [Example Code](#10-example-code)
+11. [Advanced Usage](#11-advanced-usage)
+12. [Troubleshooting](#12-troubleshooting)
 
 ---
 
@@ -236,7 +237,102 @@ graph LR
 
 ---
 
-## 5. Limit Orders
+## 5. Adjacent Parameter Explanation
+
+### What is Adjacent?
+
+The `adjacent` parameter is a hint for optimizing the process of finding the insertion position when placing an order in the order book. The order book is structured as a sorted linked list, requiring finding the appropriate position when inserting a new order.
+
+### How It Works
+
+When finding the insertion position in the order book:
+1. If `adjacent[0]` exists as a price in the order book, use that price as the starting point
+2. If `adjacent[0]` doesn't exist, check `adjacent[1]`
+3. If neither exists, start searching from the order book's `head` (first price)
+
+This allows starting the search from a specific location in the order book, reducing gas consumption and improving search efficiency.
+
+### When to Use?
+
+#### Basic Usage (Without Hint)
+
+When you don't know the current state of the order book or don't need specific optimization:
+
+```typescript
+const adjacent: [bigint, bigint] = [BigInt(0), BigInt(0)];
+```
+
+Passing `[0, 0]` starts searching from the order book's `head`.
+
+#### Advanced Usage (With Hint)
+
+When placing consecutive orders or knowing a specific price range in the order book, you can provide previous price information as a hint:
+
+```typescript
+// Example: Previous order price was 100 CROSS, and current order is placed near 100 CROSS
+const previousPrice = ethers.parseEther('100');
+const adjacent: [bigint, bigint] = [previousPrice, BigInt(0)];
+
+// Or provide two hint prices
+const nearbyPrice1 = ethers.parseEther('100');
+const nearbyPrice2 = ethers.parseEther('105');
+const adjacent: [bigint, bigint] = [nearbyPrice1, nearbyPrice2];
+```
+
+**Note**:
+- If the price provided in `adjacent` doesn't exist in the order book, it's ignored and search starts from `head`
+- Providing incorrect prices won't break the order but may not provide optimization benefits
+
+### Usage Examples
+
+#### Scenario 1: Placing Consecutive Orders
+
+When placing multiple orders consecutively near the same price:
+
+```typescript
+const targetPrice = ethers.parseEther('100');
+const adjacent: [bigint, bigint] = [targetPrice, BigInt(0)];
+
+// First order
+await submitBuyLimitOrder(wallet, pair, targetPrice, amount1, constraints, adjacent);
+
+// Second order (near same price)
+await submitBuyLimitOrder(wallet, pair, targetPrice, amount2, constraints, adjacent);
+```
+
+#### Scenario 2: When You Know Order Book State
+
+When you've queried the order book and know a specific price range:
+
+```typescript
+// Assume you've checked orders around a specific price in the order book
+const knownPrice1 = ethers.parseEther('95');
+const knownPrice2 = ethers.parseEther('105');
+const adjacent: [bigint, bigint] = [knownPrice1, knownPrice2];
+
+// Place order near 100 CROSS
+const orderPrice = ethers.parseEther('100');
+await submitBuyLimitOrder(wallet, pair, orderPrice, amount, constraints, adjacent);
+```
+
+### Gas Optimization
+
+Using `adjacent` correctly can:
+- Reduce gas consumption when the order book is large
+- Be particularly effective when placing orders in the middle of the order book
+- Have limited effect when placing orders at the beginning or end of the order book
+
+### Summary
+
+| Situation | Recommended adjacent value | Description |
+|-----------|---------------------------|-------------|
+| Order book state unknown | `[0, 0]` | Search from head |
+| Previous order price known | `[previousPrice, 0]` | Search from previous price |
+| Specific price range known | `[price1, price2]` | Search from whichever price exists |
+
+---
+
+## 6. Limit Orders
 
 ### Buy Limit Order (`submitBuyLimit`)
 
@@ -250,7 +346,7 @@ Places an order to buy BASE tokens at or below the specified price.
 | `price` | uint256 | Limit price (must be divisible by tickSize) |
 | `amount` | uint256 | Order amount (must be divisible by lotSize) |
 | `constraints` | uint8 | Order constraints (0: GTC, 1: IOC, 2: FOK) |
-| `adjacent` | uint256[2] | Previous price search range (typically [0, 0]) |
+| `adjacent` | uint256[2] | Order book search optimization hint (see [Adjacent Parameter Explanation](#5-adjacent-parameter-explanation) for details) |
 | `maxMatchCount` | uint256 | Maximum match count (0 for Router default) |
 
 #### Order Constraints
@@ -308,7 +404,8 @@ async function submitBuyLimitOrder(
     const requiredQuote = await routerContract.getRequiredBuyVolume(pair, quoteVolume);
     console.log('Required QUOTE (including fee):', ethers.formatEther(requiredQuote));
     
-    // adjacent parameter (previous price search range)
+    // adjacent parameter (order book search optimization hint)
+    // Use [0, 0] when order book state is unknown
     const adjacent: [bigint, bigint] = [BigInt(0), BigInt(0)];
     
     // Send transaction
@@ -398,7 +495,7 @@ sequenceDiagram
 
 ---
 
-## 6. Market Orders
+## 7. Market Orders
 
 ### Buy Market Order (`submitBuyMarket`)
 
@@ -511,7 +608,7 @@ sequenceDiagram
 
 ---
 
-## 7. Canceling Orders
+## 8. Canceling Orders
 
 ### How to Cancel Orders
 
@@ -556,7 +653,7 @@ async function cancelOrders(
 
 ---
 
-## 8. Using Native CROSS Coin
+## 9. Using Native CROSS Coin
 
 ### Sending Native CROSS
 
@@ -619,7 +716,7 @@ Users don't need to worry about this process.
 
 ---
 
-## 9. Example Code
+## 10. Example Code
 
 ### TypeScript Example (ethers.js)
 
@@ -732,16 +829,17 @@ const wallet = new ethers.Wallet(privateKey, provider);
 
 ---
 
-## 10. Advanced Usage
+## 11. Advanced Usage
 
 ### Gas Optimization Tips
 
 1. **Use Unlimited Approve**: Avoids repeated approve transactions
 2. **Set Appropriate maxMatchCount**: Too high can consume more gas
+3. **Utilize Adjacent Parameter**: When you know the order book state, using `adjacent` can reduce gas consumption (see [Adjacent Parameter Explanation](#5-adjacent-parameter-explanation) for details)
 
 ---
 
-## 11. Troubleshooting
+## 12. Troubleshooting
 
 ### Common Errors and Solutions
 
