@@ -99,3 +99,7 @@ This software is provided "as is" without warranty. Users should conduct their o
 ## 📚 Technical Documentation
 
 For detailed technical documentation about the contract architecture, implementation details, and V2 changes, see [Technical Documentation](TECHNICAL.md).
+
+### Router Scripts Guide
+
+For a comprehensive guide on how to place orders using the Router, see [Router Order Script Guide](ROUTER_SCRIPTS_GUIDE.md).
