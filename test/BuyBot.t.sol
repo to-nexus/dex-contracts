@@ -11,6 +11,8 @@ import {CrossDexRouter} from "../src/CrossDexRouter.sol";
 import {MarketImpl} from "../src/MarketImpl.sol";
 import {PairImpl} from "../src/PairImpl.sol";
 import {IPair} from "../src/interfaces/IPair.sol";
+import {MockSwapRouter} from "./mock/MockSwapRouter.sol";
+import {MockUniswapV3Pool} from "./mock/MockUniswapV3Pool.sol";
 
 contract MockERC20 is Test {
     string public name;
@@ -67,6 +69,9 @@ contract BuyBotTest is Test {
 
     MockERC20 public quoteToken;
     MockERC20 public baseToken;
+    MockERC20 public swapToken; // Token for swap tests
+    MockSwapRouter public swapRouter;
+    MockUniswapV3Pool public mockPool;
 
     address public owner;
     address public user;
@@ -78,6 +83,7 @@ contract BuyBotTest is Test {
     uint256 public constant MIN_ORDER_AMOUNT = 100e18;
     uint256 public constant TICK_SIZE = 1e18;
     uint256 public constant LOT_SIZE = 1e18;
+    uint24 public constant MAX_TICK_SLIPPAGE = 1; // 1 tick = 0.01%
 
     function setUp() public {
         owner = makeAddr("owner");
@@ -90,6 +96,16 @@ contract BuyBotTest is Test {
         // Deploy mock tokens
         quoteToken = new MockERC20("USDC", "USDC", 18);
         baseToken = new MockERC20("TOKEN", "TOKEN", 18);
+        swapToken = new MockERC20("SWAP", "SWAP", 18);
+
+        // Deploy mock swap router
+        swapRouter = new MockSwapRouter();
+
+        // Set default exchange rate (1:1)
+        swapRouter.setExchangeRate(address(swapToken), address(quoteToken), 1e18);
+
+        // Deploy mock Uniswap V3 pool (swapToken <-> quoteToken)
+        mockPool = new MockUniswapV3Pool(address(swapToken), address(quoteToken));
 
         // Deploy implementations
         CrossDexImpl crossDexImpl = new CrossDexImpl();
@@ -117,7 +133,18 @@ contract BuyBotTest is Test {
         pair = PairImpl(pairAddress);
 
         // Deploy BuyBot for normal token (0 interval = no delay, 0 admin transfer delay)
-        buyer = new BuyBot(0, owner, address(router), MIN_ORDER_AMOUNT, 0, recipient, buyerRole, managerRole);
+        buyer = new BuyBot(
+            0, // initialDelay
+            owner,
+            address(router),
+            MIN_ORDER_AMOUNT,
+            0, // interval
+            recipient,
+            buyerRole,
+            managerRole,
+            address(swapRouter),
+            MAX_TICK_SLIPPAGE
+        );
 
         // Setup initial liquidity (sell orders)
         _setupLiquidity();
@@ -137,7 +164,18 @@ contract BuyBotTest is Test {
         wethPair = PairImpl(wethPairAddress);
 
         // Deploy BuyBot for WETH (0 interval = no delay, 0 admin transfer delay)
-        buyerWithWETH = new BuyBot(0, owner, address(router), MIN_ORDER_AMOUNT, 0, recipient, buyerRole, managerRole);
+        buyerWithWETH = new BuyBot(
+            0, // initialDelay
+            owner,
+            address(router),
+            MIN_ORDER_AMOUNT,
+            0, // interval
+            recipient,
+            buyerRole,
+            managerRole,
+            address(swapRouter),
+            MAX_TICK_SLIPPAGE
+        );
 
         // Setup liquidity for WETH pair
         address seller = makeAddr("wethSeller");
@@ -223,12 +261,34 @@ contract BuyBotTest is Test {
 
     function test_RevertWhen_BuyerIsZeroAddress() public {
         vm.expectRevert(abi.encodeWithSelector(BuyBot.BuyBotInvalidBuyer.selector, address(0)));
-        new BuyBot(0, owner, address(router), MIN_ORDER_AMOUNT, 0, recipient, address(0), managerRole);
+        new BuyBot(
+            0,
+            owner,
+            address(router),
+            MIN_ORDER_AMOUNT,
+            0,
+            recipient,
+            address(0),
+            managerRole,
+            address(swapRouter),
+            MAX_TICK_SLIPPAGE
+        );
     }
 
     function test_RevertWhen_ManagerIsZeroAddress() public {
         vm.expectRevert(abi.encodeWithSelector(BuyBot.BuyBotInvalidManager.selector, address(0)));
-        new BuyBot(0, owner, address(router), MIN_ORDER_AMOUNT, 0, recipient, buyerRole, address(0));
+        new BuyBot(
+            0,
+            owner,
+            address(router),
+            MIN_ORDER_AMOUNT,
+            0,
+            recipient,
+            buyerRole,
+            address(0),
+            address(swapRouter),
+            MAX_TICK_SLIPPAGE
+        );
     }
 
     function test_BuyMarketWithSufficientBalance() public {
@@ -337,8 +397,18 @@ contract BuyBotTest is Test {
 
     function test_CanBuyMarketViewWithInterval() public {
         // Deploy buyer with 60 second interval
-        BuyBot buyerWithInterval =
-            new BuyBot(0, owner, address(router), MIN_ORDER_AMOUNT, 60, recipient, buyerRole, managerRole);
+        BuyBot buyerWithInterval = new BuyBot(
+            0,
+            owner,
+            address(router),
+            MIN_ORDER_AMOUNT,
+            60,
+            recipient,
+            buyerRole,
+            managerRole,
+            address(swapRouter),
+            MAX_TICK_SLIPPAGE
+        );
 
         // Sufficient balance, but no lastBuyTime yet (should be true)
         quoteToken.mint(address(buyerWithInterval), MIN_ORDER_AMOUNT);
@@ -654,8 +724,18 @@ contract BuyBotTest is Test {
 
     function test_BuyMarketWithInterval() public {
         // Deploy buyer with 60 second interval
-        BuyBot buyerWithInterval =
-            new BuyBot(0, owner, address(router), MIN_ORDER_AMOUNT, 60, recipient, buyerRole, managerRole);
+        BuyBot buyerWithInterval = new BuyBot(
+            0,
+            owner,
+            address(router),
+            MIN_ORDER_AMOUNT,
+            60,
+            recipient,
+            buyerRole,
+            managerRole,
+            address(swapRouter),
+            MAX_TICK_SLIPPAGE
+        );
 
         // First buy should succeed
         uint256 buyAmount = 200e18;
@@ -810,8 +890,18 @@ contract BuyBotTest is Test {
 
     function test_IntervalZeroDisablesCheck() public {
         // Deploy buyer with 0 interval (disabled)
-        BuyBot buyerNoInterval =
-            new BuyBot(0, owner, address(router), MIN_ORDER_AMOUNT, 0, recipient, buyerRole, managerRole);
+        BuyBot buyerNoInterval = new BuyBot(
+            0,
+            owner,
+            address(router),
+            MIN_ORDER_AMOUNT,
+            0,
+            recipient,
+            buyerRole,
+            managerRole,
+            address(swapRouter),
+            MAX_TICK_SLIPPAGE
+        );
 
         // First buy
         uint256 buyAmount = 200e18;
@@ -929,5 +1019,185 @@ contract BuyBotTest is Test {
         vm.prank(user);
         vm.expectRevert();
         buyer.setInterval(60);
+    }
+
+    // ===== SWAP TESTS =====
+
+    function test_ManagerCanSetSwapPool() public {
+        address poolAddress = makeAddr("uniswapPool");
+
+        vm.prank(managerRole);
+        vm.expectEmit(true, true, true, false);
+        emit BuyBot.SwapPoolSet(address(swapToken), address(quoteToken), poolAddress);
+        buyer.setSwapPool(address(swapToken), address(quoteToken), poolAddress);
+
+        assertEq(buyer.swapPools(address(swapToken), address(quoteToken)), poolAddress);
+    }
+
+    function test_ManagerCanRemoveSwapPool() public {
+        address poolAddress = makeAddr("uniswapPool");
+
+        vm.startPrank(managerRole);
+        buyer.setSwapPool(address(swapToken), address(quoteToken), poolAddress);
+
+        // Remove by setting to address(0)
+        vm.expectEmit(true, true, true, false);
+        emit BuyBot.SwapPoolSet(address(swapToken), address(quoteToken), address(0));
+        buyer.setSwapPool(address(swapToken), address(quoteToken), address(0));
+        vm.stopPrank();
+
+        assertEq(buyer.swapPools(address(swapToken), address(quoteToken)), address(0));
+    }
+
+    function test_ManagerCanSetSwapToken() public {
+        vm.prank(managerRole);
+        vm.expectEmit(true, true, false, false);
+        emit BuyBot.SwapTokenSet(address(0), address(swapToken));
+        buyer.setSwapToken(address(swapToken));
+
+        assertEq(buyer.swapToken(), address(swapToken));
+    }
+
+    function test_ManagerCanRemoveSwapToken() public {
+        vm.startPrank(managerRole);
+        buyer.setSwapToken(address(swapToken));
+
+        vm.expectEmit(true, true, false, false);
+        emit BuyBot.SwapTokenSet(address(swapToken), address(0));
+        buyer.setSwapToken(address(0));
+        vm.stopPrank();
+
+        assertEq(buyer.swapToken(), address(0));
+    }
+
+    function test_ManagerCanSetMaxTickSlippage() public {
+        uint24 newSlippage = 10; // 10 ticks = 0.1%
+
+        vm.prank(managerRole);
+        vm.expectEmit(true, true, false, false);
+        emit BuyBot.MaxTickSlippageSet(MAX_TICK_SLIPPAGE, newSlippage);
+        buyer.setMaxTickSlippage(newSlippage);
+
+        assertEq(buyer.maxTickSlippage(), newSlippage);
+    }
+
+    function test_OwnerCanSetSwapRouter() public {
+        address newRouter = makeAddr("newSwapRouter");
+
+        vm.prank(owner);
+        vm.expectEmit(true, true, false, false);
+        emit BuyBot.SwapRouterSet(address(swapRouter), newRouter);
+        buyer.setSwapRouter(newRouter);
+
+        assertEq(address(buyer.swapRouter()), newRouter);
+    }
+
+    function test_RevertWhen_UnauthorizedSetSwapPool() public {
+        address poolAddress = makeAddr("uniswapPool");
+
+        vm.prank(user);
+        vm.expectRevert();
+        buyer.setSwapPool(address(swapToken), address(quoteToken), poolAddress);
+    }
+
+    function test_RevertWhen_ZeroTickSlippage() public {
+        vm.prank(managerRole);
+        vm.expectRevert();
+        buyer.setMaxTickSlippage(0); // 0 not allowed
+    }
+
+    function test_SwapToQuote_Success() public {
+        uint256 swapAmount = 500e18;
+
+        // Setup: Set swapToken and pool
+        vm.startPrank(managerRole);
+        buyer.setSwapToken(address(swapToken));
+        buyer.setSwapPool(address(swapToken), address(quoteToken), address(mockPool));
+        vm.stopPrank();
+
+        // Fund buyer with swapToken (not quoteToken)
+        swapToken.mint(address(buyer), swapAmount);
+
+        // Fund swap router with quoteToken for swaps
+        quoteToken.mint(address(swapRouter), 1000e18);
+        vm.prank(address(swapRouter));
+        quoteToken.approve(address(swapRouter), type(uint256).max);
+
+        // Execute swapToQuote
+        vm.prank(buyerRole);
+        uint256 amountOut = buyer.swapToQuote(address(pair), 3000);
+
+        // Verify swap executed
+        assertGt(amountOut, 0);
+        assertEq(quoteToken.balanceOf(address(buyer)), amountOut);
+        assertEq(swapToken.balanceOf(address(buyer)), 0); // All swapToken was swapped
+    }
+
+    function test_SwapToQuote_ThenBuyMarket() public {
+        uint256 swapAmount = 500e18;
+        uint256 buyAmount = 200e18;
+
+        // Setup: Set swapToken and pool
+        vm.startPrank(managerRole);
+        buyer.setSwapToken(address(swapToken));
+        buyer.setSwapPool(address(swapToken), address(quoteToken), address(mockPool));
+        vm.stopPrank();
+
+        // Fund buyer with swapToken
+        swapToken.mint(address(buyer), swapAmount);
+
+        // Fund swap router with quoteToken for swaps
+        quoteToken.mint(address(swapRouter), 1000e18);
+        vm.prank(address(swapRouter));
+        quoteToken.approve(address(swapRouter), type(uint256).max);
+
+        // Step 1: Swap to quote
+        vm.prank(buyerRole);
+        uint256 amountOut = buyer.swapToQuote(address(pair), 3000);
+        assertGe(amountOut, buyAmount);
+
+        // Step 2: Buy market
+        vm.prank(buyerRole);
+        buyer.buyMarket(address(pair), buyAmount, 0);
+
+        // Verify trade executed
+        assertTrue(buyer.lastBuyTime() > 0);
+    }
+
+    function test_RevertWhen_SwapToQuote_NoSwapToken() public {
+        // No swap token set
+        vm.prank(buyerRole);
+        vm.expectRevert(BuyBot.BuyBotNoSwapToken.selector);
+        buyer.swapToQuote(address(pair), 3000);
+    }
+
+    function test_RevertWhen_SwapToQuote_PoolNotFound() public {
+        // Set swap token but no pool
+        vm.prank(managerRole);
+        buyer.setSwapToken(address(swapToken));
+
+        // Fund buyer with swapToken
+        swapToken.mint(address(buyer), 500e18);
+
+        // Execute swapToQuote (should fail - no pool)
+        vm.prank(buyerRole);
+        vm.expectRevert(
+            abi.encodeWithSelector(BuyBot.BuyBotPoolNotFound.selector, address(swapToken), address(quoteToken))
+        );
+        buyer.swapToQuote(address(pair), 3000);
+    }
+
+    function test_RevertWhen_SwapToQuote_InsufficientBalance() public {
+        // Setup: Set swapToken and pool
+        vm.startPrank(managerRole);
+        buyer.setSwapToken(address(swapToken));
+        buyer.setSwapPool(address(swapToken), address(quoteToken), address(mockPool));
+        vm.stopPrank();
+
+        // Don't fund buyer with any tokens
+
+        vm.prank(buyerRole);
+        vm.expectRevert(abi.encodeWithSelector(BuyBot.BuyBotInsufficientSwapBalance.selector, address(swapToken), 0));
+        buyer.swapToQuote(address(pair), 3000);
     }
 }
