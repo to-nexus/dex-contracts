@@ -12,15 +12,15 @@ import {PairImplV2} from "../src/PairImplV2.sol";
 
 contract CloseMarket is Script {
     // 1. transfer ownership to the market owner
-    // gorge write --rpc-url wss://mainnet.crosstoken.io:32001 --sender 0xafcc9E7d739b03CC53e2152d368f365430CF3CCa --out transfer_ownership.json \
+    // gorge write --rpc-url $CROSS --sender 0xafcc9E7d739b03CC53e2152d368f365430CF3CCa --out transfer_ownership.json \
     // 0x4469a9879Ec02CE4313bef5e2F21b4F17f2B70e4 "execute(address,uint256,bytes)" 0xcb95777d0f8d2EfA5e836Cb65f814dF8C7261d83 0 \
     // $(cast calldata "transferOwnership(address)" 0xafcc9E7d739b03CC53e2152d368f365430CF3CCa)
 
     // gorge sign --out transfer_ownership_signed.json transfer_ownership.json
-    // gorge send --rpc-url wss://mainnet.crosstoken.io:32001 --out transfer_ownership_sent.json transfer_ownership_signed.json
+    // gorge send --rpc-url $CROSS --out transfer_ownership_sent.json transfer_ownership_signed.json
 
     // 2. all pause
-    // gorge script --rpc-url wss://mainnet.crosstoken.io:32001 --out all_pause.json \
+    // gorge script --rpc-url $CROSS --out all_pause.json \
     // --sender 0xafcc9E7d739b03CC53e2152d368f365430CF3CCa \
     // --sig "allPause(address)" \
     // --out ./script.json \
@@ -28,7 +28,7 @@ contract CloseMarket is Script {
     // 0xcb95777d0f8d2EfA5e836Cb65f814dF8C7261d83
 
     // gorge sign --out all_pause_signed.json all_pause.json
-    // gorge send --rpc-url wss://mainnet.crosstoken.io:32001 --out all_pause_sent.json all_pause_signed.json
+    // gorge send --rpc-url $CROSS --out all_pause_sent.json all_pause_signed.json
 
     function allPause(address market) external {
         vm.broadcast();
@@ -42,37 +42,37 @@ contract CloseMarket is Script {
 
     // 3. emergency cancel all orders
     // SDODGE
-    // gorge write --rpc-url wss://mainnet.crosstoken.io:32001 --sender 0xafcc9E7d739b03CC53e2152d368f365430CF3CCa --append --out .emergency_cancel_orders.json \
+    // gorge write --rpc-url $CROSS --sender 0xafcc9E7d739b03CC53e2152d368f365430CF3CCa --append --out .emergency_cancel_orders.json \
     // 0x07B1578B66F67AA02587D5B35AFC47D66FB39BBD "emergencyCancelOrder(uint256[])" "[1]"
 
     // NW
-    // gorge write --rpc-url wss://mainnet.crosstoken.io:32001 --sender 0xafcc9E7d739b03CC53e2152d368f365430CF3CCa --append --out .emergency_cancel_orders.json \
+    // gorge write --rpc-url $CROSS --sender 0xafcc9E7d739b03CC53e2152d368f365430CF3CCa --append --out .emergency_cancel_orders.json \
     // 0x08A8132639D8E493DA3752C65F8DC695D6D03F64 "emergencyCancelOrder(uint256[])" "[7,11,12,15,16,18]"
 
     // PP
-    // gorge write --rpc-url wss://mainnet.crosstoken.io:32001 --sender 0xafcc9E7d739b03CC53e2152d368f365430CF3CCa --append --out .emergency_cancel_orders.json \
+    // gorge write --rpc-url $CROSS --sender 0xafcc9E7d739b03CC53e2152d368f365430CF3CCa --append --out .emergency_cancel_orders.json \
     // 0x312F5C69ACE9B8FB1869D43AC7A5A6F065A5353D "emergencyCancelOrder(uint256[])" "[3,4,5]"
 
     // LADDER
-    // gorge write --rpc-url wss://mainnet.crosstoken.io:32001 --sender 0xafcc9E7d739b03CC53e2152d368f365430CF3CCa --append --out .emergency_cancel_orders.json \
+    // gorge write --rpc-url $CROSS --sender 0xafcc9E7d739b03CC53e2152d368f365430CF3CCa --append --out .emergency_cancel_orders.json \
     // 0x831429C1197965FBF63A28CAAE8E91ECC00F55A8 "emergencyCancelOrder(uint256[])" "[1]"
 
     // ZEDDYZZANG
-    // gorge write --rpc-url wss://mainnet.crosstoken.io:32001 --sender 0xafcc9E7d739b03CC53e2152d368f365430CF3CCa --append --out .emergency_cancel_orders.json \
+    // gorge write --rpc-url $CROSS --sender 0xafcc9E7d739b03CC53e2152d368f365430CF3CCa --append --out .emergency_cancel_orders.json \
     // 0x83CCF5064322EC3D0D7B2719C12125E8F8A09E96 "emergencyCancelOrder(uint256[])" "[2,3,8,10,11,12,13,15]"
 
     // PHRST
-    // gorge write --rpc-url wss://mainnet.crosstoken.io:32001 --sender 0xafcc9E7d739b03CC53e2152d368f365430CF3CCa --append --out .emergency_cancel_orders.json \
+    // gorge write --rpc-url $CROSS --sender 0xafcc9E7d739b03CC53e2152d368f365430CF3CCa --append --out .emergency_cancel_orders.json \
     // 977AA9DE88D597168500C7F47F8EC0FB6815E977 "emergencyCancelOrder(uint256[])" "[2]"
 
     // TRUMP
-    // gorge write --rpc-url wss://mainnet.crosstoken.io:32001 --sender 0xafcc9E7d739b03CC53e2152d368f365430CF3CCa --append --out .emergency_cancel_orders.json \
+    // gorge write --rpc-url $CROSS --sender 0xafcc9E7d739b03CC53e2152d368f365430CF3CCa --append --out .emergency_cancel_orders.json \
     // 9A2E6643D7326391E474EAAD62FEA530245343A8 "emergencyCancelOrder(uint256[])" "[1,3]"
 
     // KKUL789
-    // gorge write --rpc-url wss://mainnet.crosstoken.io:32001 --sender 0xafcc9E7d739b03CC53e2152d368f365430CF3CCa --append --out .emergency_cancel_orders.json \
+    // gorge write --rpc-url $CROSS --sender 0xafcc9E7d739b03CC53e2152d368f365430CF3CCa --append --out .emergency_cancel_orders.json \
     // 9A52CC333CA7647FA8FDE626DCCBFFBCC2630B66 "emergencyCancelOrder(uint256[])" "[2,7,8]"
 
     // gorge sign --out emergency_cancel_orders_signed.json emergency_cancel_orders.json
-    // gorge send --rpc-url wss://mainnet.crosstoken.io:32001 --out emergency_cancel_orders_sent.json emergency_cancel_orders_signed.json
+    // gorge send --rpc-url $CROSS --out emergency_cancel_orders_sent.json emergency_cancel_orders_signed.json
 }
