@@ -24,7 +24,7 @@ contract CloseMarket is Script {
     // --sender 0xafcc9E7d739b03CC53e2152d368f365430CF3CCa \
     // --sig "allPause(address)" \
     // --out ./script.json \
-    // ./script/DeployForgeContract.s.sol:DeployForgeContract \
+    // ./script/CloseMarket.s.sol:CloseMarket \
     // 0xcb95777d0f8d2EfA5e836Cb65f814dF8C7261d83
 
     // gorge sign --out all_pause_signed.json all_pause.json
@@ -63,15 +63,15 @@ contract CloseMarket is Script {
 
     // PHRST
     // gorge write --rpc-url $CROSS --sender 0xafcc9E7d739b03CC53e2152d368f365430CF3CCa --append --out .emergency_cancel_orders.json \
-    // 977AA9DE88D597168500C7F47F8EC0FB6815E977 "emergencyCancelOrder(uint256[])" "[2]"
+    // 0x977AA9DE88D597168500C7F47F8EC0FB6815E977 "emergencyCancelOrder(uint256[])" "[2]"
 
     // TRUMP
     // gorge write --rpc-url $CROSS --sender 0xafcc9E7d739b03CC53e2152d368f365430CF3CCa --append --out .emergency_cancel_orders.json \
-    // 9A2E6643D7326391E474EAAD62FEA530245343A8 "emergencyCancelOrder(uint256[])" "[1,3]"
+    // 0x9A2E6643D7326391E474EAAD62FEA530245343A8 "emergencyCancelOrder(uint256[])" "[1,3]"
 
     // KKUL789
     // gorge write --rpc-url $CROSS --sender 0xafcc9E7d739b03CC53e2152d368f365430CF3CCa --append --out .emergency_cancel_orders.json \
-    // 9A52CC333CA7647FA8FDE626DCCBFFBCC2630B66 "emergencyCancelOrder(uint256[])" "[2,7,8]"
+    // 0x9A52CC333CA7647FA8FDE626DCCBFFBCC2630B66 "emergencyCancelOrder(uint256[])" "[2,7,8]"
 
     // gorge sign --out emergency_cancel_orders_signed.json emergency_cancel_orders.json
     // gorge send --rpc-url $CROSS --out emergency_cancel_orders_sent.json emergency_cancel_orders_signed.json
