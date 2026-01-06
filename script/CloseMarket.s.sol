@@ -40,6 +40,17 @@ contract CloseMarket is Script {
         }
     }
 
+    function checkClosedMarket(address market) external {
+        MarketImplV2 MARKET = MarketImplV2(payable(market));
+        (, address[] memory pairs) = MARKET.allPairs();
+        uint256 length = pairs.length;
+        for (uint256 i = 0; i < length; i++) {
+            uint256 baseReserve = PairImplV2(pairs[i]).baseReserve();
+            uint256 quoteReserve = PairImplV2(pairs[i]).quoteReserve();
+            if (baseReserve > 0 || quoteReserve > 0) console.log("pair", i, baseReserve, quoteReserve);
+        }
+    }
+
     // 3. emergency cancel all orders
     // SDODGE
     // gorge write --rpc-url $CROSS --sender 0xafcc9E7d739b03CC53e2152d368f365430CF3CCa --append --out .emergency_cancel_orders.json \
