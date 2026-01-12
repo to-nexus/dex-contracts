@@ -31,13 +31,14 @@ contract CloseMarket is Script {
     // gorge send --rpc-url $CROSS --out all_pause_sent.json all_pause_signed.json
 
     function allPause(address market) external {
-        vm.broadcast();
+        vm.startBroadcast();
         MarketImplV2 MARKET = MarketImplV2(payable(market));
         (, address[] memory pairs) = MARKET.allPairs();
         uint256 length = pairs.length;
         for (uint256 i = 0; i < length; i++) {
             PairImplV2(payable(pairs[i])).setPause(true);
         }
+        vm.stopBroadcast();
     }
 
     function checkClosedMarket(address market) external {
