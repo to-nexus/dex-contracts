@@ -36,7 +36,10 @@ contract CloseMarket is Script {
         (, address[] memory pairs) = MARKET.allPairs();
         uint256 length = pairs.length;
         for (uint256 i = 0; i < length; i++) {
-            PairImplV2(payable(pairs[i])).setPause(true);
+            PairImplV2 PAIR = PairImplV2(payable(pairs[i]));
+            bool paused = PAIR.paused();
+            if (paused) continue;
+            PAIR.setPause(true);
         }
         vm.stopBroadcast();
     }
