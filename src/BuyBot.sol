@@ -36,6 +36,8 @@ contract BuyBot is AccessControlDefaultAdminRules, ReentrancyGuard {
     error BuyBotInvalidRouter(address);
     error BuyBotInvalidPair(address);
     error BuyBotInvalidMinOrderAmount(uint256);
+    error BuyBotNotChanged(uint256 oldValue, uint256 newValue);
+    error BuyBotAddressNotChanged(address oldValue, address newValue);
     error BuyBotInvalidAmount(uint256);
     error BuyBotIntervalNotPassed(uint256 timeSinceLastBuy, uint256 requiredInterval);
     error BuyBotInvalidBuyer(address buyer);
@@ -349,6 +351,7 @@ contract BuyBot is AccessControlDefaultAdminRules, ReentrancyGuard {
      */
     function setMinOrderAmount(uint256 _minOrderAmount) external onlyRole(MANAGER_ROLE) {
         if (_minOrderAmount == 0) revert BuyBotInvalidMinOrderAmount(_minOrderAmount);
+        if (minOrderAmount == _minOrderAmount) revert BuyBotNotChanged(minOrderAmount, _minOrderAmount);
         uint256 oldValue = minOrderAmount;
         minOrderAmount = _minOrderAmount;
         emit MinOrderAmountSet(oldValue, _minOrderAmount);
@@ -360,6 +363,7 @@ contract BuyBot is AccessControlDefaultAdminRules, ReentrancyGuard {
      * @param _interval New interval in seconds (0 to disable)
      */
     function setInterval(uint256 _interval) external onlyRole(MANAGER_ROLE) {
+        if (interval == _interval) revert BuyBotNotChanged(interval, _interval);
         uint256 oldValue = interval;
         interval = _interval;
         emit IntervalSet(oldValue, _interval);
@@ -371,6 +375,7 @@ contract BuyBot is AccessControlDefaultAdminRules, ReentrancyGuard {
      * @param _recipient New recipient address (address(0) to keep in contract)
      */
     function setRecipient(address _recipient) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (recipient == _recipient) revert BuyBotAddressNotChanged(recipient, _recipient);
         address oldValue = recipient;
         recipient = _recipient;
         emit RecipientSet(oldValue, _recipient);
@@ -408,6 +413,7 @@ contract BuyBot is AccessControlDefaultAdminRules, ReentrancyGuard {
      * @param _swapToken Token address to swap from (address(0) to disable)
      */
     function setSwapToken(address _swapToken) external onlyRole(MANAGER_ROLE) {
+        if (swapToken == _swapToken) revert BuyBotAddressNotChanged(swapToken, _swapToken);
         address oldValue = swapToken;
         swapToken = _swapToken;
         emit SwapTokenSet(oldValue, _swapToken);
@@ -420,6 +426,7 @@ contract BuyBot is AccessControlDefaultAdminRules, ReentrancyGuard {
      */
     function setMaxTickSlippage(uint24 _maxTickSlippage) external onlyRole(MANAGER_ROLE) {
         if (_maxTickSlippage == 0) revert BuyBotInvalidTickSlippage(_maxTickSlippage);
+        if (maxTickSlippage == _maxTickSlippage) revert BuyBotNotChanged(maxTickSlippage, _maxTickSlippage);
         uint24 oldValue = maxTickSlippage;
         maxTickSlippage = _maxTickSlippage;
         emit MaxTickSlippageSet(oldValue, _maxTickSlippage);
@@ -431,6 +438,7 @@ contract BuyBot is AccessControlDefaultAdminRules, ReentrancyGuard {
      * @param _swapRouter New SwapRouter address (address(0) to disable)
      */
     function setSwapRouter(address _swapRouter) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (address(swapRouter) == _swapRouter) revert BuyBotAddressNotChanged(address(swapRouter), _swapRouter);
         address oldValue = address(swapRouter);
         swapRouter = ISwapRouter(_swapRouter);
         emit SwapRouterSet(oldValue, _swapRouter);
