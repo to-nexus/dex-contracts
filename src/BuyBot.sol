@@ -166,27 +166,25 @@ contract BuyBot is AccessControlDefaultAdminRules, ReentrancyGuard {
         onlyRole(BUYER_ROLE)
     {
         if (pair == address(0)) revert BuyBotInvalidPair(pair);
-        if (amount == 0) revert BuyBotInvalidAmount(amount);
+        // Get pair configuration
+        IPair.Config memory config = IPair(pair).getConfig();
+        IERC20 quoteToken = config.QUOTE;
+        IERC20 baseToken = config.BASE;
+
+        // Check minimum order amount
+        if (amount < minOrderAmount) revert BuyBotInsufficientBalance(amount, minOrderAmount);
+
+        // Get current balance
+        uint256 balance = quoteToken.balanceOf(address(this));
+
+        // Check sufficient balance
+        if (amount > balance) revert BuyBotInsufficientBalance(balance, amount);
 
         // Check interval has passed since last buy
         if (interval > 0 && lastBuyTime > 0) {
             uint256 timeSinceLastBuy = block.timestamp - lastBuyTime;
             if (timeSinceLastBuy < interval) revert BuyBotIntervalNotPassed(timeSinceLastBuy, interval);
         }
-
-        // Get pair configuration
-        IPair.Config memory config = IPair(pair).getConfig();
-        IERC20 quoteToken = config.QUOTE;
-        IERC20 baseToken = config.BASE;
-
-        // Get current balance
-        uint256 balance = quoteToken.balanceOf(address(this));
-
-        // Check minimum order amount
-        if (amount < minOrderAmount) revert BuyBotInsufficientBalance(amount, minOrderAmount);
-
-        // Check sufficient balance
-        if (amount > balance) revert BuyBotInsufficientBalance(balance, amount);
 
         // Approve router if needed (only once per token)
         address routerAddress = address(router);
