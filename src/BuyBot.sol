@@ -131,10 +131,6 @@ contract BuyBot is AccessControlDefaultAdminRules, ReentrancyGuard {
         swapRouter = ISwapRouter(_swapRouter);
         maxTickSlippage = _maxTickSlippage;
 
-        // Set DEFAULT_ADMIN_ROLE as admin for BUYER_ROLE and MANAGER_ROLE
-        _setRoleAdmin(BUYER_ROLE, DEFAULT_ADMIN_ROLE);
-        _setRoleAdmin(MANAGER_ROLE, DEFAULT_ADMIN_ROLE);
-
         // Grant BUYER_ROLE to owner and buyer
         _grantRole(BUYER_ROLE, _owner);
         _grantRole(BUYER_ROLE, _buyer);
