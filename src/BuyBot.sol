@@ -46,8 +46,10 @@ contract BuyBot is AccessControlDefaultAdminRules, ReentrancyGuard {
     error BuyBotPoolNotFound(address tokenIn, address tokenOut);
     error BuyBotInsufficientSwapBalance(address token, uint256 balance);
     error BuyBotInvalidTokenAddresses();
+    error BuyBotInvalidPool(address pool);
     error BuyBotETHTransferFailed();
     error BuyBotInsufficientWithdrawBalance();
+    error BuyBotInvalidPoolTokens(address pool, address tokenIn, address tokenOut);
 
     event MarketBuyExecuted(
         address indexed pair,
@@ -378,14 +380,24 @@ contract BuyBot is AccessControlDefaultAdminRules, ReentrancyGuard {
 
     /**
      * @notice Set swap pool for token pair
-     * @dev Only manager can set pools. The pool address is not validated on-chain;
-     *      ensure only trusted managers are granted MANAGER_ROLE to prevent malicious pool settings.
+     * @dev Only manager can set pools. Validates that pool tokens match tokenIn/tokenOut.
      * @param tokenIn Input token address
      * @param tokenOut Output token address
      * @param pool Uniswap V3 pool address (address(0) to remove)
      */
     function setSwapPool(address tokenIn, address tokenOut, address pool) external onlyRole(MANAGER_ROLE) {
         if (tokenIn == address(0) || tokenOut == address(0)) revert BuyBotInvalidTokenAddresses();
+        if (pool == address(0)) revert BuyBotInvalidPool(pool);
+
+        // Verify pool tokens match tokenIn and tokenOut (if pool is not address(0))
+        address poolToken0 = IUniswapV3Pool(pool).token0();
+        address poolToken1 = IUniswapV3Pool(pool).token1();
+
+        // Check if tokens match in either order (token0/token1 are sorted by address)
+        bool isValid =
+            (tokenIn == poolToken0 && tokenOut == poolToken1) || (tokenIn == poolToken1 && tokenOut == poolToken0);
+        if (!isValid) revert BuyBotInvalidPoolTokens(pool, tokenIn, tokenOut);
+
         swapPools[tokenIn][tokenOut] = pool;
         emit SwapPoolSet(tokenIn, tokenOut, pool);
     }
