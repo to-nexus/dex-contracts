@@ -11,7 +11,6 @@ import {IPair} from "./interfaces/IPair.sol";
 import {IRouter} from "./interfaces/IRouter.sol";
 import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
 import {IUniswapV3Pool} from "./interfaces/IUniswapV3Pool.sol";
-import {TickMath} from "./lib/TickMath.sol";
 
 /**
  * @title BuyBot
@@ -43,7 +42,6 @@ contract BuyBot is AccessControlDefaultAdminRules, ReentrancyGuard {
     error BuyBotInvalidBuyer(address buyer);
     error BuyBotInvalidManager(address manager);
     error BuyBotInvalidSwapRouter(address);
-    error BuyBotInvalidTickSlippage(uint24);
     error BuyBotNoSwapToken();
     error BuyBotPoolNotFound(address tokenIn, address tokenOut);
     error BuyBotInsufficientSwapBalance(address token, uint256 balance);
@@ -67,7 +65,6 @@ contract BuyBot is AccessControlDefaultAdminRules, ReentrancyGuard {
     event SwapExecuted(address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 amountOut);
     event SwapPoolSet(address indexed tokenIn, address indexed tokenOut, address indexed pool);
     event SwapTokenSet(address indexed before, address indexed current);
-    event MaxTickSlippageSet(uint24 before, uint24 current);
     event SwapRouterSet(address before, address current);
 
     /// @notice CrossDexRouter address
@@ -88,9 +85,6 @@ contract BuyBot is AccessControlDefaultAdminRules, ReentrancyGuard {
     /// @notice Uniswap V3 SwapRouter address
     ISwapRouter public swapRouter;
 
-    /// @notice Maximum tick slippage for swaps (1 tick = 0.01% price movement)
-    uint24 public maxTickSlippage;
-
     /// @notice Token to swap from (e.g., WETH, USDT, etc.)
     address public swapToken;
 
@@ -108,7 +102,6 @@ contract BuyBot is AccessControlDefaultAdminRules, ReentrancyGuard {
      * @param _buyer Address authorized to execute buyMarket (gets BUYER_ROLE)
      * @param _manager Address authorized to set minOrderAmount and interval (gets MANAGER_ROLE)
      * @param _swapRouter Uniswap V3 SwapRouter address (address(0) to disable swapping)
-     * @param _maxTickSlippage Maximum tick slippage for swaps (1 tick = 0.01% price movement)
      */
     constructor(
         uint48 _initialDelay,
@@ -119,21 +112,18 @@ contract BuyBot is AccessControlDefaultAdminRules, ReentrancyGuard {
         address _recipient,
         address _buyer,
         address _manager,
-        address _swapRouter,
-        uint24 _maxTickSlippage
+        address _swapRouter
     ) AccessControlDefaultAdminRules(_initialDelay, _owner) {
         if (_router == address(0)) revert BuyBotInvalidRouter(_router);
         if (_minOrderAmount == 0) revert BuyBotInvalidMinOrderAmount(_minOrderAmount);
         if (_buyer == address(0)) revert BuyBotInvalidBuyer(_buyer);
         if (_manager == address(0)) revert BuyBotInvalidManager(_manager);
-        if (_maxTickSlippage == 0) revert BuyBotInvalidTickSlippage(_maxTickSlippage);
 
         router = IRouter(_router);
         minOrderAmount = _minOrderAmount;
         interval = _interval;
         recipient = _recipient;
         swapRouter = ISwapRouter(_swapRouter);
-        maxTickSlippage = _maxTickSlippage;
 
         // Grant BUYER_ROLE to owner and buyer
         _grantRole(BUYER_ROLE, _owner);
@@ -147,7 +137,6 @@ contract BuyBot is AccessControlDefaultAdminRules, ReentrancyGuard {
         emit IntervalSet(0, _interval);
         emit RecipientSet(address(0), _recipient);
         emit SwapRouterSet(address(0), _swapRouter);
-        emit MaxTickSlippageSet(0, _maxTickSlippage);
     }
 
     // ===== PUBLIC FUNCTIONS =====
@@ -221,12 +210,13 @@ contract BuyBot is AccessControlDefaultAdminRules, ReentrancyGuard {
      * @dev Can only be called by owner or authorized buyer
      * @dev Protected against reentrancy attacks
      * @dev Swaps all balance of swapToken to the pair's quote token
-     * @dev Uses maxTickSlippage for precise tick-based price slippage control
+     * @dev Uses minAmountOut for slippage protection (caller provides off-chain calculated value)
      * @param pair Trading pair address (to determine quote token)
      * @param uniswapFee Uniswap V3 pool fee tier (500 = 0.05%, 3000 = 0.3%, 10000 = 1%)
+     * @param minAmountOut Minimum amount of quote tokens to receive (for slippage protection)
      * @return amountOut Actual amount of tokens received from swap
      */
-    function swapToQuote(address pair, uint24 uniswapFee)
+    function swapToQuote(address pair, uint24 uniswapFee, uint256 minAmountOut)
         external
         nonReentrant
         onlyRole(BUYER_ROLE)
@@ -255,10 +245,7 @@ contract BuyBot is AccessControlDefaultAdminRules, ReentrancyGuard {
             tokenIn.forceApprove(swapRouterAddress, type(uint256).max);
         }
 
-        // Calculate sqrtPriceLimitX96 based on maxTickSlippage
-        uint160 sqrtPriceLimitX96 = _calculateSqrtPriceLimit(pool, swapToken);
-
-        // Execute swap with tick-based price limit
+        // Execute swap with minAmountOut for slippage protection
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
             tokenIn: swapToken,
             tokenOut: quoteToken,
@@ -266,44 +253,13 @@ contract BuyBot is AccessControlDefaultAdminRules, ReentrancyGuard {
             recipient: address(this),
             deadline: block.timestamp,
             amountIn: balance,
-            amountOutMinimum: 0, // Price limit enforced by sqrtPriceLimitX96
-            sqrtPriceLimitX96: sqrtPriceLimitX96
+            amountOutMinimum: minAmountOut,
+            sqrtPriceLimitX96: 0 // No price limit, protected by minAmountOut
         });
 
         amountOut = swapRouter.exactInputSingle(params);
 
         emit SwapExecuted(swapToken, quoteToken, balance, amountOut);
-    }
-
-    /**
-     * @notice Calculate sqrtPriceLimitX96 based on current pool price and maxTickSlippage
-     * @param pool Uniswap V3 pool address
-     * @param tokenIn Input token address
-     * @return sqrtPriceLimitX96 The price limit for the swap
-     */
-    function _calculateSqrtPriceLimit(address pool, address tokenIn) internal view returns (uint160) {
-        // Get current tick from pool
-        (, int24 currentTick,,,,,) = IUniswapV3Pool(pool).slot0();
-
-        // Determine swap direction
-        address token0 = IUniswapV3Pool(pool).token0();
-        bool zeroForOne = (tokenIn == token0);
-
-        // Calculate target tick with slippage
-        // zeroForOne: price decreases, so tick decreases
-        // oneForZero: price increases, so tick increases
-        int24 targetTick;
-        if (zeroForOne) {
-            targetTick = currentTick - int24(maxTickSlippage);
-            // Ensure we don't go below MIN_TICK
-            if (targetTick < TickMath.MIN_TICK) targetTick = TickMath.MIN_TICK;
-        } else {
-            targetTick = currentTick + int24(maxTickSlippage);
-            // Ensure we don't exceed MAX_TICK
-            if (targetTick > TickMath.MAX_TICK) targetTick = TickMath.MAX_TICK;
-        }
-
-        return TickMath.getSqrtRatioAtTick(targetTick);
     }
 
     // ===== OWNER ONLY FUNCTIONS =====
@@ -415,19 +371,6 @@ contract BuyBot is AccessControlDefaultAdminRules, ReentrancyGuard {
         address oldValue = swapToken;
         swapToken = _swapToken;
         emit SwapTokenSet(oldValue, _swapToken);
-    }
-
-    /**
-     * @notice Set maximum tick slippage for swaps
-     * @dev Only manager can set. 1 tick = 0.01% price movement.
-     * @param _maxTickSlippage New maximum tick slippage (1 = 1 tick = 0.01%)
-     */
-    function setMaxTickSlippage(uint24 _maxTickSlippage) external onlyRole(MANAGER_ROLE) {
-        if (_maxTickSlippage == 0) revert BuyBotInvalidTickSlippage(_maxTickSlippage);
-        if (maxTickSlippage == _maxTickSlippage) revert BuyBotNotChanged(maxTickSlippage, _maxTickSlippage);
-        uint24 oldValue = maxTickSlippage;
-        maxTickSlippage = _maxTickSlippage;
-        emit MaxTickSlippageSet(oldValue, _maxTickSlippage);
     }
 
     /**
