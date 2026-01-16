@@ -96,8 +96,9 @@ contract CrossDexRouterV3 is IRouterV3, IOwnable, UUPSUpgradeable, ContextUpgrad
      * @param pair The pair contract address
      * @param volume The base quote volume user wants to spend
      * @return The total volume needed including fee
+     * @notice Not a view function due to delegatecall. Use eth_call for gas-free queries.
      */
-    function getRequiredBuyVolume(address pair, uint256 volume) external view validPair(pair) returns (uint256) {
+    function getRequiredBuyVolume(address pair, uint256 volume) external validPair(pair) returns (uint256) {
         return IPairV3(pair).calcBuyVolumeWithFee(volume);
     }
 
