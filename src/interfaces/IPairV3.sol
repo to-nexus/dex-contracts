@@ -54,5 +54,7 @@ interface IPairV3 {
 
     function cancelOrder(address caller, uint256[] memory orderIds) external;
 
-    function calcBuyVolumeWithFee(uint256 volume) external view returns (uint256 buyVolume);
+    /// @notice Calculate total QUOTE volume including buyer taker fee.
+    /// @dev Uses delegatecall to FeeController. Can be called via eth_call for gas-free queries.
+    function calcBuyVolumeWithFee(uint256 volume) external returns (uint256 buyVolume);
 }

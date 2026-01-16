@@ -5,6 +5,7 @@ import {ERC1967Proxy} from "@openzeppelin-contracts-5.5.0/proxy/ERC1967/ERC1967P
 import {UUPSUpgradeable} from "@openzeppelin-contracts-5.5.0/proxy/utils/UUPSUpgradeable.sol";
 import {IERC20, IERC20Metadata} from "@openzeppelin-contracts-5.5.0/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin-contracts-5.5.0/token/ERC20/utils/SafeERC20.sol";
+import {Address} from "@openzeppelin-contracts-5.5.0/utils/Address.sol";
 import {Math} from "@openzeppelin-contracts-5.5.0/utils/math/Math.sol";
 
 import {PausableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.5.0/utils/PausableUpgradeable.sol";
@@ -19,6 +20,7 @@ contract PairImplV3 is IPairV3, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     using SafeERC20 for IERC20;
     using Math for uint256;
     using List for List.U256;
+    using Address for address;
 
     error PairInvalidReserve(address);
     error PairInvalidAccountReserve(address, address);
@@ -139,7 +141,7 @@ contract PairImplV3 is IPairV3, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         minTradeVolume = Math.mulDiv(_tickSize, _lotSize, DENOMINATOR);
 
         feeController = IFeeController(_feeController);
-        feeController.initialize(feeControllerInitData);
+        _feeControllerInitialize(feeControllerInitData);
     }
 
     //  #    # # ###### #    #  ####
@@ -153,8 +155,8 @@ contract PairImplV3 is IPairV3, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         return Config({QUOTE: QUOTE, BASE: BASE, DENOMINATOR: DENOMINATOR});
     }
 
-    function calcBuyVolumeWithFee(uint256 volume) external view returns (uint256 buyVolume) {
-        return feeController.calcBuyVolumeWithFee(false, volume);
+    function calcBuyVolumeWithFee(uint256 volume) external returns (uint256 buyVolume) {
+        return _feeControllerCalcBuyVolumeWithFee(false, volume);
     }
 
     function orderById(uint256 id) external view returns (Order memory) {
@@ -261,12 +263,16 @@ contract PairImplV3 is IPairV3, IOwnable, UUPSUpgradeable, PausableUpgradeable {
                 _allOrders[orderId] = order;
 
                 if (isSellOrder) {
+                    // Set maker fee bps for V2 compatibility (used in cancel refund)
+                    _allOrders[orderId].feeBps = _feeControllerSellerMakerFeeBps();
                     _addBaseReserve(order.owner, order.amount);
                     _sellOrders[order.price].push(orderId);
                 } else {
+                    // Set maker fee bps for V2 compatibility (used in cancel refund)
+                    _allOrders[orderId].feeBps = _feeControllerBuyerMakerFeeBps();
                     // For V2 RouterV2, the fee is already included in the transferred amount
                     // So we use the actual received amount instead of calculating fee again
-                    uint256 reserveQuoteAmount = feeController.calcBuyVolumeWithFee(true, order);
+                    uint256 reserveQuoteAmount = _feeControllerCalcBuyVolumeWithFeeOrder(true, order);
                     _addQuoteReserve(order.owner, reserveQuoteAmount);
                     _buyOrders[order.price].push(orderId);
                 }
@@ -340,7 +346,7 @@ contract PairImplV3 is IPairV3, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         //    and only match with buy orders that have a price equal to or higher than the input price.
         (bool done, uint256 earnQuoteAmount) = _matchSellOrder(orderId, order, maxMatchCount);
         if (earnQuoteAmount != 0) {
-            uint256 takerFee = feeController.settleFees();
+            uint256 takerFee = _feeControllerSettleFees();
             _exchangeSellOrder(orderId, order.owner, earnQuoteAmount, takerFee);
         }
         return (done, 0);
@@ -361,8 +367,8 @@ contract PairImplV3 is IPairV3, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         uint256 skimQuoteAmount;
         {
             uint256 buyVolumeWithFee = spendQuoteAmount == 0
-                ? feeController.calcBuyVolumeWithFee(false, order)
-                : feeController.calcBuyVolumeWithFee(false, spendQuoteAmount);
+                ? _feeControllerCalcBuyVolumeWithFeeOrder(false, order)
+                : _feeControllerCalcBuyVolumeWithFee(false, spendQuoteAmount);
             bool ok;
             (ok, skimQuoteAmount) = Math.trySub(QUOTE.balanceOf(address(this)), quoteReserve + buyVolumeWithFee);
             if (!ok) revert PairInvalidReserve(address(QUOTE));
@@ -378,7 +384,7 @@ contract PairImplV3 is IPairV3, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         if (buyBaseAmount != 0) {
             // Process buyer fee
             _exchangeBuyOrder(orderId, order.owner, buyBaseAmount, useQuoteAmount, 0);
-            uint256 takerFee = feeController.settleFees();
+            uint256 takerFee = _feeControllerSettleFees();
             if (takerFee != 0) {
                 emit FeeCollect(orderId, order.owner, useQuoteAmount, takerFee, useQuoteAmount - takerFee);
             }
@@ -541,8 +547,9 @@ contract PairImplV3 is IPairV3, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         uint256 price,
         List.U256 storage _orders
     ) private returns (address makerOwner, uint256 tradeAmount, uint256 makerFee) {
-        (makerOwner, tradeAmount, makerFee) =
-        (maker.owner, Math.min(taker.amount, maker.amount), feeController.recodeMatch(taker, maker));
+        tradeAmount = Math.min(taker.amount, maker.amount);
+        uint256 tradeQuoteAmount = Math.mulDiv(price, tradeAmount, DENOMINATOR);
+        (makerOwner, makerFee) = (maker.owner, _feeControllerRecodeMatch(taker, maker, tradeAmount, tradeQuoteAmount));
 
         (uint256 sellId, uint256 buyId) = (taker.side == OrderSide.SELL ? (takerId, makerId) : (makerId, takerId));
         emit OrderMatched(sellId, buyId, price, tradeAmount, block.timestamp);
@@ -733,7 +740,7 @@ contract PairImplV3 is IPairV3, IOwnable, UUPSUpgradeable, PausableUpgradeable {
             emit FeeControllerUpdated(address(feeController), newFeeController);
             feeController = IFeeController(newFeeController);
         }
-        feeController.initialize(feeControllerInitData);
+        _feeControllerInitialize(feeControllerInitData);
     }
 
     function skim(IERC20 erc20, address to, uint256 amount) external onlyOwner {
@@ -766,6 +773,63 @@ contract PairImplV3 is IPairV3, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     function setPause(bool pause) external onlyOwner {
         if (pause) _pause();
         else _unpause();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // FeeController delegatecall wrappers
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    function _feeControllerInitialize(bytes memory initData) private {
+        Address.functionDelegateCall(
+            address(feeController), abi.encodeCall(IFeeController.initialize, (address(QUOTE), DENOMINATOR, initData))
+        );
+    }
+
+    function _feeControllerCalcBuyVolumeWithFee(bool isMaker, uint256 volume) private returns (uint256) {
+        // calcBuyVolumeWithFee(bool,uint256)
+        bytes memory result = Address.functionDelegateCall(
+            address(feeController), abi.encodeCall(IFeeController.calcBuyVolumeWithFee, (isMaker, volume))
+        );
+        return abi.decode(result, (uint256));
+    }
+
+    function _feeControllerCalcBuyVolumeWithFeeOrder(bool isMaker, Order memory order) private returns (uint256) {
+        // calcBuyVolumeWithFee(bool,(uint8,address,uint32,uint256,uint256)) - Order struct
+        bytes memory result = Address.functionDelegateCall(
+            address(feeController), abi.encodeCall(IFeeController.calcBuyVolumeWithFeeByOrder, (isMaker, order))
+        );
+        return abi.decode(result, (uint256));
+    }
+
+    function _feeControllerRecodeMatch(
+        Order memory taker,
+        Order memory maker,
+        uint256 tradeAmount,
+        uint256 tradeQuoteAmount
+    ) private returns (uint256) {
+        bytes memory result = Address.functionDelegateCall(
+            address(feeController),
+            abi.encodeCall(IFeeController.recodeMatch, (taker, maker, tradeAmount, tradeQuoteAmount))
+        );
+        return abi.decode(result, (uint256));
+    }
+
+    function _feeControllerSettleFees() private returns (uint256) {
+        bytes memory result =
+            Address.functionDelegateCall(address(feeController), abi.encodeCall(IFeeController.settleFees, ()));
+        return abi.decode(result, (uint256));
+    }
+
+    function _feeControllerSellerMakerFeeBps() private returns (uint32) {
+        bytes memory result =
+            Address.functionDelegateCall(address(feeController), abi.encodeCall(IFeeController.sellerMakerFeeBps, ()));
+        return abi.decode(result, (uint32));
+    }
+
+    function _feeControllerBuyerMakerFeeBps() private returns (uint32) {
+        bytes memory result =
+            Address.functionDelegateCall(address(feeController), abi.encodeCall(IFeeController.buyerMakerFeeBps, ()));
+        return abi.decode(result, (uint32));
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
