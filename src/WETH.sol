@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import {ERC20} from "@openzeppelin-contracts-5.5.0/token/ERC20/ERC20.sol";
 import {Address} from "@openzeppelin-contracts-5.5.0/utils/Address.sol";
 
-import {IRouter} from "./interfaces/IRouter.sol";
+import {IRouterV3} from "./interfaces/IRouterV3.sol";
 
 contract WETH is ERC20 {
     using Address for address payable;
@@ -27,7 +27,7 @@ contract WETH is ERC20 {
         super._update(from, to, value);
         // [If it is not a burn case] If to is not the Pair, perform burn and then transfer.
         if (to != address(0)) {
-            if (!IRouter(ROUTER).isPair(to)) {
+            if (!IRouterV3(ROUTER).isPair(to)) {
                 _burn(to, value);
                 payable(to).sendValue(value);
             }
