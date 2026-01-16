@@ -34,8 +34,18 @@ contract BuyBotScript is Script {
         uint24 maxTickSlippage
     ) external returns (address) {
         vm.broadcast();
-        BuyBot bot =
-            new BuyBot(initialDelay, owner, router, minOrderAmount, interval, recipient, buyer, manager, swapRouter, maxTickSlippage);
+        BuyBot bot = new BuyBot(
+            initialDelay,
+            owner,
+            router,
+            minOrderAmount,
+            interval,
+            recipient,
+            buyer,
+            manager,
+            swapRouter,
+            maxTickSlippage
+        );
         return address(bot);
     }
 
