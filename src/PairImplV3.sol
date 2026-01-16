@@ -549,7 +549,8 @@ contract PairImplV3 is IPairV3, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     ) private returns (address makerOwner, uint256 tradeAmount, uint256 makerFee) {
         tradeAmount = Math.min(taker.amount, maker.amount);
         uint256 tradeQuoteAmount = Math.mulDiv(price, tradeAmount, DENOMINATOR);
-        (makerOwner, makerFee) = (maker.owner, _feeControllerRecodeMatch(taker, maker, tradeAmount, tradeQuoteAmount));
+        (makerOwner, makerFee) =
+        (maker.owner, _feeControllerRecodeMatch(takerId, taker, maker, tradeAmount, tradeQuoteAmount));
 
         (uint256 sellId, uint256 buyId) = (taker.side == OrderSide.SELL ? (takerId, makerId) : (makerId, takerId));
         emit OrderMatched(sellId, buyId, price, tradeAmount, block.timestamp);
@@ -802,6 +803,7 @@ contract PairImplV3 is IPairV3, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     }
 
     function _feeControllerRecodeMatch(
+        uint256 takerId,
         Order memory taker,
         Order memory maker,
         uint256 tradeAmount,
@@ -809,7 +811,7 @@ contract PairImplV3 is IPairV3, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     ) private returns (uint256) {
         bytes memory result = Address.functionDelegateCall(
             address(feeController),
-            abi.encodeCall(IFeeController.recodeMatch, (taker, maker, tradeAmount, tradeQuoteAmount))
+            abi.encodeCall(IFeeController.recodeMatch, (takerId, taker, maker, tradeAmount, tradeQuoteAmount))
         );
         return abi.decode(result, (uint256));
     }

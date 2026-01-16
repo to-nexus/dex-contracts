@@ -17,6 +17,17 @@ interface IFeeController {
     error FeeControllerInvalidFeeCollector();
     error FeeControllerNotDelegateCall();
     error FeeControllerInvalidPairConfig(address quote, uint256 denominator);
+    error FeeControllerTakerIdMismatch(uint256 expected, uint256 actual);
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Events
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// @notice Emitted when fees are settled and transferred to feeCollector.
+    /// @param takerId The taker order ID that initiated this fee settlement
+    /// @param feeCollector The address receiving the fees
+    /// @param totalFee The total fee amount transferred (maker + taker fees)
+    event FeeControllerFeesSettled(uint256 indexed takerId, address indexed feeCollector, uint256 totalFee);
 
     /// @notice Initialize or update fee configuration.
     /// @dev Called via delegatecall. Implementation should decode initData for its specific config.
@@ -40,12 +51,16 @@ interface IFeeController {
 
     /// @notice Record a match and accumulate fees.
     /// @dev Called via delegatecall for each fill. Maker fee is returned, taker fee is accumulated.
-    /// @param taker The taker order (uses taker.side to determine taker fee bps)
+    ///      On first call, caches takerId and takerFeeBps in transient storage.
+    ///      On subsequent calls, validates takerId matches the cached value.
+    /// @param takerId The taker order ID (for transient storage validation)
+    /// @param taker The taker order (uses taker.side to determine taker fee bps on first call)
     /// @param maker The maker order (uses maker.feeBps which was set at order creation)
     /// @param tradeAmount The trade amount in BASE (for future extensibility)
     /// @param tradeQuoteAmount The trade volume in QUOTE (fee calculation base)
     /// @return makerFee The fee charged to the maker for this fill
     function recodeMatch(
+        uint256 takerId,
         IPairV3.Order memory taker,
         IPairV3.Order memory maker,
         uint256 tradeAmount,

@@ -11,17 +11,14 @@ import {IPairV3} from "./interfaces/IPairV3.sol";
 /// @title FeeControllerV2Compat
 /// @notice V2-compatible fee controller implementing 4 fee bps (seller/buyer × maker/taker).
 ///         Designed to be called via delegatecall from PairImplV3.
-/// @dev All state is stored in Pair's storage via ERC-7201 namespaced slot.
+/// @dev Persistent config stored in Pair's storage via ERC-7201 namespaced slot.
+///      Per-transaction data stored in transient storage for gas efficiency.
 contract FeeControllerV2Compat is IFeeController {
     using SafeERC20 for IERC20;
     using Math for uint256;
 
-    /// @dev Reserved slot for taker fee bps direct storage access (future extensibility)
-    /// keccak256(abi.encode(uint256(keccak256("crossdex.feecontroller.v2compat.takerfeebps")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant _takerFeeBpsSlot = 0x5813c8d80096621638b3ed51bf4250962c0ac17965191c985906fbb2f45de500;
-
     // ─────────────────────────────────────────────────────────────────────────────
-    // ERC-7201 Namespaced Storage
+    // ERC-7201 Namespaced Persistent Storage
     // ─────────────────────────────────────────────────────────────────────────────
 
     /// @custom:storage-location erc7201:crossdex.feecontroller.v2compat
@@ -35,19 +32,30 @@ contract FeeControllerV2Compat is IFeeController {
         // Cached from Pair for gas savings
         IERC20 quote;
         uint256 denominator;
-        // --- Per-submit accumulation (reset after settleFees) ---
-        uint256 makerFeeAcc;
-        uint256 takerFeeAcc;
     }
 
     // keccak256(abi.encode(uint256(keccak256("crossdex.feecontroller.v2compat")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant STORAGE_SLOT = 0x8a0c9d8ec1d9f8b3f4e5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c600;
+    bytes32 private constant STORAGE_SLOT = 0x14ab8af4ef0e5d00cd393c578620673b1d80a5b1987c3516fd0d7064057dd200;
 
     function _layout() private pure returns (Layout storage $) {
         assembly {
             $.slot := STORAGE_SLOT
         }
     }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // ERC-7201 Namespaced Transient Storage (EIP-1153)
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// @custom:storage-location erc7201:crossdex.feecontroller.v2compat.transient
+    /// Slot offsets from TRANSIENT_SLOT:
+    ///   +0: currentTakerId (uint256) - validates same taker across matches
+    ///   +1: takerFeeBps (uint32) - cached taker fee bps for gas optimization
+    ///   +2: makerFeeAcc (uint256) - accumulated maker fees
+    ///   +3: takerFeeAcc (uint256) - accumulated taker fees
+
+    // keccak256(abi.encode(uint256(keccak256("crossdex.feecontroller.v2compat.transient")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant TRANSIENT_SLOT = 0x1fb63c0db76aadd79cfb812e9cbabdb25fe3dcb96270af5420927160c2e29800;
 
     // ─────────────────────────────────────────────────────────────────────────────
     // Delegatecall enforcement
@@ -90,9 +98,7 @@ contract FeeControllerV2Compat is IFeeController {
         $.sellerTakerFeeBps = sTk;
         $.buyerMakerFeeBps = bMk;
         $.buyerTakerFeeBps = bTk;
-        // Reset accumulators on re-initialize
-        $.makerFeeAcc = 0;
-        $.takerFeeAcc = 0;
+        // Note: fee accumulators are in transient storage, auto-reset per transaction
         if (address($.quote) == address(0)) {
             $.quote = IERC20(quote);
             $.denominator = denominator;
@@ -131,51 +137,75 @@ contract FeeControllerV2Compat is IFeeController {
 
     /// @notice Record a match and accumulate fees.
     /// @dev Called via delegatecall for each fill during matching.
+    ///      - On first call: caches takerId and takerFeeBps in transient storage
+    ///      - On subsequent calls: validates takerId and uses cached takerFeeBps
     ///      - Maker fee uses maker.feeBps (set at order creation time for V2 compatibility)
-    ///      - Taker fee uses current config based on taker.side
-    /// @param taker The taker order (uses taker.side to determine taker fee bps)
+    /// @param takerId The taker order ID (for transient storage validation)
+    /// @param taker The taker order (uses taker.side to determine taker fee bps on first call)
     /// @param maker The maker order (uses maker.feeBps which was set at order creation)
     /// @param tradeQuoteAmount The trade volume in QUOTE (fee calculation base)
     /// @return makerFee The fee charged to the maker for this fill
     function recodeMatch(
+        uint256 takerId,
         IPairV3.Order memory taker,
         IPairV3.Order memory maker,
         uint256, /* tradeAmount - unused in V2Compat, reserved for extensibility */
         uint256 tradeQuoteAmount
     ) external override onlyDelegateCall returns (uint256 makerFee) {
-        Layout storage $ = _layout();
+        uint32 takerBps;
+
+        // Check if this is the first recodeMatch call in this transaction
+        uint256 currentTakerId = _tloadTakerId();
+        if (currentTakerId == 0) {
+            // First call: cache takerId and takerFeeBps
+            _tstoreTakerId(takerId);
+            Layout storage $ = _layout();
+            takerBps = taker.side == IPairV3.OrderSide.SELL ? $.sellerTakerFeeBps : $.buyerTakerFeeBps;
+            _tstoreTakerFeeBps(takerBps);
+        } else {
+            // Subsequent call: validate takerId matches
+            if (currentTakerId != takerId) revert FeeControllerTakerIdMismatch(currentTakerId, takerId);
+            // Use cached takerFeeBps
+            takerBps = _tloadTakerFeeBps();
+        }
 
         // Maker fee: use feeBps stored in maker order at creation time (V2 compatibility)
-        // Taker fee: use current config based on taker side
         uint32 makerBps = maker.feeBps;
-        uint32 takerBps = taker.side == IPairV3.OrderSide.SELL ? $.sellerTakerFeeBps : $.buyerTakerFeeBps;
 
-        // Accumulate fees
+        // Accumulate fees in transient storage
         if (makerBps != 0) makerFee = Math.mulDiv(tradeQuoteAmount, makerBps, BPS_DENOMINATOR);
-        $.makerFeeAcc += makerFee;
+        _tstoreMakerFeeAcc(_tloadMakerFeeAcc() + makerFee);
+
         if (takerBps != 0) {
             uint256 takerFee = Math.mulDiv(tradeQuoteAmount, takerBps, BPS_DENOMINATOR);
-            $.takerFeeAcc += takerFee;
+            _tstoreTakerFeeAcc(_tloadTakerFeeAcc() + takerFee);
         }
     }
 
     /// @notice Settle accumulated fees by transferring to feeCollector.
     /// @dev Called via delegatecall after all matches in a submit are done.
+    ///      Reads accumulated fees from transient storage (auto-reset at tx end).
+    ///      Follows CEI pattern: Effects before Interactions to prevent reentrancy.
     /// @return takerFeeTotal The taker fee portion (for Pair's net calculation/event)
     function settleFees() external override onlyDelegateCall returns (uint256 takerFeeTotal) {
-        Layout storage $ = _layout();
-
-        uint256 makerFeeTotal = $.makerFeeAcc;
-        takerFeeTotal = $.takerFeeAcc;
+        // Read from transient storage
+        uint256 takerId = _tloadTakerId();
+        uint256 makerFeeTotal = _tloadMakerFeeAcc();
+        takerFeeTotal = _tloadTakerFeeAcc();
         uint256 totalFee = makerFeeTotal + takerFeeTotal;
 
-        // Reset accumulators
-        $.makerFeeAcc = 0;
-        $.takerFeeAcc = 0;
+        // Effects: Reset transient storage BEFORE external call (CEI pattern)
+        // Always reset even if totalFee == 0 to allow subsequent trades in same tx
+        _tstoreTakerId(0);
+        _tstoreMakerFeeAcc(0);
+        _tstoreTakerFeeAcc(0);
 
-        // Transfer total fee to feeCollector
-        if (totalFee > 0) $.quote.safeTransfer($.feeCollector, totalFee);
-        // TODO emit event
+        // Interactions: Transfer fee and emit event LAST
+        if (totalFee > 0) {
+            Layout storage $ = _layout();
+            $.quote.safeTransfer($.feeCollector, totalFee);
+            emit FeeControllerFeesSettled(takerId, $.feeCollector, totalFee);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -196,5 +226,61 @@ contract FeeControllerV2Compat is IFeeController {
     /// @notice Get current fee collector address
     function feeCollector() external view returns (address) {
         return _layout().feeCollector;
+    }
+
+    function _tloadTakerId() private view returns (uint256 value) {
+        bytes32 slot = TRANSIENT_SLOT;
+        assembly {
+            value := tload(slot)
+        }
+    }
+
+    function _tstoreTakerId(uint256 value) private {
+        bytes32 slot = TRANSIENT_SLOT;
+        assembly {
+            tstore(slot, value)
+        }
+    }
+
+    function _tloadTakerFeeBps() private view returns (uint32 value) {
+        bytes32 slot = bytes32(uint256(TRANSIENT_SLOT) + 1);
+        assembly {
+            value := tload(slot)
+        }
+    }
+
+    function _tstoreTakerFeeBps(uint32 value) private {
+        bytes32 slot = bytes32(uint256(TRANSIENT_SLOT) + 1);
+        assembly {
+            tstore(slot, value)
+        }
+    }
+
+    function _tloadMakerFeeAcc() private view returns (uint256 value) {
+        bytes32 slot = bytes32(uint256(TRANSIENT_SLOT) + 2);
+        assembly {
+            value := tload(slot)
+        }
+    }
+
+    function _tstoreMakerFeeAcc(uint256 value) private {
+        bytes32 slot = bytes32(uint256(TRANSIENT_SLOT) + 2);
+        assembly {
+            tstore(slot, value)
+        }
+    }
+
+    function _tloadTakerFeeAcc() private view returns (uint256 value) {
+        bytes32 slot = bytes32(uint256(TRANSIENT_SLOT) + 3);
+        assembly {
+            value := tload(slot)
+        }
+    }
+
+    function _tstoreTakerFeeAcc(uint256 value) private {
+        bytes32 slot = bytes32(uint256(TRANSIENT_SLOT) + 3);
+        assembly {
+            tstore(slot, value)
+        }
     }
 }
