@@ -12,21 +12,13 @@ import {ReentrancyGuardTransient} from "@openzeppelin-contracts-5.5.0/utils/Reen
 import {ContextUpgradeable} from "@openzeppelin-contracts-upgradeable-5.5.0/utils/ContextUpgradeable.sol";
 
 import {WETH} from "./WETH.sol";
-import {ICrossDex} from "./interfaces/ICrossDex.sol";
-import {BPS_DENOMINATOR} from "./interfaces/IMarket.sol";
+import {ICrossDexV3} from "./interfaces/ICrossDexV3.sol";
 import {IOwnable} from "./interfaces/IOwnable.sol";
-import {IPair, IPairV3} from "./interfaces/IPair.sol";
-import {IRouter, IRouterInitializer} from "./interfaces/IRouter.sol";
+import {IPairV3} from "./interfaces/IPairV3.sol";
+import {IRouterV3} from "./interfaces/IRouterV3.sol";
 import {IWETH} from "./interfaces/IWETH.sol";
 
-contract CrossDexRouterV3 is
-    IRouter,
-    IRouterInitializer,
-    IOwnable,
-    UUPSUpgradeable,
-    ContextUpgradeable,
-    ReentrancyGuardTransient
-{
+contract CrossDexRouterV3 is IRouterV3, IOwnable, UUPSUpgradeable, ContextUpgradeable, ReentrancyGuardTransient {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
     using Math for uint256;
@@ -92,7 +84,7 @@ contract CrossDexRouterV3 is
     }
 
     function isPair(address pair) public view override returns (bool) {
-        return ICrossDex(CROSS_DEX).pairToMarket(pair) != address(0);
+        return ICrossDexV3(CROSS_DEX).pairToMarket(pair) != address(0);
     }
 
     function owner() public view override returns (address) {
@@ -102,18 +94,18 @@ contract CrossDexRouterV3 is
     /**
      * @dev Calculate the total QUOTE volume required (including buyer taker fee)
      * @param pair The pair contract address
-     * @param quoteVolume The base quote volume user wants to spend
+     * @param volume The base quote volume user wants to spend
      * @return The total volume needed including fee
      */
-    function getRequiredBuyVolume(address pair, uint256 quoteVolume) external view validPair(pair) returns (uint256) {
-        return _calculateRequireBuyVolume(pair, quoteVolume);
+    function getRequiredBuyVolume(address pair, uint256 volume) external view validPair(pair) returns (uint256) {
+        return IPairV3(pair).calcBuyVolumeWithFee(volume);
     }
 
     function submitSellLimit(
         address pair,
         uint256 price,
         uint256 amount,
-        IPair.LimitConstraints constraints,
+        IPairV3.LimitConstraints constraints,
         uint256[2] memory adjacent,
         uint256 _maxMatchCount
     ) external payable nonReentrant checkSubmit validPair(pair) returns (uint256) {
@@ -121,13 +113,13 @@ contract CrossDexRouterV3 is
         IPairV3 _pair = IPairV3(pair);
         IPairV3.Config memory info = _pair.getConfig();
 
-        uint256 prevPrice = _pair.findPrevPrice(IPair.OrderSide.SELL, price, adjacent, findPrevPriceCount);
+        uint256 prevPrice = _pair.findPrevPrice(IPairV3.OrderSide.SELL, price, adjacent, findPrevPriceCount);
 
         if (address(info.BASE) == address(CROSS)) CROSS.mintTo{value: amount}(pair);
         else info.BASE.safeTransferFrom(_owner, pair, amount);
 
-        IPair.Order memory order =
-            IPair.Order({side: IPair.OrderSide.SELL, owner: _owner, feeBps: 0, price: price, amount: amount});
+        IPairV3.Order memory order =
+            IPairV3.Order({side: IPairV3.OrderSide.SELL, owner: _owner, feeBps: 0, price: price, amount: amount});
         return _pair.submitLimitOrder(order, constraints, prevPrice, _toMaxMatchCount(_maxMatchCount));
     }
 
@@ -135,26 +127,26 @@ contract CrossDexRouterV3 is
         address pair,
         uint256 price,
         uint256 amount,
-        IPair.LimitConstraints constraints,
+        IPairV3.LimitConstraints constraints,
         uint256[2] calldata adjacent,
         uint256 _maxMatchCount
     ) external payable nonReentrant checkSubmit validPair(pair) returns (uint256) {
         address _owner = _msgSender();
         IPairV3 _pair = IPairV3(pair);
         IPairV3.Config memory info = _pair.getConfig();
-        uint256 prevPrice = _pair.findPrevPrice(IPair.OrderSide.BUY, price, adjacent, findPrevPriceCount);
+        uint256 prevPrice = _pair.findPrevPrice(IPairV3.OrderSide.BUY, price, adjacent, findPrevPriceCount);
 
         {
             uint256 volume = Math.mulDiv(price, amount, info.DENOMINATOR);
             // Use taker fee since limit order can be immediately matched and become taker
-            volume = _calculateRequireBuyVolume(pair, volume);
+            volume = IPairV3(pair).calcBuyVolumeWithFee(volume);
 
             if (address(info.QUOTE) == address(CROSS)) CROSS.mintTo{value: volume}(pair);
             else info.QUOTE.safeTransferFrom(_owner, pair, volume);
         }
 
-        IPair.Order memory order =
-            IPair.Order({side: IPair.OrderSide.BUY, owner: _owner, feeBps: 0, price: price, amount: amount});
+        IPairV3.Order memory order =
+            IPairV3.Order({side: IPairV3.OrderSide.BUY, owner: _owner, feeBps: 0, price: price, amount: amount});
         return _pair.submitLimitOrder(order, constraints, prevPrice, _toMaxMatchCount(_maxMatchCount));
     }
 
@@ -172,8 +164,8 @@ contract CrossDexRouterV3 is
         if (address(BASE) == address(CROSS)) CROSS.mintTo{value: amount}(pair);
         else BASE.safeTransferFrom(_owner, pair, amount);
 
-        IPair.Order memory order =
-            IPair.Order({side: IPair.OrderSide.SELL, owner: _owner, feeBps: 0, price: 0, amount: 0});
+        IPairV3.Order memory order =
+            IPairV3.Order({side: IPairV3.OrderSide.SELL, owner: _owner, feeBps: 0, price: 0, amount: 0});
         IPairV3(pair).submitMarketOrder(order, amount, _toMaxMatchCount(_maxMatchCount));
     }
 
@@ -189,13 +181,13 @@ contract CrossDexRouterV3 is
 
         IERC20 QUOTE = info.QUOTE;
         {
-            uint256 volume = _calculateRequireBuyVolume(pair, quoteVolume);
+            uint256 volume = IPairV3(pair).calcBuyVolumeWithFee(quoteVolume);
             if (address(QUOTE) == address(CROSS)) CROSS.mintTo{value: volume}(pair);
             else QUOTE.safeTransferFrom(_owner, pair, volume);
         }
 
-        IPair.Order memory order =
-            IPair.Order({side: IPair.OrderSide.BUY, owner: _owner, feeBps: 0, price: 0, amount: 0});
+        IPairV3.Order memory order =
+            IPairV3.Order({side: IPairV3.OrderSide.BUY, owner: _owner, feeBps: 0, price: 0, amount: 0});
         IPairV3(pair).submitMarketOrder(order, quoteVolume, _toMaxMatchCount(_maxMatchCount));
     }
 
@@ -205,18 +197,6 @@ contract CrossDexRouterV3 is
             if (length > cancelLimit) revert RouterCancelLimitExceeded(length, cancelLimit);
             IPairV3(pair).cancelOrder(_msgSender(), orderIds);
         }
-    }
-
-    /**
-     * @dev Calculate the volume including buyer taker fee for buy orders
-     * Use taker fee since both limit and market orders can be matched immediately
-     * @param pair The pair contract address
-     * @param baseVolume The base volume without fee
-     * @return The volume including fee
-     */
-    function _calculateRequireBuyVolume(address pair, uint256 baseVolume) private view returns (uint256) {
-        (,,, uint32 buyerTakerFeeBps) = IPairV3(pair).getEffectiveFees();
-        return baseVolume + Math.mulDiv(baseVolume, buyerTakerFeeBps, BPS_DENOMINATOR);
     }
 
     function _toMaxMatchCount(uint256 _maxMatchCount) private view returns (uint256) {
