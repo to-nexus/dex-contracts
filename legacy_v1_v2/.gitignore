@@ -12,20 +12,3 @@ docs/
 
 # Dotenv file
 .env
-
-dependencies/
-
-!remappings.txt
-*.txt
-
-.idea
-.vscode
-.DS_Store
-.cursor
-CLAUDE.md
-/plans
-
-test/remote
-
-
-broadcast/
