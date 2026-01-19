@@ -29,3 +29,7 @@ test/remote
 
 
 broadcast/
+
+
+lcov.info
+coverage-html/

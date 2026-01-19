@@ -13,7 +13,7 @@ import {ICrossDexV3} from "./interfaces/ICrossDexV3.sol";
 import {IMarketV3} from "./interfaces/IMarketV3.sol";
 import {IRouterV3} from "./interfaces/IRouterV3.sol";
 
-contract CrossDexImplV3 is ICrossDexV3, UUPSUpgradeable, OwnableUpgradeable {
+contract CrossDexImplV3 is UUPSUpgradeable, OwnableUpgradeable, ICrossDexV3 {
     using EnumerableMap for EnumerableMap.AddressToAddressMap;
     using EnumerableSet for EnumerableSet.AddressSet;
 

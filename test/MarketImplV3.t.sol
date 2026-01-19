@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.13;
 
-import {Test} from "forge-std/Test.sol";
-
 import {CrossDexImplV3} from "../src/CrossDexImplV3.sol";
 import {FeeControllerV2Compat} from "../src/FeeControllerV2Compat.sol";
 import {MarketImplV3} from "../src/MarketImplV3.sol";
@@ -232,7 +230,7 @@ contract MarketImplV3Test is DEXV3BaseTest {
         MARKET.setFeeController(0, 2, true, address(FEE_CONTROLLER), newFeeData);
 
         // All pairs should have updated feeController since it's force=true
-        (address[] memory bases, address[] memory pairs) = MARKET.allPairs();
+        (, address[] memory pairs) = MARKET.allPairs();
         assertEq(pairs.length, 3);
     }
 

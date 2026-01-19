@@ -14,7 +14,7 @@ import {PairImplV3} from "./PairImplV3.sol";
 import {ICrossDexV3} from "./interfaces/ICrossDexV3.sol";
 import {IMarketV3} from "./interfaces/IMarketV3.sol";
 
-contract MarketImplV3 is IMarketV3, UUPSUpgradeable, OwnableUpgradeable {
+contract MarketImplV3 is UUPSUpgradeable, OwnableUpgradeable, IMarketV3 {
     using EnumerableMap for EnumerableMap.AddressToAddressMap;
 
     error MarketInvalidInitializeData(bytes32);

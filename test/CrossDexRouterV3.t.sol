@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.13;
 
-import {IERC20} from "@openzeppelin-contracts-5.5.0/token/ERC20/IERC20.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 import {CrossDexRouterV3} from "../src/CrossDexRouterV3.sol";

@@ -504,6 +504,144 @@ contract DEXV3FeeControllerV3SplitTest is Test {
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
+    // Configuration View Functions Tests (reading from PAIR's storage via delegatecall context)
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// @dev ERC-7201 storage slot for FeeControllerV3Split
+    /// keccak256(abi.encode(uint256(keccak256("cross.storage.FeeControllerV3Split")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant FeeControllerV3SplitStorageLocation =
+        0xc063cf2dfd170dd7c3dd72990f0424c6080fb35c03fb56e3a8e6c5b294381000;
+
+    function test_view_feeCollector_afterInit() external view {
+        // Read slot 0: feeCollector address (right-aligned in 32 bytes)
+        bytes32 slot0 = vm.load(address(PAIR), FeeControllerV3SplitStorageLocation);
+        address storedFeeCollector = address(uint160(uint256(slot0)));
+
+        assertEq(storedFeeCollector, FEE_COLLECTOR, "FeeCollector should match initialized value");
+    }
+
+    function test_view_creator_afterInit() external view {
+        // Read slot 1: creator (20 bytes) + takerFeeBps (4) + creatorShareBps (4) + makerRebateShareBps (4) = 32 bytes
+        // Layout (right to left): makerRebateShareBps | creatorShareBps | takerFeeBps | creator
+        bytes32 slot1 =
+            vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 1));
+
+        // Extract creator (lowest 20 bytes = 160 bits)
+        address storedCreator = address(uint160(uint256(slot1)));
+
+        assertEq(storedCreator, CREATOR, "Creator should match initialized value");
+    }
+
+    function test_view_takerFeeBps_afterInit() external view {
+        bytes32 slot1 =
+            vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 1));
+
+        // Extract takerFeeBps (bits 160-191, shift right 160 bits, mask 32 bits)
+        uint32 storedTakerFeeBps = uint32(uint256(slot1) >> 160);
+
+        assertEq(storedTakerFeeBps, TAKER_FEE_BPS, "TakerFeeBps should match initialized value");
+    }
+
+    function test_view_creatorShareBps_afterInit() external view {
+        bytes32 slot1 =
+            vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 1));
+
+        // Extract creatorShareBps (bits 192-223, shift right 192 bits, mask 32 bits)
+        uint32 storedCreatorShareBps = uint32(uint256(slot1) >> 192);
+
+        assertEq(storedCreatorShareBps, CREATOR_SHARE_BPS, "CreatorShareBps should match initialized value");
+    }
+
+    function test_view_makerRebateShareBps_afterInit() external view {
+        bytes32 slot1 =
+            vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 1));
+
+        // Extract makerRebateShareBps (bits 224-255, shift right 224 bits)
+        uint32 storedMakerRebateShareBps = uint32(uint256(slot1) >> 224);
+
+        assertEq(storedMakerRebateShareBps, MAKER_REBATE_SHARE_BPS, "MakerRebateShareBps should match initialized value");
+    }
+
+    function test_view_quote_afterInit() external view {
+        // Read slot 2: quote address
+        bytes32 slot2 =
+            vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 2));
+        address storedQuote = address(uint160(uint256(slot2)));
+
+        assertEq(storedQuote, address(QUOTE), "Quote should match initialized value");
+    }
+
+    function test_view_denominator_afterInit() external view {
+        // Read slot 3: denominator (full uint256)
+        bytes32 slot3 =
+            vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 3));
+        uint256 storedDenominator = uint256(slot3);
+
+        assertEq(storedDenominator, BASE_DECIMALS, "Denominator should match initialized value");
+    }
+
+    function test_view_allConfigValues_afterInit() external view {
+        // Comprehensive test: verify all config values in one test
+        bytes32 slot0 = vm.load(address(PAIR), FeeControllerV3SplitStorageLocation);
+        bytes32 slot1 =
+            vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 1));
+        bytes32 slot2 =
+            vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 2));
+        bytes32 slot3 =
+            vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 3));
+
+        // Decode all values
+        address storedFeeCollector = address(uint160(uint256(slot0)));
+        address storedCreator = address(uint160(uint256(slot1)));
+        uint32 storedTakerFeeBps = uint32(uint256(slot1) >> 160);
+        uint32 storedCreatorShareBps = uint32(uint256(slot1) >> 192);
+        uint32 storedMakerRebateShareBps = uint32(uint256(slot1) >> 224);
+        address storedQuote = address(uint160(uint256(slot2)));
+        uint256 storedDenominator = uint256(slot3);
+
+        // Verify all values
+        assertEq(storedFeeCollector, FEE_COLLECTOR, "FeeCollector mismatch");
+        assertEq(storedCreator, CREATOR, "Creator mismatch");
+        assertEq(storedTakerFeeBps, TAKER_FEE_BPS, "TakerFeeBps mismatch");
+        assertEq(storedCreatorShareBps, CREATOR_SHARE_BPS, "CreatorShareBps mismatch");
+        assertEq(storedMakerRebateShareBps, MAKER_REBATE_SHARE_BPS, "MakerRebateShareBps mismatch");
+        assertEq(storedQuote, address(QUOTE), "Quote mismatch");
+        assertEq(storedDenominator, BASE_DECIMALS, "Denominator mismatch");
+    }
+
+    function test_view_configValues_afterUpdate() external {
+        // Test that config values are properly updated after setFeeController
+        uint32 newTakerFeeBps = 50; // 0.5%
+        uint32 newCreatorShareBps = 5000; // 50%
+        uint32 newMakerRebateShareBps = 1000; // 10%
+        address newCreator = makeAddr("newCreator");
+        address newFeeCollector = makeAddr("newFeeCollector");
+
+        // Update configuration
+        vm.prank(OWNER);
+        bytes memory newFeeData =
+            abi.encode(newFeeCollector, newCreator, newTakerFeeBps, newCreatorShareBps, newMakerRebateShareBps);
+        MARKET.setFeeController(0, 1, true, address(FEE_CONTROLLER), newFeeData);
+
+        // Read and verify updated values
+        bytes32 slot0 = vm.load(address(PAIR), FeeControllerV3SplitStorageLocation);
+        bytes32 slot1 =
+            vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 1));
+
+        address storedFeeCollector = address(uint160(uint256(slot0)));
+        address storedCreator = address(uint160(uint256(slot1)));
+        uint32 storedTakerFeeBps = uint32(uint256(slot1) >> 160);
+        uint32 storedCreatorShareBps = uint32(uint256(slot1) >> 192);
+        uint32 storedMakerRebateShareBps = uint32(uint256(slot1) >> 224);
+
+        assertEq(storedFeeCollector, newFeeCollector, "Updated FeeCollector mismatch");
+        assertEq(storedCreator, newCreator, "Updated Creator mismatch");
+        assertEq(storedTakerFeeBps, newTakerFeeBps, "Updated TakerFeeBps mismatch");
+        assertEq(storedCreatorShareBps, newCreatorShareBps, "Updated CreatorShareBps mismatch");
+        assertEq(storedMakerRebateShareBps, newMakerRebateShareBps, "Updated MakerRebateShareBps mismatch");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
     // Initialize Validation Tests
     // ─────────────────────────────────────────────────────────────────────────────
 

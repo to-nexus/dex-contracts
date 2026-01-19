@@ -1,14 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.13;
 
-import {IERC20} from "@openzeppelin-contracts-5.5.0/token/ERC20/IERC20.sol";
-import {Math} from "@openzeppelin-contracts-5.5.0/utils/math/Math.sol";
-
 import {PairImplV3} from "../src/PairImplV3.sol";
-import {IOwnable} from "../src/interfaces/IOwnable.sol";
 import {IPairV3} from "../src/interfaces/IPairV3.sol";
 import {DEXV3BaseTest} from "./DEXV3Base.t.sol";
-import {T20} from "./mock/T20.sol";
 
 contract PairImplV3Test is DEXV3BaseTest {
     address public constant USER3 = address(bytes20("USER3"));
