@@ -182,11 +182,8 @@ contract PairImplV3 is UUPSUpgradeable, PausableUpgradeable, IPairV3, IOwnable {
         uint256 length = prices.length;
 
         uint256[][] memory orderIds = new uint256[][](length);
-        for (uint256 i = 0; i < length;) {
+        for (uint256 i = 0; i < length; ++i) {
             orderIds[i] = orders[prices[i]].values();
-            unchecked {
-                ++i;
-            }
         }
         return orderIds;
     }
@@ -317,16 +314,13 @@ contract PairImplV3 is UUPSUpgradeable, PausableUpgradeable, IPairV3, IOwnable {
 
     function cancelOrder(address caller, uint256[] calldata orderIds) external override onlyRouter {
         uint256 length = orderIds.length;
-        for (uint256 i = 0; i < length;) {
+        for (uint256 i = 0; i < length; ++i) {
             uint256 orderId = orderIds[i];
             Order memory order = _allOrders[orderId];
             if (order.owner == address(0)) continue;
             if (order.owner != caller) revert PairNotOwner(orderId, caller);
 
             _cancelOrder(orderId, order, CloseType.CANCEL);
-            unchecked {
-                ++i;
-            }
         }
     }
 
@@ -765,15 +759,12 @@ contract PairImplV3 is UUPSUpgradeable, PausableUpgradeable, IPairV3, IOwnable {
 
     function emergencyCancelOrder(uint256[] calldata orderIds) external whenPaused onlyOwner {
         uint256 length = orderIds.length;
-        for (uint256 i = 0; i < length;) {
+        for (uint256 i = 0; i < length; ++i) {
             uint256 orderId = orderIds[i];
             Order memory order = _allOrders[orderId];
             if (order.owner == address(0)) continue;
 
             _cancelOrder(orderId, order, CloseType.EMERGENCY);
-            unchecked {
-                ++i;
-            }
         }
     }
 

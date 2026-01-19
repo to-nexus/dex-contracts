@@ -204,10 +204,12 @@ contract DEXV3FeeControllerV2CompatTest is DEXV3BaseTest {
         // Set buyer maker fee to 10 bps (0.1%)
         uint32 newBuyerMakerFee = 10;
 
-        vm.prank(OWNER);
         bytes memory newFeeData =
             abi.encode(FEE_COLLECTOR, SELLER_MAKER_FEE, SELLER_TAKER_FEE, newBuyerMakerFee, newBuyerMakerFee);
-        MARKET.setFeeController(0, 1, true, address(FEE_CONTROLLER), newFeeData);
+        address[] memory pairs = new address[](1);
+        pairs[0] = address(PAIR);
+        vm.prank(OWNER);
+        MARKET.setFeeController(pairs, address(FEE_CONTROLLER), newFeeData);
 
         uint256 price = _toQuote(100);
         uint256 amount = _toBase(10);
@@ -284,9 +286,11 @@ contract DEXV3FeeControllerV2CompatTest is DEXV3BaseTest {
 
     function test_zero_fee_scenario() external {
         // Set all fees to 0
-        vm.prank(OWNER);
         bytes memory zeroFeeData = abi.encode(FEE_COLLECTOR, uint32(0), uint32(0), uint32(0), uint32(0));
-        MARKET.setFeeController(0, 1, true, address(FEE_CONTROLLER), zeroFeeData);
+        address[] memory pairs = new address[](1);
+        pairs[0] = address(PAIR);
+        vm.prank(OWNER);
+        MARKET.setFeeController(pairs, address(FEE_CONTROLLER), zeroFeeData);
 
         uint256 price = _toQuote(100);
         uint256 amount = _toBase(10);
@@ -592,9 +596,11 @@ contract DEXV3FeeControllerV2CompatTest is DEXV3BaseTest {
     /// @dev Prevents FeeControllerTakerIdMismatch in subsequent trades within same tx
     function test_zero_fee_settlement_resets_transient() external {
         // Set all fees to 0
-        vm.prank(OWNER);
         bytes memory zeroFeeData = abi.encode(FEE_COLLECTOR, uint32(0), uint32(0), uint32(0), uint32(0));
-        MARKET.setFeeController(0, 1, true, address(FEE_CONTROLLER), zeroFeeData);
+        address[] memory pairs = new address[](1);
+        pairs[0] = address(PAIR);
+        vm.prank(OWNER);
+        MARKET.setFeeController(pairs, address(FEE_CONTROLLER), zeroFeeData);
 
         uint256 price = _toQuote(100);
         uint256 amount = _toBase(10);

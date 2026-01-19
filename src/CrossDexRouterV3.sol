@@ -32,6 +32,7 @@ contract CrossDexRouterV3 is UUPSUpgradeable, ContextUpgradeable, ReentrancyGuar
     event MaxMatchCountChanged(uint256 indexed before, uint256 indexed current);
     event CancelLimitChanged(uint256 indexed before, uint256 indexed current);
     event WhitelistedCodeAccountSet(address indexed account, bool whitelisted);
+    event Skim(address indexed to, uint256 amount);
 
     address public CROSS_DEX; // immutable
     IWETH public CROSS; // immutable
@@ -44,14 +45,29 @@ contract CrossDexRouterV3 is UUPSUpgradeable, ContextUpgradeable, ReentrancyGuar
 
     uint256[43] private __gap;
 
+    // Transient storage slot for cached balance (keccak256("CrossDexRouterV3.cachedBalance") - 1)
+    bytes32 private constant CACHED_BALANCE_SLOT = 0x7a2e3c4d5f6a7b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f7a8b9c0d1e2f3a4;
+
     modifier checkSubmit() {
         _checkAccountCode(_msgSender());
+        _storeCachedBalance();
         _;
         _checkNoRemainingValue();
     }
 
+    function _storeCachedBalance() private {
+        uint256 cachedBalance = address(this).balance - msg.value;
+        assembly {
+            tstore(CACHED_BALANCE_SLOT, cachedBalance)
+        }
+    }
+
     function _checkNoRemainingValue() private view {
-        if (address(this).balance != 0) revert RouterInvalidValue();
+        uint256 cachedBalance;
+        assembly {
+            cachedBalance := tload(CACHED_BALANCE_SLOT)
+        }
+        if (address(this).balance != cachedBalance) revert RouterInvalidValue();
     }
 
     modifier validPair(address pair) {
@@ -258,21 +274,30 @@ contract CrossDexRouterV3 is UUPSUpgradeable, ContextUpgradeable, ReentrancyGuar
 
     function setWhitelistedCodeAccount(address[] memory accounts, bool whitelisted) external onlyOwner {
         if (whitelisted) {
-            for (uint256 i = 0; i < accounts.length;) {
+            for (uint256 i = 0; i < accounts.length; ++i) {
                 address account = accounts[i];
                 if (whitelistedCodeAccounts.add(account)) emit WhitelistedCodeAccountSet(account, true);
-                unchecked {
-                    ++i;
-                }
             }
         } else {
-            for (uint256 i = 0; i < accounts.length;) {
+            for (uint256 i = 0; i < accounts.length; ++i) {
                 address account = accounts[i];
                 if (whitelistedCodeAccounts.remove(account)) emit WhitelistedCodeAccountSet(account, false);
-                unchecked {
-                    ++i;
-                }
             }
+        }
+    }
+
+    /**
+     * @notice Withdraw any ETH forcibly sent to this contract (e.g., via selfdestruct)
+     * @dev This function allows the owner to recover ETH that was injected into the router
+     * without going through the normal submit flow. This prevents DoS attacks where
+     * an attacker force-sends ETH to brick the router.
+     */
+    function skim(address payable to) external onlyOwner {
+        uint256 balance = address(this).balance;
+        if (balance > 0) {
+            emit Skim(to, balance);
+            (bool success,) = to.call{value: balance}("");
+            require(success, "ETH transfer failed");
         }
     }
 

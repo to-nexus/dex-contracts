@@ -191,27 +191,33 @@ contract MarketImplV3Test is DEXV3BaseTest {
 
         bytes memory feeData = abi.encode(FEE_COLLECTOR, uint32(10), uint32(20), uint32(5), uint32(10));
 
+        address[] memory pairs = new address[](1);
+        pairs[0] = address(PAIR);
+
         vm.expectEmit(true, true, false, false);
         emit MarketImplV3.FeeControllerUpdated(address(FEE_CONTROLLER), address(newFeeController));
 
         vm.prank(OWNER);
-        MARKET.setFeeController(0, 1, true, address(newFeeController), feeData);
+        MARKET.setFeeController(pairs, address(newFeeController), feeData);
 
         assertEq(MARKET.feeController(), address(newFeeController));
     }
 
-    function test_setFeeController_forceUpdate() external {
+    function test_setFeeController_updatePairs() external {
         bytes memory feeData = abi.encode(FEE_COLLECTOR, uint32(10), uint32(20), uint32(5), uint32(10));
 
-        // Force update all pairs
+        address[] memory pairs = new address[](1);
+        pairs[0] = address(PAIR);
+
+        // Update the pair
         vm.prank(OWNER);
-        MARKET.setFeeController(0, 1, true, address(FEE_CONTROLLER), feeData);
+        MARKET.setFeeController(pairs, address(FEE_CONTROLLER), feeData);
 
         // Verify PAIR still has fee controller
         assertEq(address(PAIR.feeController()), address(FEE_CONTROLLER));
     }
 
-    function test_setFeeController_partialUpdate() external {
+    function test_setFeeController_selectivePairUpdate() external {
         // Create multiple pairs
         T20 base2 = new T20("BASE2", "B2", 18);
         T20 base3 = new T20("BASE3", "B3", 18);
@@ -220,29 +226,99 @@ contract MarketImplV3Test is DEXV3BaseTest {
             abi.encode(FEE_COLLECTOR, SELLER_MAKER_FEE, SELLER_TAKER_FEE, BUYER_MAKER_FEE, BUYER_TAKER_FEE);
 
         vm.startPrank(OWNER);
-        MARKET.createPair(address(base2), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e6, feeData);
-        MARKET.createPair(address(base3), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e6, feeData);
+        address pair2 = MARKET.createPair(address(base2), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e6, feeData);
+        address pair3 = MARKET.createPair(address(base3), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e6, feeData);
         vm.stopPrank();
 
-        // Update only pairs 1-2 (indices 0-1)
+        // Update only specific pairs (pair1 and pair2)
+        address[] memory pairsToUpdate = new address[](2);
+        pairsToUpdate[0] = address(PAIR);
+        pairsToUpdate[1] = pair2;
+
         bytes memory newFeeData = abi.encode(FEE_COLLECTOR, uint32(10), uint32(20), uint32(5), uint32(10));
         vm.prank(OWNER);
-        MARKET.setFeeController(0, 2, true, address(FEE_CONTROLLER), newFeeData);
+        MARKET.setFeeController(pairsToUpdate, address(FEE_CONTROLLER), newFeeData);
 
-        // All pairs should have updated feeController since it's force=true
-        (, address[] memory pairs) = MARKET.allPairs();
-        assertEq(pairs.length, 3);
+        // All 3 pairs should exist
+        (, address[] memory allPairs) = MARKET.allPairs();
+        assertEq(allPairs.length, 3);
+
+        // Verify pair3 was not included in the update (but still has same controller)
+        assertEq(address(PairImplV3(pair3).feeController()), address(FEE_CONTROLLER));
+    }
+
+    function test_setFeeController_emptyPairsArray() external {
+        // Create a new fee controller
+        FeeControllerV2Compat newFeeController = new FeeControllerV2Compat();
+
+        vm.prank(OWNER);
+        CROSS_DEX.setFeeControllerAllow(address(newFeeController), true);
+
+        bytes memory feeData = abi.encode(FEE_COLLECTOR, uint32(10), uint32(20), uint32(5), uint32(10));
+
+        address[] memory emptyPairs = new address[](0);
+
+        vm.expectEmit(true, true, false, false);
+        emit MarketImplV3.FeeControllerUpdated(address(FEE_CONTROLLER), address(newFeeController));
+
+        // Should update market feeController but not iterate any pairs
+        vm.prank(OWNER);
+        MARKET.setFeeController(emptyPairs, address(newFeeController), feeData);
+
+        // Market feeController updated
+        assertEq(MARKET.feeController(), address(newFeeController));
+        // But PAIR still has old feeController
+        assertEq(address(PAIR.feeController()), address(FEE_CONTROLLER));
     }
 
     function test_setFeeController_revert_notAllowed() external {
         address unallowedFeeController = address(0x9999);
         bytes memory feeData = abi.encode(FEE_COLLECTOR, uint32(10), uint32(20), uint32(5), uint32(10));
 
+        address[] memory pairs = new address[](1);
+        pairs[0] = address(PAIR);
+
         vm.prank(OWNER);
         vm.expectRevert(
             abi.encodeWithSelector(CrossDexImplV3.CrossDexInvalidFeeController.selector, unallowedFeeController)
         );
-        MARKET.setFeeController(0, 1, true, unallowedFeeController, feeData);
+        MARKET.setFeeController(pairs, unallowedFeeController, feeData);
+    }
+
+    function test_setFeeController_revert_invalidPair() external {
+        bytes memory feeData = abi.encode(FEE_COLLECTOR, uint32(10), uint32(20), uint32(5), uint32(10));
+
+        address fakePair = address(0x1234);
+        address[] memory pairs = new address[](1);
+        pairs[0] = fakePair;
+
+        vm.prank(OWNER);
+        vm.expectRevert(abi.encodeWithSelector(MarketImplV3.MarketInvalidPairAddress.selector, fakePair));
+        MARKET.setFeeController(pairs, address(FEE_CONTROLLER), feeData);
+    }
+
+    function test_setFeeController_revert_pairFromOtherMarket() external {
+        // Create another market
+        T20 otherQuote = new T20("OTHERQUOTE", "OQ", 18);
+        bytes memory feeData =
+            abi.encode(FEE_COLLECTOR, SELLER_MAKER_FEE, SELLER_TAKER_FEE, BUYER_MAKER_FEE, BUYER_TAKER_FEE);
+
+        vm.prank(OWNER);
+        address otherMarket = CROSS_DEX.createMarket(OWNER, address(otherQuote), address(FEE_CONTROLLER), "other");
+
+        // Create a pair in the other market
+        T20 otherBase = new T20("OTHERBASE", "OB", 18);
+        vm.prank(OWNER);
+        address otherPair = MarketImplV3(otherMarket)
+            .createPair(address(otherBase), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e6, feeData);
+
+        // Try to update the other market's pair from this market
+        address[] memory pairs = new address[](1);
+        pairs[0] = otherPair;
+
+        vm.prank(OWNER);
+        vm.expectRevert(abi.encodeWithSelector(MarketImplV3.MarketInvalidPairAddress.selector, otherPair));
+        MARKET.setFeeController(pairs, address(FEE_CONTROLLER), feeData);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════

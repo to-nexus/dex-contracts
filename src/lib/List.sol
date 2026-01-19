@@ -54,12 +54,9 @@ library List {
         uint256[] memory result = new uint256[](_list.length);
         uint256 _length = _list.length;
         uint256 data = _list.head;
-        for (uint256 i = 0; i < _length;) {
+        for (uint256 i = 0; i < _length; ++i) {
             result[i] = data;
             data = _list.nodes[data].next;
-            unchecked {
-                ++i;
-            }
         }
         return result;
     }
