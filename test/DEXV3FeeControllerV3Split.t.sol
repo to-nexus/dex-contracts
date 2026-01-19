@@ -13,7 +13,7 @@ import {MarketImplV3} from "../src/MarketImplV3.sol";
 import {PairImplV3} from "../src/PairImplV3.sol";
 import {WETH} from "../src/WETH.sol";
 
-import {BPS_DENOMINATOR} from "../src/interfaces/IFeeController.sol";
+import {BPS_DENOMINATOR, IFeeController} from "../src/interfaces/IFeeController.sol";
 import {IPairV3} from "../src/interfaces/IPairV3.sol";
 
 import {T20} from "./mock/T20.sol";
@@ -489,6 +489,177 @@ contract DEXV3FeeControllerV3SplitTest is Test {
         // No fees collected
         assertEq(QUOTE.balanceOf(CREATOR), creatorBefore, "No creator fee with 0 taker fee");
         assertEq(QUOTE.balanceOf(FEE_COLLECTOR), feeCollectorBefore, "No system fee with 0 taker fee");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // View Functions Tests
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    function test_view_sellerMakerFeeBps() external view {
+        assertEq(FEE_CONTROLLER.sellerMakerFeeBps(), 0, "Seller maker fee should always be 0");
+    }
+
+    function test_view_buyerMakerFeeBps() external view {
+        assertEq(FEE_CONTROLLER.buyerMakerFeeBps(), 0, "Buyer maker fee should always be 0");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Initialize Validation Tests
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    function test_initialize_revert_zeroFeeCollector() external {
+        // Create a new pair with invalid config
+        T20 newBase = new T20("NEW", "NEW", 18);
+        bytes memory invalidFeeData = abi.encode(
+            address(0), // feeCollector = 0 (invalid)
+            CREATOR,
+            TAKER_FEE_BPS,
+            CREATOR_SHARE_BPS,
+            MAKER_REBATE_SHARE_BPS
+        );
+
+        vm.prank(OWNER);
+        vm.expectRevert(abi.encodeWithSelector(IFeeController.FeeControllerInvalidFeeCollector.selector));
+        MARKET.createPair(address(newBase), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e6, invalidFeeData);
+    }
+
+    function test_initialize_revert_zeroCreator() external {
+        T20 newBase = new T20("NEW", "NEW", 18);
+        bytes memory invalidFeeData = abi.encode(
+            FEE_COLLECTOR,
+            address(0), // creator = 0 (invalid)
+            TAKER_FEE_BPS,
+            CREATOR_SHARE_BPS,
+            MAKER_REBATE_SHARE_BPS
+        );
+
+        vm.prank(OWNER);
+        vm.expectRevert(abi.encodeWithSelector(IFeeController.FeeControllerInvalidFeeCollector.selector));
+        MARKET.createPair(address(newBase), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e6, invalidFeeData);
+    }
+
+    function test_initialize_revert_takerFeeTooHigh() external {
+        T20 newBase = new T20("NEW", "NEW", 18);
+        bytes memory invalidFeeData = abi.encode(
+            FEE_COLLECTOR,
+            CREATOR,
+            uint32(10000), // takerFeeBps >= 10000 (invalid)
+            CREATOR_SHARE_BPS,
+            MAKER_REBATE_SHARE_BPS
+        );
+
+        vm.prank(OWNER);
+        vm.expectRevert(abi.encodeWithSelector(IFeeController.FeeControllerInvalidFeeBps.selector));
+        MARKET.createPair(address(newBase), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e6, invalidFeeData);
+    }
+
+    function test_initialize_revert_shareSumTooHigh() external {
+        T20 newBase = new T20("NEW", "NEW", 18);
+        bytes memory invalidFeeData = abi.encode(
+            FEE_COLLECTOR,
+            CREATOR,
+            TAKER_FEE_BPS,
+            uint32(6000), // creatorShareBps
+            uint32(5000) // makerRebateShareBps, sum = 11000 > 10000 (invalid)
+        );
+
+        vm.prank(OWNER);
+        vm.expectRevert(abi.encodeWithSelector(IFeeController.FeeControllerInvalidFeeBps.selector));
+        MARKET.createPair(address(newBase), QUOTE_DECIMALS / 1e2, BASE_DECIMALS / 1e6, invalidFeeData);
+    }
+
+    function test_initialize_revert_directCall_notDelegateCall() external {
+        // Calling initialize directly (not via delegatecall) should revert
+        bytes memory feeData =
+            abi.encode(FEE_COLLECTOR, CREATOR, TAKER_FEE_BPS, CREATOR_SHARE_BPS, MAKER_REBATE_SHARE_BPS);
+
+        vm.expectRevert(abi.encodeWithSelector(IFeeController.FeeControllerNotDelegateCall.selector));
+        FEE_CONTROLLER.initialize(address(QUOTE), BASE_DECIMALS, feeData);
+    }
+
+    function test_calcBuyVolumeWithFee_maker() external view {
+        uint256 volume = _toQuote(1000);
+        // Maker has no fee in V3Split - this is a pure calculation, no storage needed
+        uint256 result = FEE_CONTROLLER.calcBuyVolumeWithFee(true, volume);
+        assertEq(result, volume, "Maker should have no fee added");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Zero Rebate Share Tests
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    function test_zero_maker_rebate_share() external {
+        // Set maker rebate to 0
+        vm.prank(OWNER);
+        bytes memory zeroRebateData = abi.encode(
+            FEE_COLLECTOR,
+            CREATOR,
+            TAKER_FEE_BPS,
+            CREATOR_SHARE_BPS,
+            uint32(0) // makerRebateShareBps = 0
+        );
+        MARKET.setFeeController(0, 1, true, address(FEE_CONTROLLER), zeroRebateData);
+
+        uint256 price = _toQuote(100);
+        uint256 amount = _toBase(10);
+        uint256 quoteVolume = _toTradeVolume(price, amount);
+
+        vm.prank(USER1);
+        ROUTER.submitBuyLimit(address(PAIR), price, amount, IPairV3.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+
+        uint256 makerQuoteBefore = QUOTE.balanceOf(USER1);
+        uint256 creatorBefore = QUOTE.balanceOf(CREATOR);
+        uint256 feeCollectorBefore = QUOTE.balanceOf(FEE_COLLECTOR);
+
+        vm.prank(USER2);
+        ROUTER.submitSellMarket(address(PAIR), amount, 0);
+
+        // Calculate expected with 0 rebate
+        uint256 takerFee = _calcFee(quoteVolume, TAKER_FEE_BPS);
+        uint256 creatorFee = _calcFee(takerFee, CREATOR_SHARE_BPS);
+        uint256 systemFee = takerFee - creatorFee; // No rebate deduction
+
+        // Maker should NOT receive rebate
+        assertEq(QUOTE.balanceOf(USER1) - makerQuoteBefore, 0, "Maker should not receive rebate");
+        assertEq(QUOTE.balanceOf(CREATOR) - creatorBefore, creatorFee, "Creator gets their share");
+        assertEq(QUOTE.balanceOf(FEE_COLLECTOR) - feeCollectorBefore, systemFee, "FeeCollector gets the rest");
+    }
+
+    function test_zero_creator_share() external {
+        // Set creator share to 0
+        vm.prank(OWNER);
+        bytes memory zeroCreatorData = abi.encode(
+            FEE_COLLECTOR,
+            CREATOR,
+            TAKER_FEE_BPS,
+            uint32(0), // creatorShareBps = 0
+            MAKER_REBATE_SHARE_BPS
+        );
+        MARKET.setFeeController(0, 1, true, address(FEE_CONTROLLER), zeroCreatorData);
+
+        uint256 price = _toQuote(100);
+        uint256 amount = _toBase(10);
+        uint256 quoteVolume = _toTradeVolume(price, amount);
+
+        vm.prank(USER1);
+        ROUTER.submitBuyLimit(address(PAIR), price, amount, IPairV3.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+
+        uint256 creatorBefore = QUOTE.balanceOf(CREATOR);
+        uint256 feeCollectorBefore = QUOTE.balanceOf(FEE_COLLECTOR);
+
+        vm.prank(USER2);
+        ROUTER.submitSellMarket(address(PAIR), amount, 0);
+
+        // Calculate expected with 0 creator share
+        uint256 takerFee = _calcFee(quoteVolume, TAKER_FEE_BPS);
+        uint256 makerRebate = _calcFee(takerFee, MAKER_REBATE_SHARE_BPS);
+        uint256 systemFee = takerFee - makerRebate; // No creator deduction
+
+        // Creator should NOT receive anything
+        assertEq(QUOTE.balanceOf(CREATOR) - creatorBefore, 0, "Creator should not receive fee");
+        assertEq(
+            QUOTE.balanceOf(FEE_COLLECTOR) - feeCollectorBefore, systemFee, "FeeCollector gets creator's share too"
+        );
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
