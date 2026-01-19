@@ -4,7 +4,6 @@ pragma solidity 0.8.30;
 import {UUPSUpgradeable} from "@openzeppelin-contracts-5.5.0/proxy/utils/UUPSUpgradeable.sol";
 import {IERC20} from "@openzeppelin-contracts-5.5.0/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin-contracts-5.5.0/token/ERC20/utils/SafeERC20.sol";
-import {Address} from "@openzeppelin-contracts-5.5.0/utils/Address.sol";
 import {Math} from "@openzeppelin-contracts-5.5.0/utils/math/Math.sol";
 import {EnumerableSet} from "@openzeppelin-contracts-5.5.0/utils/structs/EnumerableSet.sol";
 
@@ -48,17 +47,29 @@ contract CrossDexRouterV3 is IRouterV3, IOwnable, UUPSUpgradeable, ContextUpgrad
     modifier checkSubmit() {
         _checkAccountCode(_msgSender());
         _;
+        _checkNoRemainingValue();
+    }
+
+    function _checkNoRemainingValue() private view {
         if (address(this).balance != 0) revert RouterInvalidValue();
     }
 
     modifier validPair(address pair) {
-        if (!isPair(pair)) revert RouterInvalidPairAddress(pair);
+        _checkValidPair(pair);
         _;
     }
 
     modifier onlyOwner() {
-        if (_msgSender() != owner()) revert OwnableUnauthorizedAccount(_msgSender());
+        _checkOwner();
         _;
+    }
+
+    function _checkValidPair(address pair) private view {
+        if (!isPair(pair)) revert RouterInvalidPairAddress(pair);
+    }
+
+    function _checkOwner() private view {
+        if (_msgSender() != owner()) revert OwnableUnauthorizedAccount(_msgSender());
     }
 
     constructor() {
@@ -81,14 +92,6 @@ contract CrossDexRouterV3 is IRouterV3, IOwnable, UUPSUpgradeable, ContextUpgrad
         findPrevPriceCount = _findPrevPriceCount;
         maxMatchCount = _maxMatchCount;
         cancelLimit = _cancelLimit;
-    }
-
-    function isPair(address pair) public view override returns (bool) {
-        return ICrossDexV3(CROSS_DEX).pairToMarket(pair) != address(0);
-    }
-
-    function owner() public view override returns (address) {
-        return IOwnable(CROSS_DEX).owner();
     }
 
     /**
@@ -161,9 +164,9 @@ contract CrossDexRouterV3 is IRouterV3, IOwnable, UUPSUpgradeable, ContextUpgrad
         address _owner = _msgSender();
         IPairV3.Config memory info = IPairV3(pair).getConfig();
 
-        IERC20 BASE = info.BASE;
-        if (address(BASE) == address(CROSS)) CROSS.mintTo{value: amount}(pair);
-        else BASE.safeTransferFrom(_owner, pair, amount);
+        IERC20 baseToken = info.BASE;
+        if (address(baseToken) == address(CROSS)) CROSS.mintTo{value: amount}(pair);
+        else baseToken.safeTransferFrom(_owner, pair, amount);
 
         IPairV3.Order memory order =
             IPairV3.Order({side: IPairV3.OrderSide.SELL, owner: _owner, feeBps: 0, price: 0, amount: 0});
@@ -180,11 +183,11 @@ contract CrossDexRouterV3 is IRouterV3, IOwnable, UUPSUpgradeable, ContextUpgrad
         address _owner = _msgSender();
         IPairV3.Config memory info = IPairV3(pair).getConfig();
 
-        IERC20 QUOTE = info.QUOTE;
+        IERC20 quoteToken = info.QUOTE;
         {
             uint256 volume = IPairV3(pair).calcBuyVolumeWithFee(quoteVolume);
-            if (address(QUOTE) == address(CROSS)) CROSS.mintTo{value: volume}(pair);
-            else QUOTE.safeTransferFrom(_owner, pair, volume);
+            if (address(quoteToken) == address(CROSS)) CROSS.mintTo{value: volume}(pair);
+            else quoteToken.safeTransferFrom(_owner, pair, volume);
         }
 
         IPairV3.Order memory order =
@@ -199,6 +202,22 @@ contract CrossDexRouterV3 is IRouterV3, IOwnable, UUPSUpgradeable, ContextUpgrad
             IPairV3(pair).cancelOrder(_msgSender(), orderIds);
         }
     }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Public view functions
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    function isPair(address pair) public view override returns (bool) {
+        return ICrossDexV3(CROSS_DEX).pairToMarket(pair) != address(0);
+    }
+
+    function owner() public view override returns (address) {
+        return IOwnable(CROSS_DEX).owner();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Private functions
+    // ─────────────────────────────────────────────────────────────────────────────
 
     function _toMaxMatchCount(uint256 _maxMatchCount) private view returns (uint256) {
         return _maxMatchCount == 0 || _maxMatchCount > maxMatchCount ? maxMatchCount : _maxMatchCount;

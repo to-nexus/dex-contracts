@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.30;
 
-import {ERC1967Proxy} from "@openzeppelin-contracts-5.5.0/proxy/ERC1967/ERC1967Proxy.sol";
 import {UUPSUpgradeable} from "@openzeppelin-contracts-5.5.0/proxy/utils/UUPSUpgradeable.sol";
 import {IERC20, IERC20Metadata} from "@openzeppelin-contracts-5.5.0/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin-contracts-5.5.0/token/ERC20/utils/SafeERC20.sol";
@@ -56,7 +55,8 @@ contract PairImplV3 is IPairV3, IOwnable, UUPSUpgradeable, PausableUpgradeable {
 
     // slots
     // keccak256(abi.encode(uint256(keccak256("crossdex.pair.matchedprice")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant _matchedPriceSlot = 0xfd0e5d4f9b88892d3b04349a0e2bc0d1359414c21932fcd7d5a523a6c0a5cd00;
+    // solhint-disable-next-line const-name-snakecase
+    bytes32 private constant MATCHED_PRICE_SLOT = 0xfd0e5d4f9b88892d3b04349a0e2bc0d1359414c21932fcd7d5a523a6c0a5cd00;
 
     address public MARKET; // immutable
     address public ROUTER; // immutable
@@ -75,7 +75,7 @@ contract PairImplV3 is IPairV3, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     // tick size
     uint256 public tickSize;
     uint256 public lotSize;
-    uint256 public minTradeVolume; // [QUOTE] Math.mulDiv(_tickSize, _lotSize, DENOMINATOR);
+    uint256 public minTradeVolume; // [quote] Math.mulDiv(_tickSize, _lotSize, denominator);
 
     // orders
     uint256 private _orderIdCounter;
@@ -83,7 +83,7 @@ contract PairImplV3 is IPairV3, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     mapping(uint256 price => List.U256) private _sellOrders; // price => sell order id list (For the same price, orders will be stored in chronological order.)
     mapping(uint256 price => List.U256) private _buyOrders; //  price => buy order id list (For the same price, orders will be stored in chronological order.)
     mapping(uint256 orderId => Order) private _allOrders;
-    mapping(address account => uint256[2]) private _accountReserves; // 0: sell (BASE), 1: buy (QUOTE)
+    mapping(address account => uint256[2]) private _accountReserves; // 0: sell (base), 1: buy (quote)
 
     // Pair-specific fee configuration
     IFeeController public feeController;
@@ -97,8 +97,12 @@ contract PairImplV3 is IPairV3, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     }
 
     modifier onlyRouter() {
-        if (_msgSender() != ROUTER) revert PairInvalidRouter(_msgSender());
+        _checkRouter();
         _;
+    }
+
+    function _checkRouter() private view {
+        if (_msgSender() != ROUTER) revert PairInvalidRouter(_msgSender());
     }
 
     modifier setLatest() {
@@ -112,8 +116,8 @@ contract PairImplV3 is IPairV3, IOwnable, UUPSUpgradeable, PausableUpgradeable {
 
     function initialize(
         address router,
-        address quote,
-        address base,
+        address quoteAddr,
+        address baseAddr,
         uint256 _tickSize, // tick size for quote token
         uint256 _lotSize, // lot size for base token
         address _feeController,
@@ -122,17 +126,17 @@ contract PairImplV3 is IPairV3, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         __Pausable_init();
 
         if (router == address(0)) revert PairInvalidInitializeData("router");
-        if (quote == address(0)) revert PairInvalidInitializeData("quote");
-        if (base == address(0)) revert PairInvalidInitializeData("base");
+        if (quoteAddr == address(0)) revert PairInvalidInitializeData("quote");
+        if (baseAddr == address(0)) revert PairInvalidInitializeData("base");
         if (_tickSize == 0) revert PairInvalidInitializeData("tickSize");
         if (_lotSize == 0) revert PairInvalidInitializeData("lotSize");
         if (_feeController == address(0)) revert PairInvalidInitializeData("feeController");
 
         MARKET = _msgSender();
         ROUTER = router;
-        QUOTE = IERC20(quote);
-        BASE = IERC20(base);
-        DENOMINATOR = 10 ** IERC20Metadata(base).decimals();
+        QUOTE = IERC20(quoteAddr);
+        BASE = IERC20(baseAddr);
+        DENOMINATOR = 10 ** IERC20Metadata(baseAddr).decimals();
 
         if (_tickSize * _lotSize % DENOMINATOR != 0) revert PairInvalidTickSize(_tickSize, _lotSize, DENOMINATOR);
 
@@ -155,15 +159,11 @@ contract PairImplV3 is IPairV3, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         return Config({QUOTE: QUOTE, BASE: BASE, DENOMINATOR: DENOMINATOR});
     }
 
-    function calcBuyVolumeWithFee(uint256 volume) external returns (uint256 buyVolume) {
-        return _feeControllerCalcBuyVolumeWithFee(false, volume);
-    }
-
     function orderById(uint256 id) external view returns (Order memory) {
         return _allOrders[id];
     }
 
-    function accountReserves(address account) external view returns (uint256 base, uint256 quote) {
+    function accountReserves(address account) external view returns (uint256 baseAmount, uint256 quoteAmount) {
         return (_accountReserves[account][uint8(OrderSide.SELL)], _accountReserves[account][uint8(OrderSide.BUY)]);
     }
 
@@ -203,12 +203,18 @@ contract PairImplV3 is IPairV3, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         if (side == OrderSide.SELL) {
             // For a SELL order, search from the most expensive price in the BUY list
             // and only match with buy orders that have a price equal to or higher than the input price.
-            return _prices[uint8(side)].findASCPrev(price, adjacent, findMaxCount);
+            return _prices[uint8(side)].findAscPrev(price, adjacent, findMaxCount);
         } else {
             // For a BUY order, search from the cheapest price in the SELL list
             // and only match with sell orders that have a price equal to or lower than the input price.
-            return _prices[uint8(side)].findDESCPrev(price, adjacent, findMaxCount);
+            return _prices[uint8(side)].findDescPrev(price, adjacent, findMaxCount);
         }
+    }
+
+    /// @notice Calculate total QUOTE volume including buyer taker fee.
+    /// @dev Uses delegatecall to FeeController. Can be called via eth_call for gas-free queries.
+    function calcBuyVolumeWithFee(uint256 volume) external returns (uint256 buyVolume) {
+        return _feeControllerCalcBuyVolumeWithFee(false, volume);
     }
 
     //  ###### #    # ######  ####  #    # ##### ######  ####
@@ -403,7 +409,7 @@ contract PairImplV3 is IPairV3, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     // For a SELL order, search from the most expensive price in the BUY list
     // and only execute trades where order.price is equal to or lower than the buy order price.
     /// @return done Whether the order has been completely matched or the maxMatchCount has reached 0.
-    /// @return earnQuoteAmount The amount of QUOTE earned from the sale.
+    /// @return earnQuoteAmount The amount of quote earned from the sale.
     function _matchSellOrder(uint256 orderId, Order memory order, uint256 maxMatchCount)
         private
         setLatest
@@ -469,8 +475,8 @@ contract PairImplV3 is IPairV3, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     // For a BUY order, search from the cheapest price in the SELL list
     // and only execute trades where the sell order price is equal to or lower than the input price.
     /// @return done Whether the order has been completely matched or the maxMatchCount has reached 0.
-    /// @return matchedBaseAmount The amount of BASE purchased.
-    /// @return useQuoteAmount The amount of QUOTE used for the purchase.
+    /// @return matchedBaseAmount The amount of base purchased.
+    /// @return useQuoteAmount The amount of quote used for the purchase.
     function _matchBuyOrder(
         uint256 orderId,
         Order memory order,
@@ -694,14 +700,14 @@ contract PairImplV3 is IPairV3, IOwnable, UUPSUpgradeable, PausableUpgradeable {
 
     function _cacheLatestPrice(uint256 price) private {
         assembly {
-            tstore(_matchedPriceSlot, price)
+            tstore(MATCHED_PRICE_SLOT, price)
         }
     }
 
     function _setLatest() private {
         uint256 _latestPrice;
         assembly {
-            _latestPrice := tload(_matchedPriceSlot)
+            _latestPrice := tload(MATCHED_PRICE_SLOT)
         }
         if (_latestPrice != 0) {
             if (_latestPrice != matchedPrice) matchedPrice = _latestPrice;
