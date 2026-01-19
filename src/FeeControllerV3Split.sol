@@ -44,8 +44,8 @@ contract FeeControllerV3Split is IFeeController {
     // ERC-7201 Namespaced Persistent Storage
     // ─────────────────────────────────────────────────────────────────────────────
 
-    /// @custom:storage-location erc7201:crossdex.feecontroller.v3split
-    struct Layout {
+    /// @custom:storage-location erc7201:cross.storage.FeeControllerV3Split
+    struct FeeControllerV3SplitStorage {
         // --- Persistent config (set via initialize) ---
         address feeCollector;
         address creator;
@@ -57,12 +57,13 @@ contract FeeControllerV3Split is IFeeController {
         uint256 denominator;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("crossdex.feecontroller.v3split")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant STORAGE_SLOT = 0xe19e946b09ec007af8ee81c0a3af18911300d21bef80c17e2eae368a87ae3600;
+    // keccak256(abi.encode(uint256(keccak256("cross.storage.FeeControllerV3Split")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant FeeControllerV3SplitStorageLocation =
+        0xc063cf2dfd170dd7c3dd72990f0424c6080fb35c03fb56e3a8e6c5b294381000;
 
-    function _layout() private pure returns (Layout storage $) {
+    function _getFeeControllerV3SplitStorage() private pure returns (FeeControllerV3SplitStorage storage $) {
         assembly {
-            $.slot := STORAGE_SLOT
+            $.slot := FeeControllerV3SplitStorageLocation
         }
     }
 
@@ -70,14 +71,15 @@ contract FeeControllerV3Split is IFeeController {
     // ERC-7201 Namespaced Transient Storage (EIP-1153)
     // ─────────────────────────────────────────────────────────────────────────────
 
-    /// @custom:storage-location erc7201:crossdex.feecontroller.v3split.transient
-    /// Slot offsets from TRANSIENT_SLOT:
+    /// @custom:storage-location erc7201:cross.storage.FeeControllerV3Split.transient
+    /// Slot offsets from FeeControllerV3SplitTransientLocation:
     ///   +0: currentTakerId (uint256) - validates same taker across matches
     ///   +1: takerFeeAccTotal (uint256) - accumulated total taker fees
     ///   +2: makerRebatePaidTotal (uint256) - accumulated maker rebates already paid
 
-    // keccak256(abi.encode(uint256(keccak256("crossdex.feecontroller.v3split.transient")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant TRANSIENT_SLOT = 0x1d6572127ebbf954e3b8cde8f85551df844dec1634a4cb04810c8848ec2ee200;
+    // keccak256(abi.encode(uint256(keccak256("cross.storage.FeeControllerV3Split.transient")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant FeeControllerV3SplitTransientLocation =
+        0xc402bc4465edd18493ad1ac2cd9f5e2cd78832a5c76906ac70c20b838757df00;
 
     // ─────────────────────────────────────────────────────────────────────────────
     // Delegatecall enforcement
@@ -124,7 +126,7 @@ contract FeeControllerV3Split is IFeeController {
         if (_takerFeeBps >= BPS_DENOMINATOR) revert FeeControllerInvalidFeeBps();
         if (_creatorShareBps + _makerRebateShareBps > BPS_DENOMINATOR) revert FeeControllerInvalidFeeBps();
 
-        Layout storage $ = _layout();
+        FeeControllerV3SplitStorage storage $ = _getFeeControllerV3SplitStorage();
         $.feeCollector = _feeCollector;
         $.creator = _creator;
         $.takerFeeBps = _takerFeeBps;
@@ -150,7 +152,7 @@ contract FeeControllerV3Split is IFeeController {
         override
         returns (uint256 buyVolume)
     {
-        Layout storage $ = _layout();
+        FeeControllerV3SplitStorage storage $ = _getFeeControllerV3SplitStorage();
         uint256 baseVolume = Math.mulDiv(order.price, order.amount, $.denominator);
         // MakerFee is always 0 in V3Split
         if (isMaker) return baseVolume;
@@ -165,7 +167,7 @@ contract FeeControllerV3Split is IFeeController {
     function calcBuyVolumeWithFee(bool isMaker, uint256 volume) external view override returns (uint256 buyVolume) {
         // MakerFee is always 0 in V3Split
         if (isMaker) return volume;
-        Layout storage $ = _layout();
+        FeeControllerV3SplitStorage storage $ = _getFeeControllerV3SplitStorage();
         return volume + Math.mulDiv(volume, $.takerFeeBps, BPS_DENOMINATOR);
     }
 
@@ -199,7 +201,7 @@ contract FeeControllerV3Split is IFeeController {
             if (currentTakerId != takerId) revert FeeControllerTakerIdMismatch(currentTakerId, takerId);
         }
 
-        Layout storage $ = _layout();
+        FeeControllerV3SplitStorage storage $ = _getFeeControllerV3SplitStorage();
 
         // Calculate taker fee and accumulate
         uint256 takerFee = 0;
@@ -239,7 +241,7 @@ contract FeeControllerV3Split is IFeeController {
         _tstoreMakerRebatePaid(0);
 
         // Calculate fee distribution
-        Layout storage $ = _layout();
+        FeeControllerV3SplitStorage storage $ = _getFeeControllerV3SplitStorage();
         uint256 creatorFee = 0;
         uint256 collectorFee = 0;
 
@@ -279,27 +281,27 @@ contract FeeControllerV3Split is IFeeController {
 
     /// @notice Get current fee collector address
     function feeCollector() external view returns (address) {
-        return _layout().feeCollector;
+        return _getFeeControllerV3SplitStorage().feeCollector;
     }
 
     /// @notice Get current creator address
     function creator() external view returns (address) {
-        return _layout().creator;
+        return _getFeeControllerV3SplitStorage().creator;
     }
 
     /// @notice Get taker fee bps
     function takerFeeBps() external view returns (uint32) {
-        return _layout().takerFeeBps;
+        return _getFeeControllerV3SplitStorage().takerFeeBps;
     }
 
     /// @notice Get creator share bps (percentage of taker fee)
     function creatorShareBps() external view returns (uint32) {
-        return _layout().creatorShareBps;
+        return _getFeeControllerV3SplitStorage().creatorShareBps;
     }
 
     /// @notice Get maker rebate share bps (percentage of taker fee)
     function makerRebateShareBps() external view returns (uint32) {
-        return _layout().makerRebateShareBps;
+        return _getFeeControllerV3SplitStorage().makerRebateShareBps;
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -307,42 +309,42 @@ contract FeeControllerV3Split is IFeeController {
     // ─────────────────────────────────────────────────────────────────────────────
 
     function _tloadTakerId() private view returns (uint256 value) {
-        bytes32 slot = TRANSIENT_SLOT;
+        bytes32 slot = FeeControllerV3SplitTransientLocation;
         assembly {
             value := tload(slot)
         }
     }
 
     function _tstoreTakerId(uint256 value) private {
-        bytes32 slot = TRANSIENT_SLOT;
+        bytes32 slot = FeeControllerV3SplitTransientLocation;
         assembly {
             tstore(slot, value)
         }
     }
 
     function _tloadTakerFeeAcc() private view returns (uint256 value) {
-        bytes32 slot = bytes32(uint256(TRANSIENT_SLOT) + 1);
+        bytes32 slot = bytes32(uint256(FeeControllerV3SplitTransientLocation) + 1);
         assembly {
             value := tload(slot)
         }
     }
 
     function _tstoreTakerFeeAcc(uint256 value) private {
-        bytes32 slot = bytes32(uint256(TRANSIENT_SLOT) + 1);
+        bytes32 slot = bytes32(uint256(FeeControllerV3SplitTransientLocation) + 1);
         assembly {
             tstore(slot, value)
         }
     }
 
     function _tloadMakerRebatePaid() private view returns (uint256 value) {
-        bytes32 slot = bytes32(uint256(TRANSIENT_SLOT) + 2);
+        bytes32 slot = bytes32(uint256(FeeControllerV3SplitTransientLocation) + 2);
         assembly {
             value := tload(slot)
         }
     }
 
     function _tstoreMakerRebatePaid(uint256 value) private {
-        bytes32 slot = bytes32(uint256(TRANSIENT_SLOT) + 2);
+        bytes32 slot = bytes32(uint256(FeeControllerV3SplitTransientLocation) + 2);
         assembly {
             tstore(slot, value)
         }

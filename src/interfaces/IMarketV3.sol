@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 uint32 constant NO_FEE_BPS = type(uint32).max; // Special value to indicate "use market fee"
-uint32 constant BPS_DENOMINATOR = 10000; // Basis points denominator (100%)
+// Note: BPS_DENOMINATOR is defined in IFeeController.sol
 
 interface IMarketV3 {
     function QUOTE() external view returns (address);

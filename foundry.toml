@@ -5,8 +5,13 @@ libs = ["lib", "dependencies"]
 optimizer = true
 optimizer_runs = 999999
 remappings = [
-    "@openzeppelin/contracts/=dependencies/@openzeppelin-contracts-5.5.0/", 
+    "@openzeppelin/contracts/=dependencies/@openzeppelin-contracts-5.5.0/",
     "forge-std/=dependencies/forge-std-1.14.0/src/",
+]
+
+# Allow vm.getCode to read V2 artifacts from legacy directory
+fs_permissions = [
+    { access = "read", path = "./legacy_v1_v2/out" }
 ]
 
 [dependencies]
@@ -29,4 +34,5 @@ exclude_lints = [
     "unsafe-typecast",
     "mixed-case-variable",       # allow UPPER_SNAKE_CASE for pseudo-immutables
     "screaming-snake-case-immutable",
+    "unchecked-call",
 ]

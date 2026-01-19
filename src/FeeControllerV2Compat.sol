@@ -31,8 +31,8 @@ contract FeeControllerV2Compat is IFeeController {
     // ERC-7201 Namespaced Persistent Storage
     // ─────────────────────────────────────────────────────────────────────────────
 
-    /// @custom:storage-location erc7201:crossdex.feecontroller.v2compat
-    struct Layout {
+    /// @custom:storage-location erc7201:cross.storage.FeeControllerV2Compat
+    struct FeeControllerV2CompatStorage {
         // --- Persistent config (set via initialize) ---
         address feeCollector;
         uint32 sellerMakerFeeBps;
@@ -44,12 +44,13 @@ contract FeeControllerV2Compat is IFeeController {
         uint256 denominator;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("crossdex.feecontroller.v2compat")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant STORAGE_SLOT = 0x14ab8af4ef0e5d00cd393c578620673b1d80a5b1987c3516fd0d7064057dd200;
+    // keccak256(abi.encode(uint256(keccak256("cross.storage.FeeControllerV2Compat")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant FeeControllerV2CompatStorageLocation =
+        0xda974a09e7b8542215f909d6fdf2a86dab7afcfd32616d508be15f49de00f500;
 
-    function _layout() private pure returns (Layout storage $) {
+    function _getFeeControllerV2CompatStorage() private pure returns (FeeControllerV2CompatStorage storage $) {
         assembly {
-            $.slot := STORAGE_SLOT
+            $.slot := FeeControllerV2CompatStorageLocation
         }
     }
 
@@ -57,15 +58,16 @@ contract FeeControllerV2Compat is IFeeController {
     // ERC-7201 Namespaced Transient Storage (EIP-1153)
     // ─────────────────────────────────────────────────────────────────────────────
 
-    /// @custom:storage-location erc7201:crossdex.feecontroller.v2compat.transient
-    /// Slot offsets from TRANSIENT_SLOT:
+    /// @custom:storage-location erc7201:cross.storage.FeeControllerV2Compat.transient
+    /// Slot offsets from FeeControllerV2CompatTransientLocation:
     ///   +0: currentTakerId (uint256) - validates same taker across matches
     ///   +1: takerFeeBps (uint32) - cached taker fee bps for gas optimization
     ///   +2: makerFeeAcc (uint256) - accumulated maker fees
     ///   +3: takerFeeAcc (uint256) - accumulated taker fees
 
-    // keccak256(abi.encode(uint256(keccak256("crossdex.feecontroller.v2compat.transient")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant TRANSIENT_SLOT = 0x1fb63c0db76aadd79cfb812e9cbabdb25fe3dcb96270af5420927160c2e29800;
+    // keccak256(abi.encode(uint256(keccak256("cross.storage.FeeControllerV2Compat.transient")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant FeeControllerV2CompatTransientLocation =
+        0xaf6c89c994254c39a619ba26987a4abab224fa2af9a4311d25848a45ac164700;
 
     // ─────────────────────────────────────────────────────────────────────────────
     // Delegatecall enforcement
@@ -106,7 +108,7 @@ contract FeeControllerV2Compat is IFeeController {
         if (sTk < sMk) revert FeeControllerInvalidFeeStructure(sMk, sTk);
         if (bTk < bMk) revert FeeControllerInvalidFeeStructure(bMk, bTk);
 
-        Layout storage $ = _layout();
+        FeeControllerV2CompatStorage storage $ = _getFeeControllerV2CompatStorage();
         $.feeCollector = _feeCollector;
         $.sellerMakerFeeBps = sMk;
         $.sellerTakerFeeBps = sTk;
@@ -133,7 +135,7 @@ contract FeeControllerV2Compat is IFeeController {
     {
         // Note: view function - onlyDelegateCall not needed since it doesn't modify state
         // and will read from caller's storage in delegatecall context anyway
-        Layout storage $ = _layout();
+        FeeControllerV2CompatStorage storage $ = _getFeeControllerV2CompatStorage();
         uint256 baseVolume = Math.mulDiv(order.price, order.amount, $.denominator);
         uint32 bps = isMaker ? $.buyerMakerFeeBps : $.buyerTakerFeeBps;
         return baseVolume + Math.mulDiv(baseVolume, bps, BPS_DENOMINATOR);
@@ -144,7 +146,7 @@ contract FeeControllerV2Compat is IFeeController {
     /// @param volume The base QUOTE volume (without fee)
     /// @return buyVolume The total volume including fee
     function calcBuyVolumeWithFee(bool isMaker, uint256 volume) external view override returns (uint256 buyVolume) {
-        Layout storage $ = _layout();
+        FeeControllerV2CompatStorage storage $ = _getFeeControllerV2CompatStorage();
         uint32 bps = isMaker ? $.buyerMakerFeeBps : $.buyerTakerFeeBps;
         return volume + Math.mulDiv(volume, bps, BPS_DENOMINATOR);
     }
@@ -173,7 +175,7 @@ contract FeeControllerV2Compat is IFeeController {
         if (currentTakerId == 0) {
             // First call: cache takerId and takerFeeBps
             _tstoreTakerId(takerId);
-            Layout storage $ = _layout();
+            FeeControllerV2CompatStorage storage $ = _getFeeControllerV2CompatStorage();
             takerBps = taker.side == IPairV3.OrderSide.SELL ? $.sellerTakerFeeBps : $.buyerTakerFeeBps;
             _tstoreTakerFeeBps(takerBps);
         } else {
@@ -216,7 +218,7 @@ contract FeeControllerV2Compat is IFeeController {
 
         // Interactions: Transfer fee and emit event LAST
         if (totalFee > 0) {
-            Layout storage $ = _layout();
+            FeeControllerV2CompatStorage storage $ = _getFeeControllerV2CompatStorage();
             $.quote.safeTransfer($.feeCollector, totalFee);
             emit FeeControllerFeesSettled(takerId, $.feeCollector, totalFee);
         }
@@ -229,70 +231,70 @@ contract FeeControllerV2Compat is IFeeController {
 
     /// @notice Get seller maker fee bps (for Pair to set order.feeBps on SELL limit order)
     function sellerMakerFeeBps() external view returns (uint32) {
-        return _layout().sellerMakerFeeBps;
+        return _getFeeControllerV2CompatStorage().sellerMakerFeeBps;
     }
 
     /// @notice Get buyer maker fee bps (for Pair to set order.feeBps on BUY limit order)
     function buyerMakerFeeBps() external view returns (uint32) {
-        return _layout().buyerMakerFeeBps;
+        return _getFeeControllerV2CompatStorage().buyerMakerFeeBps;
     }
 
     /// @notice Get current fee collector address
     function feeCollector() external view returns (address) {
-        return _layout().feeCollector;
+        return _getFeeControllerV2CompatStorage().feeCollector;
     }
 
     function _tloadTakerId() private view returns (uint256 value) {
-        bytes32 slot = TRANSIENT_SLOT;
+        bytes32 slot = FeeControllerV2CompatTransientLocation;
         assembly {
             value := tload(slot)
         }
     }
 
     function _tstoreTakerId(uint256 value) private {
-        bytes32 slot = TRANSIENT_SLOT;
+        bytes32 slot = FeeControllerV2CompatTransientLocation;
         assembly {
             tstore(slot, value)
         }
     }
 
     function _tloadTakerFeeBps() private view returns (uint32 value) {
-        bytes32 slot = bytes32(uint256(TRANSIENT_SLOT) + 1);
+        bytes32 slot = bytes32(uint256(FeeControllerV2CompatTransientLocation) + 1);
         assembly {
             value := tload(slot)
         }
     }
 
     function _tstoreTakerFeeBps(uint32 value) private {
-        bytes32 slot = bytes32(uint256(TRANSIENT_SLOT) + 1);
+        bytes32 slot = bytes32(uint256(FeeControllerV2CompatTransientLocation) + 1);
         assembly {
             tstore(slot, value)
         }
     }
 
     function _tloadMakerFeeAcc() private view returns (uint256 value) {
-        bytes32 slot = bytes32(uint256(TRANSIENT_SLOT) + 2);
+        bytes32 slot = bytes32(uint256(FeeControllerV2CompatTransientLocation) + 2);
         assembly {
             value := tload(slot)
         }
     }
 
     function _tstoreMakerFeeAcc(uint256 value) private {
-        bytes32 slot = bytes32(uint256(TRANSIENT_SLOT) + 2);
+        bytes32 slot = bytes32(uint256(FeeControllerV2CompatTransientLocation) + 2);
         assembly {
             tstore(slot, value)
         }
     }
 
     function _tloadTakerFeeAcc() private view returns (uint256 value) {
-        bytes32 slot = bytes32(uint256(TRANSIENT_SLOT) + 3);
+        bytes32 slot = bytes32(uint256(FeeControllerV2CompatTransientLocation) + 3);
         assembly {
             value := tload(slot)
         }
     }
 
     function _tstoreTakerFeeAcc(uint256 value) private {
-        bytes32 slot = bytes32(uint256(TRANSIENT_SLOT) + 3);
+        bytes32 slot = bytes32(uint256(FeeControllerV2CompatTransientLocation) + 3);
         assembly {
             tstore(slot, value)
         }

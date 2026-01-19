@@ -15,7 +15,7 @@ import {IOwnable} from "./interfaces/IOwnable.sol";
 import {IPairV3} from "./interfaces/IPairV3.sol";
 import {List} from "./lib/List.sol";
 
-contract PairImplV3 is IPairV3, IOwnable, UUPSUpgradeable, PausableUpgradeable {
+contract PairImplV3 is UUPSUpgradeable, PausableUpgradeable, IPairV3, IOwnable {
     using SafeERC20 for IERC20;
     using Math for uint256;
     using List for List.U256;

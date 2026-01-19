@@ -1,12 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.13;
 
-import {Math} from "@openzeppelin-contracts-5.5.0/utils/math/Math.sol";
 import {console} from "forge-std/console.sol";
 
-import {FeeControllerV2Compat} from "../src/FeeControllerV2Compat.sol";
-import {PairImplV3} from "../src/PairImplV3.sol";
-import {BPS_DENOMINATOR} from "../src/interfaces/IFeeController.sol";
 import {IPairV3} from "../src/interfaces/IPairV3.sol";
 import {DEXV3BaseTest} from "./DEXV3Base.t.sol";
 

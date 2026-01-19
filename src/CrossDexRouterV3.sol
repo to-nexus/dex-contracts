@@ -17,7 +17,7 @@ import {IPairV3} from "./interfaces/IPairV3.sol";
 import {IRouterV3} from "./interfaces/IRouterV3.sol";
 import {IWETH} from "./interfaces/IWETH.sol";
 
-contract CrossDexRouterV3 is IRouterV3, IOwnable, UUPSUpgradeable, ContextUpgradeable, ReentrancyGuardTransient {
+contract CrossDexRouterV3 is UUPSUpgradeable, ContextUpgradeable, ReentrancyGuardTransient, IRouterV3, IOwnable {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
     using Math for uint256;
@@ -233,6 +233,10 @@ contract CrossDexRouterV3 is IRouterV3, IOwnable, UUPSUpgradeable, ContextUpgrad
         if (whitelistedCodeAccounts.contains(account)) return;
         if (account.code.length != 0) revert RouterContractAccountBlocked(account);
     }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Admin functions
+    // ─────────────────────────────────────────────────────────────────────────────
 
     function setFindPrevPriceCount(uint256 _findPrevPriceCount) external onlyOwner {
         if (_findPrevPriceCount == 0) revert RouterInvalidInputData("findPrevPriceCount");
