@@ -5,7 +5,6 @@ import {ERC1967Proxy} from "@openzeppelin-contracts-5.5.0/proxy/ERC1967/ERC1967P
 import {UUPSUpgradeable} from "@openzeppelin-contracts-5.5.0/proxy/utils/UUPSUpgradeable.sol";
 import {IERC20Metadata} from "@openzeppelin-contracts-5.5.0/token/ERC20/extensions/IERC20Metadata.sol";
 import {Create2} from "@openzeppelin-contracts-5.5.0/utils/Create2.sol";
-import {Math} from "@openzeppelin-contracts-5.5.0/utils/math/Math.sol";
 import {EnumerableMap} from "@openzeppelin-contracts-5.5.0/utils/structs/EnumerableMap.sol";
 
 import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.5.0/access/OwnableUpgradeable.sol";
@@ -22,6 +21,7 @@ contract MarketImplV3 is UUPSUpgradeable, OwnableUpgradeable, IMarketV3 {
     error MarketAlreadyCreatedBaseAddress(address);
     error MarketDeployPair();
     error MarketInvalidFeeStructure(uint32 makerFee, uint32 takerFee);
+    error MarketInvalidPairAddress(address pair);
 
     event PairCreated(address indexed pair, address indexed base, uint256 timestamp);
     event MarketFeesUpdated(uint32 sellerMakerFee, uint32 sellerTakerFee, uint32 buyerMakerFee, uint32 buyerTakerFee);
@@ -128,25 +128,21 @@ contract MarketImplV3 is UUPSUpgradeable, OwnableUpgradeable, IMarketV3 {
         pairImpl = _pairImpl;
     }
 
-    function setFeeController(
-        uint256 startIndex,
-        uint256 endIndex,
-        bool isForce,
-        address newFeeController,
-        bytes memory feeControllerInitData
-    ) external onlyOwner {
+    function setFeeController(address[] calldata pairs, address newFeeController, bytes calldata feeControllerInitData)
+        external
+        onlyOwner
+    {
         CROSS_DEX.checkFeeControllerAllowed(newFeeController);
         if (feeController != newFeeController) {
             emit FeeControllerUpdated(feeController, newFeeController);
             feeController = newFeeController;
         }
-        endIndex = Math.min(endIndex, _allPairs.length());
 
-        for (uint256 i = startIndex; i < endIndex; ++i) {
-            (, address pair) = _allPairs.at(i);
-            PairImplV3 pairContract = PairImplV3(pair);
-            if (!isForce) if (address(pairContract.feeController()) != newFeeController) continue;
-            pairContract.setFeeController(newFeeController, feeControllerInitData);
+        uint256 length = pairs.length;
+        for (uint256 i = 0; i < length; ++i) {
+            address pair = pairs[i];
+            if (CROSS_DEX.pairToMarket(pair) != address(this)) revert MarketInvalidPairAddress(pair);
+            PairImplV3(pair).setFeeController(newFeeController, feeControllerInitData);
         }
     }
 

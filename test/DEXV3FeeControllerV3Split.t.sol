@@ -428,10 +428,12 @@ contract DEXV3FeeControllerV3SplitTest is Test {
         uint32 newCreatorShareBps = 4000; // 40%
         uint32 newMakerRebateShareBps = 1000; // 10%
 
-        vm.prank(OWNER);
         bytes memory newFeeData =
             abi.encode(FEE_COLLECTOR, CREATOR, newTakerFeeBps, newCreatorShareBps, newMakerRebateShareBps);
-        MARKET.setFeeController(0, 1, true, address(FEE_CONTROLLER), newFeeData);
+        address[] memory pairs = new address[](1);
+        pairs[0] = address(PAIR);
+        vm.prank(OWNER);
+        MARKET.setFeeController(pairs, address(FEE_CONTROLLER), newFeeData);
 
         // Test with new configuration
         uint256 price = _toQuote(100);
@@ -465,10 +467,12 @@ contract DEXV3FeeControllerV3SplitTest is Test {
 
     function test_zero_taker_fee() external {
         // Set taker fee to 0
-        vm.prank(OWNER);
         bytes memory zeroFeeData =
             abi.encode(FEE_COLLECTOR, CREATOR, uint32(0), CREATOR_SHARE_BPS, MAKER_REBATE_SHARE_BPS);
-        MARKET.setFeeController(0, 1, true, address(FEE_CONTROLLER), zeroFeeData);
+        address[] memory pairs = new address[](1);
+        pairs[0] = address(PAIR);
+        vm.prank(OWNER);
+        MARKET.setFeeController(pairs, address(FEE_CONTROLLER), zeroFeeData);
 
         uint256 price = _toQuote(100);
         uint256 amount = _toBase(10);
@@ -523,8 +527,7 @@ contract DEXV3FeeControllerV3SplitTest is Test {
     function test_view_creator_afterInit() external view {
         // Read slot 1: creator (20 bytes) + takerFeeBps (4) + creatorShareBps (4) + makerRebateShareBps (4) = 32 bytes
         // Layout (right to left): makerRebateShareBps | creatorShareBps | takerFeeBps | creator
-        bytes32 slot1 =
-            vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 1));
+        bytes32 slot1 = vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 1));
 
         // Extract creator (lowest 20 bytes = 160 bits)
         address storedCreator = address(uint160(uint256(slot1)));
@@ -533,8 +536,7 @@ contract DEXV3FeeControllerV3SplitTest is Test {
     }
 
     function test_view_takerFeeBps_afterInit() external view {
-        bytes32 slot1 =
-            vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 1));
+        bytes32 slot1 = vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 1));
 
         // Extract takerFeeBps (bits 160-191, shift right 160 bits, mask 32 bits)
         uint32 storedTakerFeeBps = uint32(uint256(slot1) >> 160);
@@ -543,8 +545,7 @@ contract DEXV3FeeControllerV3SplitTest is Test {
     }
 
     function test_view_creatorShareBps_afterInit() external view {
-        bytes32 slot1 =
-            vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 1));
+        bytes32 slot1 = vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 1));
 
         // Extract creatorShareBps (bits 192-223, shift right 192 bits, mask 32 bits)
         uint32 storedCreatorShareBps = uint32(uint256(slot1) >> 192);
@@ -553,19 +554,19 @@ contract DEXV3FeeControllerV3SplitTest is Test {
     }
 
     function test_view_makerRebateShareBps_afterInit() external view {
-        bytes32 slot1 =
-            vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 1));
+        bytes32 slot1 = vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 1));
 
         // Extract makerRebateShareBps (bits 224-255, shift right 224 bits)
         uint32 storedMakerRebateShareBps = uint32(uint256(slot1) >> 224);
 
-        assertEq(storedMakerRebateShareBps, MAKER_REBATE_SHARE_BPS, "MakerRebateShareBps should match initialized value");
+        assertEq(
+            storedMakerRebateShareBps, MAKER_REBATE_SHARE_BPS, "MakerRebateShareBps should match initialized value"
+        );
     }
 
     function test_view_quote_afterInit() external view {
         // Read slot 2: quote address
-        bytes32 slot2 =
-            vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 2));
+        bytes32 slot2 = vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 2));
         address storedQuote = address(uint160(uint256(slot2)));
 
         assertEq(storedQuote, address(QUOTE), "Quote should match initialized value");
@@ -573,8 +574,7 @@ contract DEXV3FeeControllerV3SplitTest is Test {
 
     function test_view_denominator_afterInit() external view {
         // Read slot 3: denominator (full uint256)
-        bytes32 slot3 =
-            vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 3));
+        bytes32 slot3 = vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 3));
         uint256 storedDenominator = uint256(slot3);
 
         assertEq(storedDenominator, BASE_DECIMALS, "Denominator should match initialized value");
@@ -583,12 +583,9 @@ contract DEXV3FeeControllerV3SplitTest is Test {
     function test_view_allConfigValues_afterInit() external view {
         // Comprehensive test: verify all config values in one test
         bytes32 slot0 = vm.load(address(PAIR), FeeControllerV3SplitStorageLocation);
-        bytes32 slot1 =
-            vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 1));
-        bytes32 slot2 =
-            vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 2));
-        bytes32 slot3 =
-            vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 3));
+        bytes32 slot1 = vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 1));
+        bytes32 slot2 = vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 2));
+        bytes32 slot3 = vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 3));
 
         // Decode all values
         address storedFeeCollector = address(uint160(uint256(slot0)));
@@ -618,15 +615,16 @@ contract DEXV3FeeControllerV3SplitTest is Test {
         address newFeeCollector = makeAddr("newFeeCollector");
 
         // Update configuration
-        vm.prank(OWNER);
         bytes memory newFeeData =
             abi.encode(newFeeCollector, newCreator, newTakerFeeBps, newCreatorShareBps, newMakerRebateShareBps);
-        MARKET.setFeeController(0, 1, true, address(FEE_CONTROLLER), newFeeData);
+        address[] memory pairs = new address[](1);
+        pairs[0] = address(PAIR);
+        vm.prank(OWNER);
+        MARKET.setFeeController(pairs, address(FEE_CONTROLLER), newFeeData);
 
         // Read and verify updated values
         bytes32 slot0 = vm.load(address(PAIR), FeeControllerV3SplitStorageLocation);
-        bytes32 slot1 =
-            vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 1));
+        bytes32 slot1 = vm.load(address(PAIR), bytes32(uint256(FeeControllerV3SplitStorageLocation) + 1));
 
         address storedFeeCollector = address(uint160(uint256(slot0)));
         address storedCreator = address(uint160(uint256(slot1)));
@@ -728,7 +726,6 @@ contract DEXV3FeeControllerV3SplitTest is Test {
 
     function test_zero_maker_rebate_share() external {
         // Set maker rebate to 0
-        vm.prank(OWNER);
         bytes memory zeroRebateData = abi.encode(
             FEE_COLLECTOR,
             CREATOR,
@@ -736,7 +733,10 @@ contract DEXV3FeeControllerV3SplitTest is Test {
             CREATOR_SHARE_BPS,
             uint32(0) // makerRebateShareBps = 0
         );
-        MARKET.setFeeController(0, 1, true, address(FEE_CONTROLLER), zeroRebateData);
+        address[] memory pairs = new address[](1);
+        pairs[0] = address(PAIR);
+        vm.prank(OWNER);
+        MARKET.setFeeController(pairs, address(FEE_CONTROLLER), zeroRebateData);
 
         uint256 price = _toQuote(100);
         uint256 amount = _toBase(10);
@@ -765,7 +765,6 @@ contract DEXV3FeeControllerV3SplitTest is Test {
 
     function test_zero_creator_share() external {
         // Set creator share to 0
-        vm.prank(OWNER);
         bytes memory zeroCreatorData = abi.encode(
             FEE_COLLECTOR,
             CREATOR,
@@ -773,7 +772,10 @@ contract DEXV3FeeControllerV3SplitTest is Test {
             uint32(0), // creatorShareBps = 0
             MAKER_REBATE_SHARE_BPS
         );
-        MARKET.setFeeController(0, 1, true, address(FEE_CONTROLLER), zeroCreatorData);
+        address[] memory pairs = new address[](1);
+        pairs[0] = address(PAIR);
+        vm.prank(OWNER);
+        MARKET.setFeeController(pairs, address(FEE_CONTROLLER), zeroCreatorData);
 
         uint256 price = _toQuote(100);
         uint256 amount = _toBase(10);

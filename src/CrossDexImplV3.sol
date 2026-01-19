@@ -90,11 +90,8 @@ contract CrossDexImplV3 is UUPSUpgradeable, OwnableUpgradeable, ICrossDexV3 {
         uint256 length = _allMarkets.length();
         markets = new address[](length);
         quotes = new address[](length);
-        for (uint256 i = 0; i < length;) {
+        for (uint256 i = 0; i < length; ++i) {
             (markets[i], quotes[i]) = _allMarkets.at(i);
-            unchecked {
-                ++i;
-            }
         }
     }
 

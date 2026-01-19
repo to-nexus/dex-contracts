@@ -55,8 +55,8 @@ pragma solidity ^0.8.13;
 //
 // 3단계: Market 업그레이드 (각 Market별로)
 //        ├─ upgradeToAndCall(marketV3Impl, "")
-//        └─ setFeeController(0, 0, false, feeController, initData)
-//           ※ endIndex=0: V2 Pair들에 전파하지 않음 (아직 V2 상태)
+//        └─ setFeeController([], feeController, initData)
+//           ※ 빈 pairs 배열: V2 Pair들에 전파하지 않음 (아직 V2 상태)
 //
 // 4단계: Pair 업그레이드 (각 Pair별로)
 //        ├─ upgradeToAndCall(pairV3Impl, "")
@@ -563,13 +563,12 @@ contract V2ToV3UpgradeTest is Test {
 
         // Step 2: Upgrade Market (set feeController on Market only, not propagating to pairs yet)
         _upgradeMarketToV3();
-        // Set market's feeController without propagating to V2 pairs (startIndex=0, endIndex=0)
+        // Set market's feeController without propagating to V2 pairs (empty pairs array)
+        address[] memory emptyPairs = new address[](0);
         vm.prank(OWNER);
         MarketImplV3(marketV2)
             .setFeeController(
-                0,
-                0, // endIndex=0 means don't touch any pairs
-                false,
+                emptyPairs,
                 address(feeController),
                 abi.encode(FEE_COLLECTOR, SELLER_MAKER_FEE, SELLER_TAKER_FEE, BUYER_MAKER_FEE, BUYER_TAKER_FEE)
             );
@@ -634,11 +633,10 @@ contract V2ToV3UpgradeTest is Test {
         marketV3.checkFeeControllerAllowed(upgradedFeeController);
 
         // MITIGATION: Must call setFeeController immediately after upgrade
+        address[] memory emptyPairs = new address[](0);
         vm.prank(OWNER);
         marketV3.setFeeController(
-            0,
-            0,
-            true,
+            emptyPairs,
             address(feeController),
             abi.encode(FEE_COLLECTOR, SELLER_MAKER_FEE, SELLER_TAKER_FEE, BUYER_MAKER_FEE, BUYER_TAKER_FEE)
         );
@@ -713,9 +711,10 @@ contract V2ToV3UpgradeTest is Test {
         _upgradeMarketToV3();
         bytes memory feeInitData =
             abi.encode(FEE_COLLECTOR, SELLER_MAKER_FEE, SELLER_TAKER_FEE, BUYER_MAKER_FEE, BUYER_TAKER_FEE);
+        // Empty pairs array means don't propagate to any pairs (they're still V2)
+        address[] memory emptyPairs = new address[](0);
         vm.prank(OWNER);
-        // endIndex=0 means don't propagate to any pairs (they're still V2)
-        MarketImplV3(marketV2).setFeeController(0, 0, false, address(feeController), feeInitData);
+        MarketImplV3(marketV2).setFeeController(emptyPairs, address(feeController), feeInitData);
         console.log("Market upgraded and FeeController set");
 
         // Step 3: Upgrade Pair V2 → V3
@@ -739,20 +738,77 @@ contract V2ToV3UpgradeTest is Test {
         // Cancel existing orders (they use V2 fee structure)
         _cancelOrdersV3(routerV3, pairV3, sellOrderId, buyOrderId);
 
-        // Submit new V3 orders
+        // Execute trading test with balance verification
+        _executeAndVerifyTrade(routerV3, pairV3, price);
+    }
+
+    function _executeAndVerifyTrade(CrossDexRouterV3 routerV3, PairImplV3 pairV3, uint256 price) internal {
+        uint256 sellAmount = _toBase(5);
+        uint256 buyAmount = _toBase(3); // Will match 3 BASE
+        uint256 quoteVolume = Math.mulDiv(price, buyAmount, BASE_DECIMALS);
+
+        // Record balances before trading
+        uint256[3] memory balancesBefore =
+            [BASE.balanceOf(USER1), QUOTE.balanceOf(USER1), QUOTE.balanceOf(FEE_COLLECTOR)];
+        uint256 user2BaseBefore = BASE.balanceOf(USER2);
+
+        // USER1: Submit sell limit order (maker)
         uint256[2] memory adjacent = [uint256(0), uint256(0)];
         vm.prank(USER1);
         routerV3.submitSellLimit(
-            address(pairV3), price, _toBase(5), IPairV3.LimitConstraints.GOOD_TILL_CANCEL, adjacent, 0
+            address(pairV3), price, sellAmount, IPairV3.LimitConstraints.GOOD_TILL_CANCEL, adjacent, 0
         );
 
+        // USER1 deposited BASE for sell order
+        assertEq(BASE.balanceOf(USER1), balancesBefore[0] - sellAmount, "USER1 BASE deposited");
+
+        // USER2: Submit buy limit order (taker) - matches with USER1's sell
         vm.prank(USER2);
         routerV3.submitBuyLimit(
-            address(pairV3), price, _toBase(3), IPairV3.LimitConstraints.GOOD_TILL_CANCEL, adjacent, 0
+            address(pairV3), price, buyAmount, IPairV3.LimitConstraints.GOOD_TILL_CANCEL, adjacent, 0
         );
 
-        // Check matched price was updated (3 BASE matched at price 100)
+        // Verify trading results
+        _verifyTradingResults(pairV3, price, sellAmount, buyAmount, quoteVolume, balancesBefore, user2BaseBefore);
+    }
+
+    function _verifyTradingResults(
+        PairImplV3 pairV3,
+        uint256 price,
+        uint256 sellAmount,
+        uint256 buyAmount,
+        uint256 quoteVolume,
+        uint256[3] memory balancesBefore,
+        uint256 user2BaseBefore
+    ) internal {
+        // Calculate expected fee: seller maker fee = 20 bps = 0.2%
+        uint256 sellerMakerFee = Math.mulDiv(quoteVolume, SELLER_MAKER_FEE, BPS_DENOMINATOR);
+
+        // USER1 (seller/maker): receives QUOTE minus maker fee
+        uint256 user1QuoteReceived = QUOTE.balanceOf(USER1) - balancesBefore[1];
+        assertEq(user1QuoteReceived, quoteVolume - sellerMakerFee, "USER1 should receive QUOTE minus maker fee");
+
+        // USER2 (buyer/taker): receives BASE
+        assertEq(BASE.balanceOf(USER2) - user2BaseBefore, buyAmount, "USER2 should receive matched BASE");
+
+        // FeeCollector: receives maker fee
+        assertEq(
+            QUOTE.balanceOf(FEE_COLLECTOR) - balancesBefore[2],
+            sellerMakerFee,
+            "FeeCollector should receive seller maker fee"
+        );
+
+        // Check matched price was updated
         assertEq(pairV3.matchedPrice(), price, "Matched price should be updated");
+
+        // Verify remaining sell order on book (5 - 3 = 2 BASE remaining)
+        assertEq(pairV3.baseReserve(), sellAmount - buyAmount, "Remaining sell order should be on book");
+
+        console.log("Trading verification passed:");
+        console.log("  - Quote volume:", quoteVolume);
+        console.log("  - Seller maker fee:", sellerMakerFee);
+        console.log("  - USER1 QUOTE received:", user1QuoteReceived);
+        console.log("  - USER2 BASE received:", buyAmount);
     }
 
     function _approveRouterV3(CrossDexRouterV3 routerV3) internal {

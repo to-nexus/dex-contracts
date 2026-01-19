@@ -16,6 +16,15 @@ contract ContractCaller {
     }
 }
 
+/// @dev Contract to force send ETH via selfdestruct (simulates H-01 attack vector)
+contract ForceSendEth {
+    constructor() payable {}
+
+    function boom(address payable to) external {
+        selfdestruct(to);
+    }
+}
+
 contract CrossDexRouterV3Test is DEXV3BaseTest {
     function setUp() external {
         _deployV3(18, 18, 1e2, 1e6);
@@ -408,5 +417,155 @@ contract CrossDexRouterV3Test is DEXV3BaseTest {
     function test_getRequiredBuyVolume_revert_invalidPair() external {
         vm.expectRevert(abi.encodeWithSelector(CrossDexRouterV3.RouterInvalidPairAddress.selector, address(0)));
         ROUTER.getRequiredBuyVolume(address(0), _toQuote(1000));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // H-01 Fix: Forced ETH Injection (selfdestruct) DoS Prevention Tests
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// @notice Test that forced ETH injection via selfdestruct does not DoS the router
+    /// @dev This tests the fix for H-01: Router should still work after forced ETH injection
+    function test_forcedEthInjection_doesNotDoSRouter() external {
+        // 1. Force send ETH to router via selfdestruct
+        uint256 forcedAmount = 1 ether;
+        ForceSendEth forceContract = new ForceSendEth{value: forcedAmount}();
+        forceContract.boom(payable(address(ROUTER)));
+
+        // Verify router has ETH balance (from forced injection)
+        assertEq(address(ROUTER).balance, forcedAmount);
+
+        // 2. Submit order should still work (this would revert before the fix)
+        uint256 price = _toQuote(100);
+        uint256 amount = _toBase(10);
+
+        vm.prank(USER1);
+        uint256 orderId = ROUTER.submitBuyLimit(
+            address(PAIR), price, amount, IPairV3.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+        );
+
+        // 3. Verify order was created successfully
+        IPairV3.Order memory order = PAIR.orderById(orderId);
+        assertEq(order.owner, USER1);
+        assertEq(order.price, price);
+        assertEq(order.amount, amount);
+
+        // Router balance should still be the forced amount (not touched)
+        assertEq(address(ROUTER).balance, forcedAmount);
+    }
+
+    /// @notice Test that router balance delta is correctly validated
+    /// @dev Ensures that msg.value is properly accounted for and not left in the router
+    function test_forcedEthInjection_balanceDeltaValidation() external {
+        // Force send some ETH first
+        uint256 forcedAmount = 0.5 ether;
+        ForceSendEth forceContract = new ForceSendEth{value: forcedAmount}();
+        forceContract.boom(payable(address(ROUTER)));
+
+        // Multiple orders should work
+        vm.startPrank(USER1);
+        for (uint256 i = 0; i < 3; i++) {
+            ROUTER.submitBuyLimit(
+                address(PAIR), _toQuote(100), _toBase(1), IPairV3.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+            );
+        }
+        vm.stopPrank();
+
+        vm.startPrank(USER2);
+        for (uint256 i = 0; i < 3; i++) {
+            ROUTER.submitSellLimit(
+                address(PAIR), _toQuote(100), _toBase(1), IPairV3.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+            );
+        }
+        vm.stopPrank();
+
+        // Router balance should still be exactly the forced amount
+        assertEq(address(ROUTER).balance, forcedAmount);
+    }
+
+    /// @notice Test skim function recovers forced ETH
+    function test_skim_success() external {
+        // Force send ETH to router
+        uint256 forcedAmount = 2 ether;
+        ForceSendEth forceContract = new ForceSendEth{value: forcedAmount}();
+        forceContract.boom(payable(address(ROUTER)));
+
+        assertEq(address(ROUTER).balance, forcedAmount);
+
+        // Owner skims the ETH
+        address payable recipient = payable(address(0xBEEF));
+        uint256 recipientBalanceBefore = recipient.balance;
+
+        vm.expectEmit(true, false, false, true);
+        emit CrossDexRouterV3.Skim(recipient, forcedAmount);
+
+        vm.prank(OWNER);
+        ROUTER.skim(recipient);
+
+        // Verify ETH was transferred
+        assertEq(address(ROUTER).balance, 0);
+        assertEq(recipient.balance, recipientBalanceBefore + forcedAmount);
+    }
+
+    /// @notice Test skim with zero balance does nothing
+    function test_skim_zeroBalance_noOp() external {
+        assertEq(address(ROUTER).balance, 0);
+
+        address payable recipient = payable(address(0xBEEF));
+
+        // Should not revert, just no-op
+        vm.recordLogs();
+        vm.prank(OWNER);
+        ROUTER.skim(recipient);
+
+        // No event should be emitted
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        assertEq(logs.length, 0);
+    }
+
+    /// @notice Test skim reverts for non-owner
+    function test_skim_revert_unauthorized() external {
+        // Force send ETH to router
+        ForceSendEth forceContract = new ForceSendEth{value: 1 ether}();
+        forceContract.boom(payable(address(ROUTER)));
+
+        vm.prank(USER1);
+        vm.expectRevert(abi.encodeWithSelector(IOwnable.OwnableUnauthorizedAccount.selector, USER1));
+        ROUTER.skim(payable(USER1));
+    }
+
+    /// @notice Test full scenario: inject, submit orders, then skim
+    function test_fullScenario_injectSubmitSkim() external {
+        // 1. Attacker injects ETH
+        uint256 forcedAmount = 1 ether;
+        ForceSendEth forceContract = new ForceSendEth{value: forcedAmount}();
+        forceContract.boom(payable(address(ROUTER)));
+
+        // 2. Users can still trade normally
+        vm.prank(USER1);
+        uint256 buyOrderId = ROUTER.submitBuyLimit(
+            address(PAIR), _toQuote(100), _toBase(10), IPairV3.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0
+        );
+
+        vm.prank(USER2);
+        ROUTER.submitSellMarket(address(PAIR), _toBase(5), 0);
+
+        // Verify partial fill occurred
+        IPairV3.Order memory order = PAIR.orderById(buyOrderId);
+        assertEq(order.amount, _toBase(5)); // 10 - 5 = 5 remaining
+
+        // 3. Admin recovers the forced ETH
+        address payable treasury = payable(makeAddr("treasury"));
+        vm.prank(OWNER);
+        ROUTER.skim(treasury);
+
+        assertEq(address(ROUTER).balance, 0);
+        assertEq(treasury.balance, forcedAmount);
+
+        // 4. Trading continues normally after skim
+        vm.prank(USER2);
+        ROUTER.submitSellMarket(address(PAIR), _toBase(5), 0);
+
+        order = PAIR.orderById(buyOrderId);
+        assertEq(order.amount, 0); // Fully filled
     }
 }
