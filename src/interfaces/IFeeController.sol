@@ -19,16 +19,6 @@ interface IFeeController {
     error FeeControllerInvalidPairConfig(address quote, uint256 denominator);
     error FeeControllerTakerIdMismatch(uint256 expected, uint256 actual);
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Events
-    // ─────────────────────────────────────────────────────────────────────────────
-
-    /// @notice Emitted when fees are settled and transferred to feeCollector.
-    /// @param takerId The taker order ID that initiated this fee settlement
-    /// @param feeCollector The address receiving the fees
-    /// @param totalFee The total fee amount transferred (maker + taker fees)
-    event FeeControllerFeesSettled(uint256 indexed takerId, address indexed feeCollector, uint256 totalFee);
-
     /// @notice Initialize or update fee configuration.
     /// @dev Called via delegatecall. Implementation should decode initData for its specific config.
     /// @param initData Encoded fee configuration data
@@ -59,7 +49,7 @@ interface IFeeController {
     /// @param tradeAmount The trade amount in BASE (for future extensibility)
     /// @param tradeQuoteAmount The trade volume in QUOTE (fee calculation base)
     /// @return makerFee The fee charged to the maker for this fill
-    function recodeMatch(
+    function recordMatch(
         uint256 takerId,
         IPairV3.Order memory taker,
         IPairV3.Order memory maker,
