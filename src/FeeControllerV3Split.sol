@@ -8,12 +8,13 @@ import {Math} from "@openzeppelin-contracts-5.5.0/utils/math/Math.sol";
 import {BPS_DENOMINATOR, IFeeController} from "./interfaces/IFeeController.sol";
 import {IPairV3} from "./interfaces/IPairV3.sol";
 
-/// @title FeeControllerV2Compat
-/// @notice V2-compatible fee controller implementing 4 fee bps (seller/buyer × maker/taker).
+/// @title FeeControllerV3Split
+/// @notice V3 fee controller implementing taker-only fee with 3-way split (creator/maker rebate/system).
+///         MakerFee is always 0. TakerFee is split into: creator, maker rebate (paid immediately), and feeCollector.
 ///         Designed to be called via delegatecall from PairImplV3.
 /// @dev Persistent config stored in Pair's storage via ERC-7201 namespaced slot.
 ///      Per-transaction data stored in transient storage for gas efficiency.
-contract FeeControllerV2Compat is IFeeController {
+contract FeeControllerV3Split is IFeeController {
     using SafeERC20 for IERC20;
     using Math for uint256;
 
@@ -21,31 +22,43 @@ contract FeeControllerV2Compat is IFeeController {
     // Events
     // ─────────────────────────────────────────────────────────────────────────────
 
-    /// @notice Emitted when fees are settled and transferred to feeCollector.
+    /// @notice Emitted when fees are settled and distributed.
     /// @param takerId The taker order ID that initiated this fee settlement
-    /// @param feeCollector The address receiving the fees
-    /// @param totalFee The total fee amount transferred (maker + taker fees)
-    event FeeControllerFeesSettled(uint256 indexed takerId, address indexed feeCollector, uint256 totalFee);
+    /// @param totalTakerFee Total taker fee collected (before split)
+    /// @param creatorFee Amount sent to creator
+    /// @param feeCollectorFee Amount sent to feeCollector (system fee)
+    /// @param makerRebatePaidTotal Amount already paid as maker rebates during matching
+    /// @param creator Address of the creator receiving creatorFee
+    /// @param feeCollector Address of the system fee collector
+    event FeeControllerV3FeesSettled(
+        uint256 indexed takerId,
+        uint256 totalTakerFee,
+        uint256 creatorFee,
+        uint256 feeCollectorFee,
+        uint256 makerRebatePaidTotal,
+        address indexed creator,
+        address indexed feeCollector
+    );
 
     // ─────────────────────────────────────────────────────────────────────────────
     // ERC-7201 Namespaced Persistent Storage
     // ─────────────────────────────────────────────────────────────────────────────
 
-    /// @custom:storage-location erc7201:crossdex.feecontroller.v2compat
+    /// @custom:storage-location erc7201:crossdex.feecontroller.v3split
     struct Layout {
         // --- Persistent config (set via initialize) ---
         address feeCollector;
-        uint32 sellerMakerFeeBps;
-        uint32 sellerTakerFeeBps;
-        uint32 buyerMakerFeeBps;
-        uint32 buyerTakerFeeBps;
+        address creator;
+        uint32 takerFeeBps;
+        uint32 creatorShareBps;
+        uint32 makerRebateShareBps;
         // Cached from Pair for gas savings
         IERC20 quote;
         uint256 denominator;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("crossdex.feecontroller.v2compat")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant STORAGE_SLOT = 0x14ab8af4ef0e5d00cd393c578620673b1d80a5b1987c3516fd0d7064057dd200;
+    // keccak256(abi.encode(uint256(keccak256("crossdex.feecontroller.v3split")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant STORAGE_SLOT = 0xe19e946b09ec007af8ee81c0a3af18911300d21bef80c17e2eae368a87ae3600;
 
     function _layout() private pure returns (Layout storage $) {
         assembly {
@@ -57,15 +70,14 @@ contract FeeControllerV2Compat is IFeeController {
     // ERC-7201 Namespaced Transient Storage (EIP-1153)
     // ─────────────────────────────────────────────────────────────────────────────
 
-    /// @custom:storage-location erc7201:crossdex.feecontroller.v2compat.transient
+    /// @custom:storage-location erc7201:crossdex.feecontroller.v3split.transient
     /// Slot offsets from TRANSIENT_SLOT:
     ///   +0: currentTakerId (uint256) - validates same taker across matches
-    ///   +1: takerFeeBps (uint32) - cached taker fee bps for gas optimization
-    ///   +2: makerFeeAcc (uint256) - accumulated maker fees
-    ///   +3: takerFeeAcc (uint256) - accumulated taker fees
+    ///   +1: takerFeeAccTotal (uint256) - accumulated total taker fees
+    ///   +2: makerRebatePaidTotal (uint256) - accumulated maker rebates already paid
 
-    // keccak256(abi.encode(uint256(keccak256("crossdex.feecontroller.v2compat.transient")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant TRANSIENT_SLOT = 0x1fb63c0db76aadd79cfb812e9cbabdb25fe3dcb96270af5420927160c2e29800;
+    // keccak256(abi.encode(uint256(keccak256("crossdex.feecontroller.v3split.transient")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant TRANSIENT_SLOT = 0x1d6572127ebbf954e3b8cde8f85551df844dec1634a4cb04810c8848ec2ee200;
 
     // ─────────────────────────────────────────────────────────────────────────────
     // Delegatecall enforcement
@@ -78,10 +90,14 @@ contract FeeControllerV2Compat is IFeeController {
         _SELF = address(this);
     }
 
-    /// @dev Ensures the function is called via delegatecall (msg.sender != address(this) in original context).
+    /// @dev Ensures the function is called via delegatecall.
     modifier onlyDelegateCall() {
-        if (address(this) == _SELF) revert FeeControllerNotDelegateCall();
+        _checkDelegateCall();
         _;
+    }
+
+    function _checkDelegateCall() private view {
+        if (address(this) == _SELF) revert FeeControllerNotDelegateCall();
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -89,31 +105,38 @@ contract FeeControllerV2Compat is IFeeController {
     // ─────────────────────────────────────────────────────────────────────────────
 
     /// @notice Initialize or update fee configuration.
-    /// @dev Called via delegatecall from Pair. Reads QUOTE/DENOMINATOR from Pair's storage directly.
-    /// @param initData abi.encode(feeCollector, sellerMakerBps, sellerTakerBps, buyerMakerBps, buyerTakerBps)
+    /// @dev Called via delegatecall from Pair.
+    /// @param quote The QUOTE token address from Pair
+    /// @param denominator The BASE token denominator from Pair
+    /// @param initData abi.encode(feeCollector, creator, takerFeeBps, creatorShareBps, makerRebateShareBps)
     function initialize(address quote, uint256 denominator, bytes memory initData) external override onlyDelegateCall {
-        (address _feeCollector, uint32 sMk, uint32 sTk, uint32 bMk, uint32 bTk) =
-            abi.decode(initData, (address, uint32, uint32, uint32, uint32));
+        (
+            address _feeCollector,
+            address _creator,
+            uint32 _takerFeeBps,
+            uint32 _creatorShareBps,
+            uint32 _makerRebateShareBps
+        ) = abi.decode(initData, (address, address, uint32, uint32, uint32));
 
         // Validation
         if (_feeCollector == address(0)) revert FeeControllerInvalidFeeCollector();
-        if (sMk >= BPS_DENOMINATOR || sTk >= BPS_DENOMINATOR) revert FeeControllerInvalidFeeBps();
-        if (bMk >= BPS_DENOMINATOR || bTk >= BPS_DENOMINATOR) revert FeeControllerInvalidFeeBps();
-        if (sTk < sMk) revert FeeControllerInvalidFeeStructure(sMk, sTk);
-        if (bTk < bMk) revert FeeControllerInvalidFeeStructure(bMk, bTk);
+        if (_creator == address(0)) revert FeeControllerInvalidFeeCollector(); // reuse error for creator
+        if (_takerFeeBps >= BPS_DENOMINATOR) revert FeeControllerInvalidFeeBps();
+        if (_creatorShareBps + _makerRebateShareBps > BPS_DENOMINATOR) revert FeeControllerInvalidFeeBps();
 
         Layout storage $ = _layout();
         $.feeCollector = _feeCollector;
-        $.sellerMakerFeeBps = sMk;
-        $.sellerTakerFeeBps = sTk;
-        $.buyerMakerFeeBps = bMk;
-        $.buyerTakerFeeBps = bTk;
-        // Note: fee accumulators are in transient storage, auto-reset per transaction
+        $.creator = _creator;
+        $.takerFeeBps = _takerFeeBps;
+        $.creatorShareBps = _creatorShareBps;
+        $.makerRebateShareBps = _makerRebateShareBps;
+
+        // Cache quote/denominator from Pair (immutable after first init)
         if (address($.quote) == address(0)) {
             $.quote = IERC20(quote);
             $.denominator = denominator;
         } else {
-            if (address($.quote) != address(quote)) revert FeeControllerInvalidPairConfig(quote, denominator);
+            if (address($.quote) != quote) revert FeeControllerInvalidPairConfig(quote, denominator);
         }
     }
 
@@ -127,12 +150,12 @@ contract FeeControllerV2Compat is IFeeController {
         override
         returns (uint256 buyVolume)
     {
-        // Note: view function - onlyDelegateCall not needed since it doesn't modify state
-        // and will read from caller's storage in delegatecall context anyway
         Layout storage $ = _layout();
         uint256 baseVolume = Math.mulDiv(order.price, order.amount, $.denominator);
-        uint32 bps = isMaker ? $.buyerMakerFeeBps : $.buyerTakerFeeBps;
-        return baseVolume + Math.mulDiv(baseVolume, bps, BPS_DENOMINATOR);
+        // MakerFee is always 0 in V3Split
+        if (isMaker) return baseVolume;
+        // TakerFee applies
+        return baseVolume + Math.mulDiv(baseVolume, $.takerFeeBps, BPS_DENOMINATOR);
     }
 
     /// @notice Calculate total QUOTE volume including fee for a given base volume.
@@ -140,103 +163,148 @@ contract FeeControllerV2Compat is IFeeController {
     /// @param volume The base QUOTE volume (without fee)
     /// @return buyVolume The total volume including fee
     function calcBuyVolumeWithFee(bool isMaker, uint256 volume) external view override returns (uint256 buyVolume) {
+        // MakerFee is always 0 in V3Split
+        if (isMaker) return volume;
         Layout storage $ = _layout();
-        uint32 bps = isMaker ? $.buyerMakerFeeBps : $.buyerTakerFeeBps;
-        return volume + Math.mulDiv(volume, bps, BPS_DENOMINATOR);
+        return volume + Math.mulDiv(volume, $.takerFeeBps, BPS_DENOMINATOR);
     }
 
-    /// @notice Record a match and accumulate fees.
+    /// @notice Record a match, calculate taker fee, and immediately pay maker rebate.
     /// @dev Called via delegatecall for each fill during matching.
-    ///      - On first call: caches takerId and takerFeeBps in transient storage
-    ///      - On subsequent calls: validates takerId and uses cached takerFeeBps
-    ///      - Maker fee uses maker.feeBps (set at order creation time for V2 compatibility)
+    ///      - MakerFee is always 0 (returned value)
+    ///      - TakerFee is accumulated in transient storage
+    ///      - Maker rebate is calculated and immediately transferred to maker
     /// @param takerId The taker order ID (for transient storage validation)
-    /// @param taker The taker order (uses taker.side to determine taker fee bps on first call)
-    /// @param maker The maker order (uses maker.feeBps which was set at order creation)
+    /// @param taker The taker order (unused in V3Split for fee determination)
+    /// @param maker The maker order (maker.owner receives rebate)
     /// @param tradeQuoteAmount The trade volume in QUOTE (fee calculation base)
-    /// @return makerFee The fee charged to the maker for this fill
+    /// @return makerFee Always returns 0 (maker pays no fee in V3Split)
     function recordMatch(
         uint256 takerId,
         IPairV3.Order memory taker,
         IPairV3.Order memory maker,
-        uint256, /* tradeAmount - unused in V2Compat, reserved for extensibility */
+        uint256, /* tradeAmount - unused */
         uint256 tradeQuoteAmount
     ) external override onlyDelegateCall returns (uint256 makerFee) {
-        uint32 takerBps;
+        // Suppress unused variable warning
+        taker;
 
         // Check if this is the first recordMatch call in this transaction
         uint256 currentTakerId = _tloadTakerId();
         if (currentTakerId == 0) {
-            // First call: cache takerId and takerFeeBps
+            // First call: cache takerId
             _tstoreTakerId(takerId);
-            Layout storage $ = _layout();
-            takerBps = taker.side == IPairV3.OrderSide.SELL ? $.sellerTakerFeeBps : $.buyerTakerFeeBps;
-            _tstoreTakerFeeBps(takerBps);
         } else {
             // Subsequent call: validate takerId matches
             if (currentTakerId != takerId) revert FeeControllerTakerIdMismatch(currentTakerId, takerId);
-            // Use cached takerFeeBps
-            takerBps = _tloadTakerFeeBps();
         }
 
-        // Maker fee: use feeBps stored in maker order at creation time (V2 compatibility)
-        uint32 makerBps = maker.feeBps;
+        Layout storage $ = _layout();
 
-        // Accumulate fees in transient storage
-        if (makerBps != 0) makerFee = Math.mulDiv(tradeQuoteAmount, makerBps, BPS_DENOMINATOR);
-        _tstoreMakerFeeAcc(_tloadMakerFeeAcc() + makerFee);
-
-        if (takerBps != 0) {
-            uint256 takerFee = Math.mulDiv(tradeQuoteAmount, takerBps, BPS_DENOMINATOR);
+        // Calculate taker fee and accumulate
+        uint256 takerFee = 0;
+        if ($.takerFeeBps != 0) {
+            takerFee = Math.mulDiv(tradeQuoteAmount, $.takerFeeBps, BPS_DENOMINATOR);
             _tstoreTakerFeeAcc(_tloadTakerFeeAcc() + takerFee);
         }
+
+        // Calculate and immediately pay maker rebate
+        if (takerFee != 0 && $.makerRebateShareBps != 0) {
+            uint256 rebate = Math.mulDiv(takerFee, $.makerRebateShareBps, BPS_DENOMINATOR);
+            if (rebate != 0) {
+                _tstoreMakerRebatePaid(_tloadMakerRebatePaid() + rebate);
+                $.quote.safeTransfer(maker.owner, rebate);
+            }
+        }
+
+        // MakerFee is always 0 in V3Split
+        return 0;
     }
 
-    /// @notice Settle accumulated fees by transferring to feeCollector.
+    /// @notice Settle accumulated fees by transferring to creator and feeCollector.
     /// @dev Called via delegatecall after all matches in a submit are done.
-    ///      Reads accumulated fees from transient storage (auto-reset at tx end).
-    ///      Follows CEI pattern: Effects before Interactions to prevent reentrancy.
-    /// @return takerFeeTotal The taker fee portion (for Pair's net calculation/event)
+    ///      Distribution: creatorFee from total, feeCollector gets remainder after rebates.
+    ///      Follows CEI pattern: Effects before Interactions.
+    /// @return takerFeeTotal The total taker fee (for Pair's net calculation/event)
     function settleFees() external override onlyDelegateCall returns (uint256 takerFeeTotal) {
         // Read from transient storage
         uint256 takerId = _tloadTakerId();
-        uint256 makerFeeTotal = _tloadMakerFeeAcc();
         takerFeeTotal = _tloadTakerFeeAcc();
-        uint256 totalFee = makerFeeTotal + takerFeeTotal;
+        uint256 makerRebatePaid = _tloadMakerRebatePaid();
 
-        // Effects: Reset transient storage BEFORE external call (CEI pattern)
-        // Always reset even if totalFee == 0 to allow subsequent trades in same tx
+        // Effects: Reset transient storage BEFORE external calls (CEI pattern)
+        // Always reset even if takerFeeTotal == 0 to allow subsequent trades in same tx
         _tstoreTakerId(0);
-        _tstoreMakerFeeAcc(0);
         _tstoreTakerFeeAcc(0);
+        _tstoreMakerRebatePaid(0);
 
-        // Interactions: Transfer fee and emit event LAST
-        if (totalFee > 0) {
-            Layout storage $ = _layout();
-            $.quote.safeTransfer($.feeCollector, totalFee);
-            emit FeeControllerFeesSettled(takerId, $.feeCollector, totalFee);
+        // Calculate fee distribution
+        Layout storage $ = _layout();
+        uint256 creatorFee = 0;
+        uint256 collectorFee = 0;
+
+        if (takerFeeTotal > 0) {
+            // Calculate creator's share from total taker fee
+            creatorFee = Math.mulDiv(takerFeeTotal, $.creatorShareBps, BPS_DENOMINATOR);
+
+            // Collector gets: total - creatorFee - already paid rebates
+            // This ensures no dust is lost
+            collectorFee = takerFeeTotal - creatorFee - makerRebatePaid;
+
+            // Interactions: Transfer fees LAST
+            if (creatorFee != 0) $.quote.safeTransfer($.creator, creatorFee);
+            if (collectorFee != 0) $.quote.safeTransfer($.feeCollector, collectorFee);
+
+            // Emit settlement event
+            emit FeeControllerV3FeesSettled(
+                takerId, takerFeeTotal, creatorFee, collectorFee, makerRebatePaid, $.creator, $.feeCollector
+            );
         }
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
     // View helpers for Pair (returns fee bps for order.feeBps storage)
-    // These are called via delegatecall from Pair when storing maker orders.
+    // MakerFee is always 0 in V3Split
     // ─────────────────────────────────────────────────────────────────────────────
 
-    /// @notice Get seller maker fee bps (for Pair to set order.feeBps on SELL limit order)
-    function sellerMakerFeeBps() external view returns (uint32) {
-        return _layout().sellerMakerFeeBps;
+    /// @notice Get seller maker fee bps (always 0 for V3Split)
+    function sellerMakerFeeBps() external pure returns (uint32) {
+        return 0;
     }
 
-    /// @notice Get buyer maker fee bps (for Pair to set order.feeBps on BUY limit order)
-    function buyerMakerFeeBps() external view returns (uint32) {
-        return _layout().buyerMakerFeeBps;
+    /// @notice Get buyer maker fee bps (always 0 for V3Split)
+    function buyerMakerFeeBps() external pure returns (uint32) {
+        return 0;
     }
 
     /// @notice Get current fee collector address
     function feeCollector() external view returns (address) {
         return _layout().feeCollector;
     }
+
+    /// @notice Get current creator address
+    function creator() external view returns (address) {
+        return _layout().creator;
+    }
+
+    /// @notice Get taker fee bps
+    function takerFeeBps() external view returns (uint32) {
+        return _layout().takerFeeBps;
+    }
+
+    /// @notice Get creator share bps (percentage of taker fee)
+    function creatorShareBps() external view returns (uint32) {
+        return _layout().creatorShareBps;
+    }
+
+    /// @notice Get maker rebate share bps (percentage of taker fee)
+    function makerRebateShareBps() external view returns (uint32) {
+        return _layout().makerRebateShareBps;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Transient Storage Helpers
+    // ─────────────────────────────────────────────────────────────────────────────
 
     function _tloadTakerId() private view returns (uint256 value) {
         bytes32 slot = TRANSIENT_SLOT;
@@ -252,43 +320,29 @@ contract FeeControllerV2Compat is IFeeController {
         }
     }
 
-    function _tloadTakerFeeBps() private view returns (uint32 value) {
-        bytes32 slot = bytes32(uint256(TRANSIENT_SLOT) + 1);
-        assembly {
-            value := tload(slot)
-        }
-    }
-
-    function _tstoreTakerFeeBps(uint32 value) private {
-        bytes32 slot = bytes32(uint256(TRANSIENT_SLOT) + 1);
-        assembly {
-            tstore(slot, value)
-        }
-    }
-
-    function _tloadMakerFeeAcc() private view returns (uint256 value) {
-        bytes32 slot = bytes32(uint256(TRANSIENT_SLOT) + 2);
-        assembly {
-            value := tload(slot)
-        }
-    }
-
-    function _tstoreMakerFeeAcc(uint256 value) private {
-        bytes32 slot = bytes32(uint256(TRANSIENT_SLOT) + 2);
-        assembly {
-            tstore(slot, value)
-        }
-    }
-
     function _tloadTakerFeeAcc() private view returns (uint256 value) {
-        bytes32 slot = bytes32(uint256(TRANSIENT_SLOT) + 3);
+        bytes32 slot = bytes32(uint256(TRANSIENT_SLOT) + 1);
         assembly {
             value := tload(slot)
         }
     }
 
     function _tstoreTakerFeeAcc(uint256 value) private {
-        bytes32 slot = bytes32(uint256(TRANSIENT_SLOT) + 3);
+        bytes32 slot = bytes32(uint256(TRANSIENT_SLOT) + 1);
+        assembly {
+            tstore(slot, value)
+        }
+    }
+
+    function _tloadMakerRebatePaid() private view returns (uint256 value) {
+        bytes32 slot = bytes32(uint256(TRANSIENT_SLOT) + 2);
+        assembly {
+            value := tload(slot)
+        }
+    }
+
+    function _tstoreMakerRebatePaid(uint256 value) private {
+        bytes32 slot = bytes32(uint256(TRANSIENT_SLOT) + 2);
         assembly {
             tstore(slot, value)
         }

@@ -4,6 +4,7 @@ pragma solidity ^0.8.13;
 import {Math} from "@openzeppelin-contracts-5.5.0/utils/math/Math.sol";
 import {console} from "forge-std/Test.sol";
 
+import {FeeControllerV2Compat} from "../src/FeeControllerV2Compat.sol";
 import {PairImplV3} from "../src/PairImplV3.sol";
 import {BPS_DENOMINATOR, IFeeController} from "../src/interfaces/IFeeController.sol";
 import {IPairV3} from "../src/interfaces/IPairV3.sol";
@@ -328,7 +329,7 @@ contract DEXV3FeeControllerV2CompatTest is DEXV3BaseTest {
         uint256 expectedTakerFee = _calcFee(quoteVolume, SELLER_TAKER_FEE);
         // takerId will be the sell order id (2, since buy order is 1)
         vm.expectEmit(true, true, false, true, address(PAIR));
-        emit IFeeController.FeeControllerFeesSettled(2, FEE_COLLECTOR, expectedTakerFee);
+        emit FeeControllerV2Compat.FeeControllerFeesSettled(2, FEE_COLLECTOR, expectedTakerFee);
 
         // USER2: Sell market order (taker)
         vm.prank(USER2);
@@ -350,7 +351,7 @@ contract DEXV3FeeControllerV2CompatTest is DEXV3BaseTest {
         uint256 expectedMakerFee = _calcFee(quoteVolume, SELLER_MAKER_FEE);
         // takerId will be the buy order id (2, since sell order is 1)
         vm.expectEmit(true, true, false, true, address(PAIR));
-        emit IFeeController.FeeControllerFeesSettled(2, FEE_COLLECTOR, expectedMakerFee);
+        emit FeeControllerV2Compat.FeeControllerFeesSettled(2, FEE_COLLECTOR, expectedMakerFee);
 
         // USER1: Buy market order (taker) - buyer taker fee is 0
         vm.prank(USER1);
@@ -381,7 +382,7 @@ contract DEXV3FeeControllerV2CompatTest is DEXV3BaseTest {
         uint256 expectedTakerFee = _calcFee(quoteVolumeTotal, SELLER_TAKER_FEE);
         // takerId = 3 (sell order), order 1 and 2 are buy orders
         vm.expectEmit(true, true, false, true, address(PAIR));
-        emit IFeeController.FeeControllerFeesSettled(3, FEE_COLLECTOR, expectedTakerFee);
+        emit FeeControllerV2Compat.FeeControllerFeesSettled(3, FEE_COLLECTOR, expectedTakerFee);
 
         // USER2: Sell market order that matches both makers
         vm.prank(USER2);
