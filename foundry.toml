@@ -19,3 +19,14 @@ forge-std = "1.14.0"
 [fmt]
 single_line_statement_blocks = "single"
 sort_imports = true
+
+[lint]
+# Ignore test files from lint (config may not work in all Foundry versions)
+# Use `forge lint src/` for reliable results
+ignore = ["test/**", "legacy_v1_v2/**"]
+exclude_lints = [
+    "erc20-unchecked-transfer",
+    "unsafe-typecast",
+    "mixed-case-variable",       # allow UPPER_SNAKE_CASE for pseudo-immutables
+    "screaming-snake-case-immutable",
+]

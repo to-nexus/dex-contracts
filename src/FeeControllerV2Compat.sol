@@ -80,8 +80,12 @@ contract FeeControllerV2Compat is IFeeController {
 
     /// @dev Ensures the function is called via delegatecall (msg.sender != address(this) in original context).
     modifier onlyDelegateCall() {
-        if (address(this) == _SELF) revert FeeControllerNotDelegateCall();
+        _checkDelegateCall();
         _;
+    }
+
+    function _checkDelegateCall() private view {
+        if (address(this) == _SELF) revert FeeControllerNotDelegateCall();
     }
 
     // ─────────────────────────────────────────────────────────────────────────────

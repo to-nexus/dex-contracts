@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {ERC1967Proxy} from "@openzeppelin-contracts-5.5.0/proxy/ERC1967/ERC1967Proxy.sol";
-import {IERC20, IERC20Metadata} from "@openzeppelin-contracts-5.5.0/token/ERC20/extensions/IERC20Metadata.sol";
+import {IERC20} from "@openzeppelin-contracts-5.5.0/token/ERC20/IERC20.sol";
 import {Math} from "@openzeppelin-contracts-5.5.0/utils/math/Math.sol";
 import {Test, console} from "forge-std/Test.sol";
 

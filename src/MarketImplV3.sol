@@ -95,7 +95,7 @@ contract MarketImplV3 is IMarketV3, UUPSUpgradeable, OwnableUpgradeable {
         onlyOwner
         returns (address)
     {
-        if (base == address(0) || base == address(QUOTE)) revert MarketInvalidBaseAddress(base);
+        if (base == address(0) || base == QUOTE) revert MarketInvalidBaseAddress(base);
         uint256 baseDecimals = IERC20Metadata(base).decimals();
         if (baseDecimals == 0) revert MarketInvalidBaseAddress(base);
         if (_allPairs.contains(base)) revert MarketAlreadyCreatedBaseAddress(base);
@@ -110,6 +110,7 @@ contract MarketImplV3 is IMarketV3, UUPSUpgradeable, OwnableUpgradeable {
                 )
             )
         );
+        // forge-lint: disable-next-line(asm-keccak256)
         bytes32 salt = keccak256(abi.encodePacked(base));
         address pair = Create2.deploy(0, salt, bytecode);
 
@@ -143,9 +144,9 @@ contract MarketImplV3 is IMarketV3, UUPSUpgradeable, OwnableUpgradeable {
 
         for (uint256 i = startIndex; i < endIndex; ++i) {
             (, address pair) = _allPairs.at(i);
-            PairImplV3 PAIR = PairImplV3(pair);
-            if (!isForce) if (address(PAIR.feeController()) != newFeeController) continue;
-            PAIR.setFeeController(newFeeController, feeControllerInitData);
+            PairImplV3 pairContract = PairImplV3(pair);
+            if (!isForce) if (address(pairContract.feeController()) != newFeeController) continue;
+            pairContract.setFeeController(newFeeController, feeControllerInitData);
         }
     }
 

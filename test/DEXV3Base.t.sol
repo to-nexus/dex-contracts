@@ -2,9 +2,9 @@
 pragma solidity ^0.8.13;
 
 import {ERC1967Proxy} from "@openzeppelin-contracts-5.5.0/proxy/ERC1967/ERC1967Proxy.sol";
-import {IERC20, IERC20Metadata} from "@openzeppelin-contracts-5.5.0/token/ERC20/extensions/IERC20Metadata.sol";
+import {IERC20} from "@openzeppelin-contracts-5.5.0/token/ERC20/IERC20.sol";
 import {Math} from "@openzeppelin-contracts-5.5.0/utils/math/Math.sol";
-import {Test, console} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 
 import {CrossDexImplV3} from "../src/CrossDexImplV3.sol";
 import {CrossDexRouterV3} from "../src/CrossDexRouterV3.sol";
@@ -14,7 +14,6 @@ import {PairImplV3} from "../src/PairImplV3.sol";
 import {WETH} from "../src/WETH.sol";
 
 import {BPS_DENOMINATOR} from "../src/interfaces/IFeeController.sol";
-import {IPairV3} from "../src/interfaces/IPairV3.sol";
 
 import {T20} from "./mock/T20.sol";
 

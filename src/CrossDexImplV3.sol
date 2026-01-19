@@ -3,7 +3,6 @@ pragma solidity 0.8.30;
 
 import {ERC1967Proxy} from "@openzeppelin-contracts-5.5.0/proxy/ERC1967/ERC1967Proxy.sol";
 import {UUPSUpgradeable} from "@openzeppelin-contracts-5.5.0/proxy/utils/UUPSUpgradeable.sol";
-import {IERC20Metadata} from "@openzeppelin-contracts-5.5.0/token/ERC20/extensions/IERC20Metadata.sol";
 import {Create2} from "@openzeppelin-contracts-5.5.0/utils/Create2.sol";
 import {EnumerableMap} from "@openzeppelin-contracts-5.5.0/utils/structs/EnumerableMap.sol";
 import {EnumerableSet} from "@openzeppelin-contracts-5.5.0/utils/structs/EnumerableSet.sol";
@@ -13,8 +12,6 @@ import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.5.0/acce
 import {ICrossDexV3} from "./interfaces/ICrossDexV3.sol";
 import {IMarketV3} from "./interfaces/IMarketV3.sol";
 import {IRouterV3} from "./interfaces/IRouterV3.sol";
-
-import {WETH} from "./WETH.sol";
 
 contract CrossDexImplV3 is ICrossDexV3, UUPSUpgradeable, OwnableUpgradeable {
     using EnumerableMap for EnumerableMap.AddressToAddressMap;
@@ -27,7 +24,7 @@ contract CrossDexImplV3 is ICrossDexV3, UUPSUpgradeable, OwnableUpgradeable {
     error CrossDexInvalidFeeController(address feeController);
 
     event MarketCreated(
-        address indexed quote, address indexed market, address indexed owner, address fee_collector, string message
+        address indexed quote, address indexed market, address indexed owner, address feeCollector, string message
     );
     event TickSizeSetterSet(address indexed before, address indexed current);
     event PairImplSet(address indexed before, address indexed current);
@@ -48,8 +45,12 @@ contract CrossDexImplV3 is ICrossDexV3, UUPSUpgradeable, OwnableUpgradeable {
     uint256[42] __gap;
 
     modifier onlyMarket() {
-        if (!isMarket(_msgSender())) revert CrossDexInvalidMarketAddress(_msgSender());
+        _checkMarket();
         _;
+    }
+
+    function _checkMarket() private view {
+        if (!isMarket(_msgSender())) revert CrossDexInvalidMarketAddress(_msgSender());
     }
 
     constructor() {
@@ -108,9 +109,17 @@ contract CrossDexImplV3 is ICrossDexV3, UUPSUpgradeable, OwnableUpgradeable {
         if (!_allowedFeeControllers.contains(feeController)) revert CrossDexInvalidFeeController(feeController);
     }
 
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Public view functions
+    // ─────────────────────────────────────────────────────────────────────────────
+
     function isMarket(address market) public view returns (bool) {
         return _allMarkets.contains(market);
     }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // External functions (Admin)
+    // ─────────────────────────────────────────────────────────────────────────────
 
     function createMarket(address _owner, address quote, address feeController, string memory message)
         external
@@ -123,6 +132,7 @@ contract CrossDexImplV3 is ICrossDexV3, UUPSUpgradeable, OwnableUpgradeable {
                 marketImpl, abi.encodeCall(IMarketV3.initialize, (_owner, ROUTER, quote, pairImpl, feeController))
             )
         );
+        // forge-lint: disable-next-line(asm-keccak256)
         bytes32 salt = keccak256(abi.encode(quote, message));
         address market = Create2.deploy(0, salt, bytecode);
         _allMarkets.set(market, quote);
