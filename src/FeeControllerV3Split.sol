@@ -177,20 +177,16 @@ contract FeeControllerV3Split is IFeeController {
     ///      - TakerFee is accumulated in transient storage
     ///      - Maker rebate is calculated and immediately transferred to maker
     /// @param takerId The taker order ID (for transient storage validation)
-    /// @param taker The taker order (unused in V3Split for fee determination)
     /// @param maker The maker order (maker.owner receives rebate)
     /// @param tradeQuoteAmount The trade volume in QUOTE (fee calculation base)
     /// @return makerFee Always returns 0 (maker pays no fee in V3Split)
     function recordMatch(
         uint256 takerId,
-        IPairV3.Order memory taker,
+        IPairV3.Order memory, /* taker - unused */
         IPairV3.Order memory maker,
         uint256, /* tradeAmount - unused */
         uint256 tradeQuoteAmount
     ) external override onlyDelegateCall returns (uint256 makerFee) {
-        // Suppress unused variable warning
-        taker;
-
         // Check if this is the first recordMatch call in this transaction
         uint256 currentTakerId = _tloadTakerId();
         if (currentTakerId == 0) {
@@ -242,16 +238,14 @@ contract FeeControllerV3Split is IFeeController {
 
         // Calculate fee distribution
         FeeControllerV3SplitStorage storage $ = _getFeeControllerV3SplitStorage();
-        uint256 creatorFee = 0;
-        uint256 collectorFee = 0;
 
         if (takerFeeTotal > 0) {
             // Calculate creator's share from total taker fee
-            creatorFee = Math.mulDiv(takerFeeTotal, $.creatorShareBps, BPS_DENOMINATOR);
+            uint256 creatorFee = Math.mulDiv(takerFeeTotal, $.creatorShareBps, BPS_DENOMINATOR);
 
             // Collector gets: total - creatorFee - already paid rebates
             // This ensures no dust is lost
-            collectorFee = takerFeeTotal - creatorFee - makerRebatePaid;
+            uint256 collectorFee = takerFeeTotal - creatorFee - makerRebatePaid;
 
             // Interactions: Transfer fees LAST
             if (creatorFee != 0) $.quote.safeTransfer($.creator, creatorFee);
