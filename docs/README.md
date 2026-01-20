@@ -17,6 +17,7 @@ Recommended reading order:
 2. **How to trade via Router**: [`ROUTER_GUIDE.md`](./ROUTER_GUIDE.md)
 3. **Fees and FeeController**: [`FEES.md`](./FEES.md)
 4. **Upgrade (V2 → V3)**: [`UPGRADE_V2_TO_V3.md`](./UPGRADE_V2_TO_V3.md)
+5. **Events Changelog (V2 → V3)**: [`EVENTS_CHANGELOG.md`](./EVENTS_CHANGELOG.md)
 
 ## 🗺️ Documentation Map
 
@@ -24,6 +25,7 @@ Recommended reading order:
 - `FEES.md`: FeeController design, configuration, and settlement flow
 - `ROUTER_GUIDE.md`: end-user / integrator guide for submitting and canceling orders
 - `UPGRADE_V2_TO_V3.md`: safe migration plan and storage collision notes
+- `EVENTS_CHANGELOG.md`: all event changes between V2 and V3 (for indexer migration)
 
 ## 🧠 Key Concepts
 

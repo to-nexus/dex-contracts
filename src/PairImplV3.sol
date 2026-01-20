@@ -583,8 +583,8 @@ contract PairImplV3 is UUPSUpgradeable, PausableUpgradeable, IPairV3, IOwnable {
             _orders = _sellOrders[order.price];
             uint256 amount = order.amount;
             if (amount != 0) {
-                BASE.safeTransfer(order.owner, amount);
                 _subBaseReserve(order.owner, amount, false, baseReserve);
+                BASE.safeTransfer(order.owner, amount);
             }
         } else {
             _orders = _buyOrders[order.price];
@@ -593,8 +593,8 @@ contract PairImplV3 is UUPSUpgradeable, PausableUpgradeable, IPairV3, IOwnable {
                 if (order.feeBps != 0) {
                     returnQuoteAmount += Math.mulDiv(returnQuoteAmount, order.feeBps, BPS_DENOMINATOR);
                 }
-                QUOTE.safeTransfer(order.owner, returnQuoteAmount);
                 _subQuoteReserve(order.owner, returnQuoteAmount, false, quoteReserve);
+                QUOTE.safeTransfer(order.owner, returnQuoteAmount);
             }
         }
 
@@ -746,6 +746,7 @@ contract PairImplV3 is UUPSUpgradeable, PausableUpgradeable, IPairV3, IOwnable {
 
     function skim(IERC20 erc20, address to, uint256 amount) external onlyOwner {
         if (amount == 0) return;
+        if (to == address(0)) return;
 
         if (erc20 == BASE && BASE.balanceOf(address(this)) < baseReserve + amount) {
             revert PairInvalidReserve(address(BASE));
