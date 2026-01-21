@@ -148,12 +148,26 @@ contract PairImplV3 is UUPSUpgradeable, PausableUpgradeable, IPairV3, IOwnable {
         _feeControllerInitialize(feeControllerInitData);
     }
 
+    function reInitialize(address _feeController, bytes memory feeControllerInitData)
+        external
+        onlyOwner
+        reinitializer(3)
+    {
+        IMarketV3(MARKET).checkFeeControllerAllowed(_feeController);
+        feeController = IFeeController(_feeController);
+        _feeControllerInitialize(feeControllerInitData);
+    }
+
     //  #    # # ###### #    #  ####
     //  #    # # #      #    # #
     //  #    # # #####  #    #  ####
     //  #    # # #      # ## #      #
     //   #  #  # #      ##  ## #    #
     //    ##   # ###### #    #  ####
+
+    function version() external pure returns (uint64) {
+        return 3;
+    }
 
     function getConfig() external view returns (Config memory) {
         return Config({QUOTE: QUOTE, BASE: BASE, DENOMINATOR: DENOMINATOR});
