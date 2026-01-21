@@ -1,0 +1,231 @@
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.30;
+
+import {ERC1967Proxy} from "@openzeppelin-contracts-5.5.0/proxy/ERC1967/ERC1967Proxy.sol";
+import {Script, console} from "forge-std/Script.sol";
+
+import {CrossDexImplV3} from "../src/CrossDexImplV3.sol";
+import {CrossDexRouterV3} from "../src/CrossDexRouterV3.sol";
+import {FeeControllerV2Compat} from "../src/FeeControllerV2Compat.sol";
+import {FeeControllerV3Split} from "../src/FeeControllerV3Split.sol";
+import {MarketImplV3} from "../src/MarketImplV3.sol";
+import {PairImplV3} from "../src/PairImplV3.sol";
+
+/// @title DeployV3
+/// @notice Deployment script for V3 contracts
+/// @dev Usage:
+///   1. Deploy implementations: forge script script/DeployV3.s.sol:DeployV3 --sig "deployImplementations()" --broadcast
+///   2. Deploy proxy: forge script script/DeployV3.s.sol:DeployV3 --sig "deployProxy(address,address,address,address,address)" <args> --broadcast
+contract DeployV3 is Script {
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Structs
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    struct Implementations {
+        address crossDexImpl;
+        address routerImpl;
+        address marketImpl;
+        address pairImpl;
+        address feeControllerV2Compat;
+        address feeControllerV3Split;
+    }
+
+    struct ProxyDeployment {
+        address crossDex;
+        address router;
+    }
+
+    struct InitParams {
+        uint256 findPrevPriceCount;
+        uint256 maxMatchCount;
+        uint256 cancelLimit;
+        address tickSizeSetter;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Deploy Implementations
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// @notice Deploy all implementation contracts
+    /// @return impls Struct containing all implementation addresses
+    function deployImplementations() external returns (Implementations memory impls) {
+        vm.startBroadcast();
+
+        impls = _deployImplementations();
+
+        vm.stopBroadcast();
+
+        _logImplementations(impls);
+    }
+
+    function upgradeCrossDex(
+        address crossDex,
+        address router,
+        address crossDexImpl,
+        address routerImpl,
+        address marketImpl,
+        address pairImpl,
+        address[] memory feeControllers
+    ) external {
+        vm.startBroadcast();
+        CrossDexImplV3(crossDex)
+            .upgradeToAndCall(
+                crossDexImpl, abi.encodeCall(CrossDexImplV3.reInitialize, (marketImpl, pairImpl, feeControllers))
+            );
+        CrossDexRouterV3(router).upgradeToAndCall(routerImpl, abi.encodeCall(CrossDexRouterV3.reInitialize, ()));
+        vm.stopBroadcast();
+    }
+
+    function upgradeMarket(
+        address market,
+        address marketImpl,
+        address pairImpl,
+        address feeController,
+        bytes memory feeControllerInitData
+    ) external {
+        vm.startBroadcast();
+        MarketImplV3(market)
+            .upgradeToAndCall(marketImpl, abi.encodeCall(MarketImplV3.reInitialize, (pairImpl, feeController)));
+        (, address[] memory pairs) = MarketImplV3(market).allPairs();
+        for (uint256 i = 0; i < pairs.length; ++i) {
+            address pair = pairs[i];
+            PairImplV3(pair)
+                .upgradeToAndCall(
+                    pairImpl, abi.encodeCall(PairImplV3.reInitialize, (feeController, feeControllerInitData))
+                );
+        }
+        vm.stopBroadcast();
+    }
+
+    function _deployImplementations() internal returns (Implementations memory impls) {
+        impls.routerImpl = address(new CrossDexRouterV3());
+        impls.marketImpl = address(new MarketImplV3());
+        impls.pairImpl = address(new PairImplV3());
+        impls.crossDexImpl = address(new CrossDexImplV3());
+        impls.feeControllerV2Compat = address(new FeeControllerV2Compat());
+        impls.feeControllerV3Split = address(new FeeControllerV3Split());
+    }
+
+    function _logImplementations(Implementations memory impls) internal pure {
+        console.log("=== Implementation Deployment ===");
+        console.log("CrossDexImplV3 impl:", impls.crossDexImpl);
+        console.log("CrossDexRouterV3 impl:", impls.routerImpl);
+        console.log("MarketImplV3 impl:", impls.marketImpl);
+        console.log("PairImplV3 impl:", impls.pairImpl);
+        console.log("FeeControllerV2Compat:", impls.feeControllerV2Compat);
+        console.log("FeeControllerV3Split:", impls.feeControllerV3Split);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Deploy Proxy
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// @notice Deploy CrossDex proxy and initialize the system
+    /// @param crossDexImpl CrossDexImplV3 implementation address
+    /// @param routerImpl CrossDexRouterV3 implementation address
+    /// @param marketImpl MarketImplV3 implementation address
+    /// @param pairImpl PairImplV3 implementation address
+    /// @param feeController FeeController implementation address to allow
+    /// @return deployment Struct containing proxy addresses
+    function deployProxy(
+        address crossDexImpl,
+        address routerImpl,
+        address marketImpl,
+        address pairImpl,
+        address feeController
+    ) external returns (ProxyDeployment memory deployment) {
+        InitParams memory params = _loadInitParams();
+
+        vm.startBroadcast();
+
+        deployment = _deployProxy(crossDexImpl, routerImpl, marketImpl, pairImpl, feeController, params);
+
+        vm.stopBroadcast();
+
+        _logProxyDeployment(deployment, feeController);
+    }
+
+    function _loadInitParams() internal view returns (InitParams memory params) {
+        params.findPrevPriceCount = vm.envOr("FIND_PREV_PRICE_COUNT", type(uint256).max);
+        params.maxMatchCount = vm.envOr("MAX_MATCH_COUNT", type(uint256).max);
+        params.cancelLimit = vm.envOr("CANCEL_LIMIT", type(uint256).max);
+        params.tickSizeSetter = vm.envOr("TICK_SIZE_SETTER", address(0));
+    }
+
+    function _deployProxy(
+        address crossDexImpl,
+        address routerImpl,
+        address marketImpl,
+        address pairImpl,
+        address feeController,
+        InitParams memory params
+    ) internal returns (ProxyDeployment memory deployment) {
+        // Deploy CrossDex proxy
+        ERC1967Proxy proxy = new ERC1967Proxy(crossDexImpl, hex"");
+        CrossDexImplV3 crossDex = CrossDexImplV3(address(proxy));
+
+        // Initialize
+        crossDex.initialize(
+            msg.sender,
+            routerImpl,
+            params.findPrevPriceCount,
+            params.maxMatchCount,
+            params.cancelLimit,
+            marketImpl,
+            pairImpl,
+            params.tickSizeSetter
+        );
+
+        // Allow fee controller
+        if (feeController != address(0)) crossDex.setFeeControllerAllow(feeController, true);
+
+        deployment.crossDex = address(crossDex);
+        deployment.router = crossDex.ROUTER();
+    }
+
+    function _logProxyDeployment(ProxyDeployment memory deployment, address feeController) internal pure {
+        console.log("=== Proxy Deployment ===");
+        console.log("CrossDex proxy:", deployment.crossDex);
+        console.log("Router proxy:", deployment.router);
+        if (feeController != address(0)) console.log("FeeController allowed:", feeController);
+        console.log("");
+        console.log("Next steps:");
+        console.log("1. Create Market: CrossDex.createMarket(owner, quote, feeController, message)");
+        console.log("2. Create Pair: Market.createPair(base, tickSize, lotSize, feeInitData)");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Helper: Deploy All
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// @notice Deploy everything in one transaction (implementations + proxy)
+    /// @param useFeeControllerV3Split If true, use V3Split fee controller; otherwise use V2Compat
+    /// @return impls Implementation addresses
+    /// @return deployment Proxy addresses
+    function deployAll(bool useFeeControllerV3Split)
+        external
+        returns (Implementations memory impls, ProxyDeployment memory deployment)
+    {
+        vm.startBroadcast();
+
+        impls = _deployImplementations();
+
+        address feeController = useFeeControllerV3Split ? impls.feeControllerV3Split : impls.feeControllerV2Compat;
+
+        InitParams memory params = InitParams({
+            findPrevPriceCount: type(uint256).max,
+            maxMatchCount: type(uint256).max,
+            cancelLimit: type(uint256).max,
+            tickSizeSetter: address(0)
+        });
+
+        deployment =
+            _deployProxy(impls.crossDexImpl, impls.routerImpl, impls.marketImpl, impls.pairImpl, feeController, params);
+
+        vm.stopBroadcast();
+
+        _logImplementations(impls);
+        console.log("");
+        _logProxyDeployment(deployment, feeController);
+    }
+}

@@ -49,25 +49,9 @@ contract CrossDexRouterV3 is UUPSUpgradeable, ContextUpgradeable, ReentrancyGuar
     bytes32 private constant CACHED_BALANCE_SLOT = 0x7a2e3c4d5f6a7b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f7a8b9c0d1e2f3a4;
 
     modifier checkSubmit() {
-        _checkAccountCode(_msgSender());
-        _storeCachedBalance();
+        _checkSubmit();
         _;
         _checkNoRemainingValue();
-    }
-
-    function _storeCachedBalance() private {
-        uint256 cachedBalance = address(this).balance - msg.value;
-        assembly {
-            tstore(CACHED_BALANCE_SLOT, cachedBalance)
-        }
-    }
-
-    function _checkNoRemainingValue() private view {
-        uint256 cachedBalance;
-        assembly {
-            cachedBalance := tload(CACHED_BALANCE_SLOT)
-        }
-        if (address(this).balance != cachedBalance) revert RouterInvalidValue();
     }
 
     modifier validPair(address pair) {
@@ -108,6 +92,12 @@ contract CrossDexRouterV3 is UUPSUpgradeable, ContextUpgradeable, ReentrancyGuar
         findPrevPriceCount = _findPrevPriceCount;
         maxMatchCount = _maxMatchCount;
         cancelLimit = _cancelLimit;
+    }
+
+    function reInitialize() external onlyOwner reinitializer(3) {}
+
+    function version() external pure returns (uint64) {
+        return 3;
     }
 
     /**
@@ -239,6 +229,11 @@ contract CrossDexRouterV3 is UUPSUpgradeable, ContextUpgradeable, ReentrancyGuar
         return _maxMatchCount == 0 || _maxMatchCount > maxMatchCount ? maxMatchCount : _maxMatchCount;
     }
 
+    function _checkSubmit() private {
+        _checkAccountCode(_msgSender());
+        _storeCachedBalance();
+    }
+
     /**
      * @dev Checks if the account has contract code and blocks contract accounts unless whitelisted
      *
@@ -248,6 +243,21 @@ contract CrossDexRouterV3 is UUPSUpgradeable, ContextUpgradeable, ReentrancyGuar
     function _checkAccountCode(address account) private view {
         if (whitelistedCodeAccounts.contains(account)) return;
         if (account.code.length != 0) revert RouterContractAccountBlocked(account);
+    }
+
+    function _storeCachedBalance() private {
+        uint256 cachedBalance = address(this).balance - msg.value;
+        assembly {
+            tstore(CACHED_BALANCE_SLOT, cachedBalance)
+        }
+    }
+
+    function _checkNoRemainingValue() private view {
+        uint256 cachedBalance;
+        assembly {
+            cachedBalance := tload(CACHED_BALANCE_SLOT)
+        }
+        if (address(this).balance != cachedBalance) revert RouterInvalidValue();
     }
 
     // ─────────────────────────────────────────────────────────────────────────────

@@ -3,6 +3,7 @@ pragma solidity 0.8.30;
 
 import {IERC20} from "@openzeppelin-contracts-5.5.0/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin-contracts-5.5.0/token/ERC20/utils/SafeERC20.sol";
+import {ERC165} from "@openzeppelin-contracts-5.5.0/utils/introspection/ERC165.sol";
 import {Math} from "@openzeppelin-contracts-5.5.0/utils/math/Math.sol";
 
 import {BPS_DENOMINATOR, IFeeController} from "./interfaces/IFeeController.sol";
@@ -14,7 +15,7 @@ import {IPairV3} from "./interfaces/IPairV3.sol";
 ///         Designed to be called via delegatecall from PairImplV3.
 /// @dev Persistent config stored in Pair's storage via ERC-7201 namespaced slot.
 ///      Per-transaction data stored in transient storage for gas efficiency.
-contract FeeControllerV3Split is IFeeController {
+contract FeeControllerV3Split is IFeeController, ERC165 {
     using SafeERC20 for IERC20;
     using Math for uint256;
 
@@ -296,6 +297,10 @@ contract FeeControllerV3Split is IFeeController {
     /// @notice Get maker rebate share bps (percentage of taker fee)
     function makerRebateShareBps() external view returns (uint32) {
         return _getFeeControllerV3SplitStorage().makerRebateShareBps;
+    }
+
+    function supportsInterface(bytes4 interfaceId) public view override returns (bool) {
+        return interfaceId == type(IFeeController).interfaceId || super.supportsInterface(interfaceId);
     }
 
     // ─────────────────────────────────────────────────────────────────────────────

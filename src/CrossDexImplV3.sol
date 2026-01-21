@@ -4,12 +4,14 @@ pragma solidity 0.8.30;
 import {ERC1967Proxy} from "@openzeppelin-contracts-5.5.0/proxy/ERC1967/ERC1967Proxy.sol";
 import {UUPSUpgradeable} from "@openzeppelin-contracts-5.5.0/proxy/utils/UUPSUpgradeable.sol";
 import {Create2} from "@openzeppelin-contracts-5.5.0/utils/Create2.sol";
+import {IERC165} from "@openzeppelin-contracts-5.5.0/utils/introspection/IERC165.sol";
 import {EnumerableMap} from "@openzeppelin-contracts-5.5.0/utils/structs/EnumerableMap.sol";
 import {EnumerableSet} from "@openzeppelin-contracts-5.5.0/utils/structs/EnumerableSet.sol";
 
 import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.5.0/access/OwnableUpgradeable.sol";
 
 import {ICrossDexV3} from "./interfaces/ICrossDexV3.sol";
+import {IFeeController} from "./interfaces/IFeeController.sol";
 import {IMarketV3} from "./interfaces/IMarketV3.sol";
 import {IRouterV3} from "./interfaces/IRouterV3.sol";
 
@@ -84,6 +86,26 @@ contract CrossDexImplV3 is UUPSUpgradeable, OwnableUpgradeable, ICrossDexV3 {
             pairImpl = _pairImpl;
             if (_tickSizeSetter != address(0)) tickSizeSetter = _tickSizeSetter;
         }
+    }
+
+    function reInitialize(address _marketImpl, address _pairImpl, address[] memory _feeControllers)
+        external
+        onlyOwner
+        reinitializer(3)
+    {
+        marketImpl = _marketImpl;
+        pairImpl = _pairImpl;
+        for (uint256 i = 0; i < _feeControllers.length; ++i) {
+            address feeController = _feeControllers[i];
+            if (!IERC165(feeController).supportsInterface(type(IFeeController).interfaceId)) {
+                revert CrossDexInvalidFeeController(feeController);
+            }
+            if (_allowedFeeControllers.add(feeController)) emit FeeControllerAllowed(feeController, true);
+        }
+    }
+
+    function version() external pure returns (uint64) {
+        return 3;
     }
 
     function allMarkets() external view returns (address[] memory markets, address[] memory quotes) {
@@ -165,8 +187,15 @@ contract CrossDexImplV3 is UUPSUpgradeable, OwnableUpgradeable, ICrossDexV3 {
 
     function setFeeControllerAllow(address feeController, bool allowed) external onlyOwner {
         bool ok;
-        if (allowed) ok = _allowedFeeControllers.add(feeController);
-        else ok = _allowedFeeControllers.remove(feeController);
+
+        if (allowed) {
+            if (!IERC165(feeController).supportsInterface(type(IFeeController).interfaceId)) {
+                revert CrossDexInvalidFeeController(feeController);
+            }
+            ok = _allowedFeeControllers.add(feeController);
+        } else {
+            ok = _allowedFeeControllers.remove(feeController);
+        }
         if (ok) emit FeeControllerAllowed(feeController, allowed);
     }
 

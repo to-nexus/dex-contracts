@@ -68,6 +68,18 @@ contract MarketImplV3 is UUPSUpgradeable, OwnableUpgradeable, IMarketV3 {
         feeController = _feeController;
     }
 
+    function reInitialize(address _pairImpl, address _feeController) external onlyOwner reinitializer(3) {
+        if (_pairImpl == address(0)) revert MarketInvalidInitializeData("pairImpl");
+        CROSS_DEX.checkFeeControllerAllowed(_feeController);
+
+        pairImpl = _pairImpl;
+        feeController = _feeController;
+    }
+
+    function version() external pure returns (uint64) {
+        return 3;
+    }
+
     function allPairs() external view returns (address[] memory bases, address[] memory pairs) {
         uint256 length = _allPairs.length();
         bases = new address[](length);
