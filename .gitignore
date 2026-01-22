@@ -19,6 +19,7 @@ dependencies/
 .vscode
 .DS_Store
 .cursor
+.claude
 CLAUDE.md
 /plans
 

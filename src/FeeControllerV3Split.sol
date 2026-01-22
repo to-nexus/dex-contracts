@@ -41,6 +41,12 @@ contract FeeControllerV3Split is IFeeController, ERC165 {
         address indexed feeCollector
     );
 
+    /// @notice Emitted when maker rebate is paid.
+    /// @param orderId The order ID that initiated this fee settlement
+    /// @param maker The maker order (maker.owner receives rebate)
+    /// @param rebate The amount of maker rebate paid
+    event FeeControllerV3MakerRebatePaid(uint256 indexed orderId, address indexed maker, uint256 rebate);
+
     // ─────────────────────────────────────────────────────────────────────────────
     // ERC-7201 Namespaced Persistent Storage
     // ─────────────────────────────────────────────────────────────────────────────
@@ -178,11 +184,13 @@ contract FeeControllerV3Split is IFeeController, ERC165 {
     ///      - TakerFee is accumulated in transient storage
     ///      - Maker rebate is calculated and immediately transferred to maker
     /// @param takerId The taker order ID (for transient storage validation)
+    /// @param makerId The maker order ID (for event emission)
     /// @param maker The maker order (maker.owner receives rebate)
     /// @param tradeQuoteAmount The trade volume in QUOTE (fee calculation base)
     /// @return makerFee Always returns 0 (maker pays no fee in V3Split)
     function recordMatch(
         uint256 takerId,
+        uint256 makerId,
         IPairV3.Order memory, /* taker - unused */
         IPairV3.Order memory maker,
         uint256, /* tradeAmount - unused */
@@ -213,6 +221,7 @@ contract FeeControllerV3Split is IFeeController, ERC165 {
             if (rebate != 0) {
                 _tstoreMakerRebatePaid(_tloadMakerRebatePaid() + rebate);
                 $.quote.safeTransfer(maker.owner, rebate);
+                emit FeeControllerV3MakerRebatePaid(makerId, maker.owner, rebate);
             }
         }
 

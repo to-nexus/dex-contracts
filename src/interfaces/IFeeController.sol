@@ -44,6 +44,7 @@ interface IFeeController {
     ///      On first call, caches takerId and takerFeeBps in transient storage.
     ///      On subsequent calls, validates takerId matches the cached value.
     /// @param takerId The taker order ID (for transient storage validation)
+    /// @param makerId The maker order ID (for event emission)
     /// @param taker The taker order (uses taker.side to determine taker fee bps on first call)
     /// @param maker The maker order (uses maker.feeBps which was set at order creation)
     /// @param tradeAmount The trade amount in BASE (for future extensibility)
@@ -51,6 +52,7 @@ interface IFeeController {
     /// @return makerFee The fee charged to the maker for this fill
     function recordMatch(
         uint256 takerId,
+        uint256 makerId,
         IPairV3.Order memory taker,
         IPairV3.Order memory maker,
         uint256 tradeAmount,

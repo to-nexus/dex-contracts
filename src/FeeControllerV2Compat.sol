@@ -164,6 +164,7 @@ contract FeeControllerV2Compat is IFeeController, ERC165 {
     /// @return makerFee The fee charged to the maker for this fill
     function recordMatch(
         uint256 takerId,
+        uint256, /* makerId - unused in V2Compat */
         IPairV3.Order memory taker,
         IPairV3.Order memory maker,
         uint256, /* tradeAmount - unused in V2Compat, reserved for extensibility */
