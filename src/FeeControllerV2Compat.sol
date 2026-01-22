@@ -247,9 +247,20 @@ contract FeeControllerV2Compat is IFeeController, ERC165 {
         return ($.sellerMakerFeeBps, $.sellerTakerFeeBps, $.buyerMakerFeeBps, $.buyerTakerFeeBps);
     }
 
-    /// @notice Get current fee collector address
-    function feeCollector() external view returns (address) {
-        return _getFeeControllerV2CompatStorage().feeCollector;
+    /// @notice Get the configuration identifier for this FeeController implementation.
+    /// @return configId keccak256("FeeControllerV2Compat.v1")
+    function getConfigId() external pure returns (bytes32) {
+        return keccak256("FeeControllerV2Compat.v1");
+    }
+
+    /// @notice Get the entire fee configuration storage as encoded bytes.
+    /// @dev Returns: abi.encode(feeCollector, sellerMakerFeeBps, sellerTakerFeeBps, buyerMakerFeeBps, buyerTakerFeeBps)
+    ///      Note: quote and denominator are excluded as they are Pair-level config, not fee config.
+    /// @return data ABI-encoded fee configuration
+    function getStorage() external view returns (bytes memory) {
+        FeeControllerV2CompatStorage storage $ = _getFeeControllerV2CompatStorage();
+        return
+            abi.encode($.feeCollector, $.sellerMakerFeeBps, $.sellerTakerFeeBps, $.buyerMakerFeeBps, $.buyerTakerFeeBps);
     }
 
     function supportsInterface(bytes4 interfaceId) public view override returns (bool) {

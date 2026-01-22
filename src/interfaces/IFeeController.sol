@@ -82,4 +82,15 @@ interface IFeeController {
         external
         view
         returns (uint32 sellerMakerFeeBps, uint32 sellerTakerFeeBps, uint32 buyerMakerFeeBps, uint32 buyerTakerFeeBps);
+
+    /// @notice Get the configuration identifier for this FeeController implementation.
+    /// @dev Used by clients to determine how to decode the storage data from getStorage().
+    /// @return configId A unique identifier (e.g., keccak256("FeeControllerV3Split.v1"))
+    function getConfigId() external view returns (bytes32 configId);
+
+    /// @notice Get the entire fee configuration storage as encoded bytes.
+    /// @dev Called via delegatecall to read from Pair's namespaced storage.
+    ///      Clients should use getConfigId() to determine the decoding format.
+    /// @return data ABI-encoded storage struct specific to the implementation
+    function getStorage() external view returns (bytes memory data);
 }

@@ -290,29 +290,19 @@ contract FeeControllerV3Split is IFeeController, ERC165 {
         return (0, taker, 0, taker);
     }
 
-    /// @notice Get current fee collector address
-    function feeCollector() external view returns (address) {
-        return _getFeeControllerV3SplitStorage().feeCollector;
+    /// @notice Get the configuration identifier for this FeeController implementation.
+    /// @return configId keccak256("FeeControllerV3Split.v1")
+    function getConfigId() external pure returns (bytes32) {
+        return keccak256("FeeControllerV3Split.v1");
     }
 
-    /// @notice Get current creator address
-    function creator() external view returns (address) {
-        return _getFeeControllerV3SplitStorage().creator;
-    }
-
-    /// @notice Get taker fee bps
-    function takerFeeBps() external view returns (uint32) {
-        return _getFeeControllerV3SplitStorage().takerFeeBps;
-    }
-
-    /// @notice Get creator share bps (percentage of taker fee)
-    function creatorShareBps() external view returns (uint32) {
-        return _getFeeControllerV3SplitStorage().creatorShareBps;
-    }
-
-    /// @notice Get maker rebate share bps (percentage of taker fee)
-    function makerRebateShareBps() external view returns (uint32) {
-        return _getFeeControllerV3SplitStorage().makerRebateShareBps;
+    /// @notice Get the entire fee configuration storage as encoded bytes.
+    /// @dev Returns: abi.encode(feeCollector, creator, takerFeeBps, creatorShareBps, makerRebateShareBps)
+    ///      Note: quote and denominator are excluded as they are Pair-level config, not fee config.
+    /// @return data ABI-encoded fee configuration
+    function getStorage() external view returns (bytes memory) {
+        FeeControllerV3SplitStorage storage $ = _getFeeControllerV3SplitStorage();
+        return abi.encode($.feeCollector, $.creator, $.takerFeeBps, $.creatorShareBps, $.makerRebateShareBps);
     }
 
     function supportsInterface(bytes4 interfaceId) public view override returns (bool) {

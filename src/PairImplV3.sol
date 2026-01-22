@@ -201,6 +201,18 @@ contract PairImplV3 is UUPSUpgradeable, PausableUpgradeable, IPairV3, IOwnable {
         return abi.decode(result, (uint32, uint32, uint32, uint32));
     }
 
+    /// @notice Get the FeeController configuration identifier and encoded storage data.
+    /// @dev Uses delegatecall to FeeController. Can be called via eth_call for gas-free queries.
+    function getFeeControllerConfig() external returns (bytes32 configId, bytes memory data) {
+        bytes memory resultId =
+            Address.functionDelegateCall(address(feeController), abi.encodeCall(IFeeController.getConfigId, ()));
+        configId = abi.decode(resultId, (bytes32));
+
+        bytes memory resultData =
+            Address.functionDelegateCall(address(feeController), abi.encodeCall(IFeeController.getStorage, ()));
+        data = abi.decode(resultData, (bytes));
+    }
+
     function ordersByPrices(OrderSide side, uint256[] memory prices) external view returns (uint256[][] memory) {
         mapping(uint256 price => List.U256) storage orders = side == OrderSide.SELL ? _sellOrders : _buyOrders;
         uint256 length = prices.length;

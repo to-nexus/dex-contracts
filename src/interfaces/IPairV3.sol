@@ -57,4 +57,11 @@ interface IPairV3 {
     /// @notice Calculate total QUOTE volume including buyer taker fee.
     /// @dev Uses delegatecall to FeeController. Can be called via eth_call for gas-free queries.
     function calcBuyVolumeWithFee(uint256 volume) external returns (uint256 buyVolume);
+
+    /// @notice Get the FeeController configuration identifier and encoded storage data.
+    /// @dev Uses delegatecall to FeeController. Can be called via eth_call for gas-free queries.
+    ///      Clients should use configId to determine how to decode the data.
+    /// @return configId Unique identifier for the FeeController implementation
+    /// @return data ABI-encoded fee configuration specific to the implementation
+    function getFeeControllerConfig() external returns (bytes32 configId, bytes memory data);
 }
