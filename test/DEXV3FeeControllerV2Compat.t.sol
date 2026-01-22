@@ -63,6 +63,15 @@ contract DEXV3FeeControllerV2CompatTest is DEXV3BaseTest {
         assertEq(volumeWithFee, baseVolume, "With 0 buyer fee, volume should be unchanged");
     }
 
+    function test_getEffectiveFees() external {
+        (uint32 sellerMaker, uint32 sellerTaker, uint32 buyerMaker, uint32 buyerTaker) = PAIR.getEffectiveFees();
+
+        assertEq(sellerMaker, SELLER_MAKER_FEE, "sellerMakerFeeBps should match");
+        assertEq(sellerTaker, SELLER_TAKER_FEE, "sellerTakerFeeBps should match");
+        assertEq(buyerMaker, BUYER_MAKER_FEE, "buyerMakerFeeBps should match");
+        assertEq(buyerTaker, BUYER_TAKER_FEE, "buyerTakerFeeBps should match");
+    }
+
     // ─────────────────────────────────────────────────────────────────────────────
     // SELL Taker Tests (seller takes from BUY order book)
     // ─────────────────────────────────────────────────────────────────────────────

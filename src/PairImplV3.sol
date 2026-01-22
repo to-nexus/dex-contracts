@@ -191,6 +191,16 @@ contract PairImplV3 is UUPSUpgradeable, PausableUpgradeable, IPairV3, IOwnable {
         lot = lotSize;
     }
 
+    function getEffectiveFees()
+        external
+        returns (uint32 sellerMakerFeeBps, uint32 sellerTakerFeeBps, uint32 buyerMakerFeeBps, uint32 buyerTakerFeeBps)
+    {
+        // return feeController.getEffectiveFees();
+        bytes memory result =
+            Address.functionDelegateCall(address(feeController), abi.encodeCall(IFeeController.getEffectiveFees, ()));
+        return abi.decode(result, (uint32, uint32, uint32, uint32));
+    }
+
     function ordersByPrices(OrderSide side, uint256[] memory prices) external view returns (uint256[][] memory) {
         mapping(uint256 price => List.U256) storage orders = side == OrderSide.SELL ? _sellOrders : _buyOrders;
         uint256 length = prices.length;

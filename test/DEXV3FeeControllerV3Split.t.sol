@@ -507,6 +507,16 @@ contract DEXV3FeeControllerV3SplitTest is Test {
         assertEq(FEE_CONTROLLER.buyerMakerFeeBps(), 0, "Buyer maker fee should always be 0");
     }
 
+    function test_getEffectiveFees() external {
+        (uint32 sellerMaker, uint32 sellerTaker, uint32 buyerMaker, uint32 buyerTaker) = PAIR.getEffectiveFees();
+
+        // V3Split: maker fees are always 0, taker fees are uniform
+        assertEq(sellerMaker, 0, "sellerMakerFeeBps should be 0");
+        assertEq(sellerTaker, TAKER_FEE_BPS, "sellerTakerFeeBps should match takerFeeBps");
+        assertEq(buyerMaker, 0, "buyerMakerFeeBps should be 0");
+        assertEq(buyerTaker, TAKER_FEE_BPS, "buyerTakerFeeBps should match takerFeeBps");
+    }
+
     // ─────────────────────────────────────────────────────────────────────────────
     // Configuration View Functions Tests (reading from PAIR's storage via delegatecall context)
     // ─────────────────────────────────────────────────────────────────────────────
