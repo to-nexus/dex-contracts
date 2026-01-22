@@ -241,6 +241,12 @@ contract FeeControllerV2Compat is IFeeController, ERC165 {
         return _getFeeControllerV2CompatStorage().buyerMakerFeeBps;
     }
 
+    /// @notice Get all effective fee bps in a single call.
+    function getEffectiveFees() external view returns (uint32, uint32, uint32, uint32) {
+        FeeControllerV2CompatStorage storage $ = _getFeeControllerV2CompatStorage();
+        return ($.sellerMakerFeeBps, $.sellerTakerFeeBps, $.buyerMakerFeeBps, $.buyerTakerFeeBps);
+    }
+
     /// @notice Get current fee collector address
     function feeCollector() external view returns (address) {
         return _getFeeControllerV2CompatStorage().feeCollector;

@@ -283,6 +283,13 @@ contract FeeControllerV3Split is IFeeController, ERC165 {
         return 0;
     }
 
+    /// @notice Get all effective fee bps in a single call.
+    /// @dev In V3Split, maker fees are always 0 and taker fees are uniform.
+    function getEffectiveFees() external view returns (uint32, uint32, uint32, uint32) {
+        uint32 taker = _getFeeControllerV3SplitStorage().takerFeeBps;
+        return (0, taker, 0, taker);
+    }
+
     /// @notice Get current fee collector address
     function feeCollector() external view returns (address) {
         return _getFeeControllerV3SplitStorage().feeCollector;

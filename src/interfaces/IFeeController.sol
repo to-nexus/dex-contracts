@@ -71,4 +71,15 @@ interface IFeeController {
     /// @notice Get buyer maker fee bps (for Pair to set order.feeBps on BUY limit order)
     /// @dev Called via delegatecall to read from Pair's namespaced storage.
     function buyerMakerFeeBps() external view returns (uint32);
+
+    /// @notice Get all effective fee bps in a single call.
+    /// @dev Called via delegatecall to read from Pair's namespaced storage.
+    /// @return sellerMakerFeeBps Fee bps for seller maker orders
+    /// @return sellerTakerFeeBps Fee bps for seller taker orders
+    /// @return buyerMakerFeeBps Fee bps for buyer maker orders
+    /// @return buyerTakerFeeBps Fee bps for buyer taker orders
+    function getEffectiveFees()
+        external
+        view
+        returns (uint32 sellerMakerFeeBps, uint32 sellerTakerFeeBps, uint32 buyerMakerFeeBps, uint32 buyerTakerFeeBps);
 }
