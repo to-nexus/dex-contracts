@@ -35,4 +35,3 @@ interface IUniswapV3Pool {
     /// @notice The second of the two tokens of the pool, sorted by address
     function token1() external view returns (address);
 }
-

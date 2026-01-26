@@ -16,6 +16,7 @@ contract SwapToQuoteScript is Script {
     address constant USDT = 0x9F85c7B5D7637E18f946cc8AF9C131318c6833d9;
     address constant CROSSD = 0x9364ea6790f6E0EcFaa5164085f2a7de34EC55Fb;
     uint24 constant FEE_TIER = 100; // 0.01%
+    uint256 constant MIN_AMOUNT_OUT = 0; // Minimum amount out (0 for no slippage protection)
 
     function run() external {
         // Check BuyBot address is set
@@ -28,7 +29,6 @@ contract SwapToQuoteScript is Script {
         console.log("BuyBot:", BUYBOT);
         console.log("Pair:", PAIR);
         console.log("SwapToken:", buyBot.swapToken());
-        console.log("MaxTickSlippage:", buyBot.maxTickSlippage());
 
         // Check USDT balance
         uint256 usdtBalance = IERC20(USDT).balanceOf(BUYBOT);
@@ -41,7 +41,7 @@ contract SwapToQuoteScript is Script {
 
         // Execute swap
         vm.broadcast();
-        uint256 amountOut = buyBot.swapToQuote(PAIR, FEE_TIER);
+        uint256 amountOut = buyBot.swapToQuote(PAIR, FEE_TIER, MIN_AMOUNT_OUT);
 
         console.log("========== Swap Result ==========");
         console.log("Amount Out (CROSSD):", amountOut);
@@ -53,18 +53,20 @@ contract SwapToQuoteScript is Script {
      * @param buyBotAddress BuyBot contract address
      * @param pairAddress Trading pair address
      * @param feeTier Uniswap V3 fee tier
+     * @param minAmountOut Minimum amount of quote tokens to receive (for slippage protection)
      */
-    function swapToQuote(address buyBotAddress, address pairAddress, uint24 feeTier) external {
+    function swapToQuote(address buyBotAddress, address pairAddress, uint24 feeTier, uint256 minAmountOut) external {
         BuyBot buyBot = BuyBot(payable(buyBotAddress));
 
         console.log("========== SwapToQuote Execution ==========");
         console.log("BuyBot:", buyBotAddress);
         console.log("Pair:", pairAddress);
         console.log("Fee Tier:", feeTier);
+        console.log("Min Amount Out:", minAmountOut);
         console.log("SwapToken:", buyBot.swapToken());
 
         vm.broadcast();
-        uint256 amountOut = buyBot.swapToQuote(pairAddress, feeTier);
+        uint256 amountOut = buyBot.swapToQuote(pairAddress, feeTier, minAmountOut);
 
         console.log("========== Swap Result ==========");
         console.log("Amount Out:", amountOut);
