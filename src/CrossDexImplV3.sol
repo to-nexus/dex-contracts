@@ -94,11 +94,11 @@ contract CrossDexImplV3 is UUPSUpgradeable, OwnableUpgradeable, ICrossDexV3 {
         onlyOwner
         reinitializer(3)
     {
-        // CDC-10: Add zero address validation
+        // Add zero address validation
         if (_marketImpl == address(0)) revert CrossDexInitializeData("marketImpl");
         if (_pairImpl == address(0)) revert CrossDexInitializeData("pairImpl");
 
-        // CDC-10: Emit events for state changes
+        // Emit events for state changes
         emit MarketImplSet(marketImpl, _marketImpl);
         emit PairImplSet(pairImpl, _pairImpl);
 
@@ -154,7 +154,7 @@ contract CrossDexImplV3 is UUPSUpgradeable, OwnableUpgradeable, ICrossDexV3 {
         onlyOwner
         returns (address)
     {
-        // CDC-07: Validate fee controller is in allowed list before market creation
+        // Validate fee controller is in allowed list before market creation
         if (!_allowedFeeControllers.contains(feeController)) revert CrossDexInvalidFeeController(feeController);
 
         bytes memory bytecode = abi.encodePacked(
@@ -198,7 +198,7 @@ contract CrossDexImplV3 is UUPSUpgradeable, OwnableUpgradeable, ICrossDexV3 {
     }
 
     function setFeeControllerAllow(address feeController, bool allowed) external onlyOwner {
-        // CDC-09: Explicit zero address validation
+        // Explicit zero address validation
         if (feeController == address(0)) revert CrossDexInvalidFeeController(feeController);
 
         bool ok;

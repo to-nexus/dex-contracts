@@ -120,7 +120,7 @@ contract FeeControllerV2Compat is IFeeController, ERC165 {
             $.quote = IERC20(quote);
             $.denominator = denominator;
         } else {
-            // CDC-04: Remove redundant address cast
+            // Remove redundant address cast
             if (address($.quote) != quote) revert FeeControllerInvalidPairConfig(quote, denominator);
         }
     }
@@ -192,7 +192,7 @@ contract FeeControllerV2Compat is IFeeController, ERC165 {
         uint32 makerBps = maker.feeBps;
 
         // Accumulate fees in transient storage
-        // CDC-05: Skip transient storage access when makerBps is 0
+        // Skip transient storage access when makerBps is 0
         if (makerBps != 0) {
             makerFee = Math.mulDiv(tradeQuoteAmount, makerBps, BPS_DENOMINATOR);
             _tstoreMakerFeeAcc(_tloadMakerFeeAcc() + makerFee);
@@ -219,7 +219,7 @@ contract FeeControllerV2Compat is IFeeController, ERC165 {
         // Effects: Reset transient storage BEFORE external call (CEI pattern)
         // Always reset even if totalFee == 0 to allow subsequent trades in same tx
         _tstoreTakerId(0);
-        _tstoreTakerFeeBps(0); // CDC-11: Reset takerFeeBps as well
+        _tstoreTakerFeeBps(0); // Reset takerFeeBps as well
         _tstoreMakerFeeAcc(0);
         _tstoreTakerFeeAcc(0);
 
