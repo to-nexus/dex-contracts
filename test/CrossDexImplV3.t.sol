@@ -249,6 +249,18 @@ contract CrossDexImplV3Test is DEXV3BaseTest {
         assertEq(logs.length, 0, "No event should be emitted for duplicate remove");
     }
 
+    // CDC-09: setFeeControllerAllow should revert for zero address
+    function test_setFeeControllerAllow_revert_zeroAddress() external {
+        vm.prank(OWNER);
+        vm.expectRevert(abi.encodeWithSelector(CrossDexImplV3.CrossDexInvalidFeeController.selector, address(0)));
+        CROSS_DEX.setFeeControllerAllow(address(0), true);
+
+        // Also test with allowed=false
+        vm.prank(OWNER);
+        vm.expectRevert(abi.encodeWithSelector(CrossDexImplV3.CrossDexInvalidFeeController.selector, address(0)));
+        CROSS_DEX.setFeeControllerAllow(address(0), false);
+    }
+
     // ═══════════════════════════════════════════════════════════════════════════
     // Access Control Tests
     // ═══════════════════════════════════════════════════════════════════════════
