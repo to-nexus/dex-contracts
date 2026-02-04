@@ -74,6 +74,10 @@ contract MarketImplV3 is UUPSUpgradeable, OwnableUpgradeable, IMarketV3 {
         if (_feeController == address(0)) revert MarketInvalidInitializeData("feeController");
         CROSS_DEX.checkFeeControllerAllowed(_feeController);
 
+        // CDC-10: Emit events for state changes
+        emit PairImplSet(pairImpl, _pairImpl);
+        emit FeeControllerUpdated(feeController, _feeController);
+
         pairImpl = _pairImpl;
         feeController = _feeController;
     }

@@ -94,6 +94,14 @@ contract CrossDexImplV3 is UUPSUpgradeable, OwnableUpgradeable, ICrossDexV3 {
         onlyOwner
         reinitializer(3)
     {
+        // CDC-10: Add zero address validation
+        if (_marketImpl == address(0)) revert CrossDexInitializeData("marketImpl");
+        if (_pairImpl == address(0)) revert CrossDexInitializeData("pairImpl");
+
+        // CDC-10: Emit events for state changes
+        emit MarketImplSet(marketImpl, _marketImpl);
+        emit PairImplSet(pairImpl, _pairImpl);
+
         marketImpl = _marketImpl;
         pairImpl = _pairImpl;
         for (uint256 i = 0; i < _feeControllers.length; ++i) {
