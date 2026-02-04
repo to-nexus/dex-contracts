@@ -153,7 +153,13 @@ contract PairImplV3 is UUPSUpgradeable, PausableUpgradeable, IPairV3, IOwnable {
         onlyOwner
         reinitializer(3)
     {
+        // CDC-10: Explicit zero address validation
+        if (_feeController == address(0)) revert PairInvalidInitializeData("feeController");
         IMarketV3(MARKET).checkFeeControllerAllowed(_feeController);
+
+        // CDC-10: Emit event for state change
+        emit FeeControllerUpdated(address(feeController), _feeController);
+
         feeController = IFeeController(_feeController);
         _feeControllerInitialize(feeControllerInitData);
     }
