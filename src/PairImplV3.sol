@@ -85,7 +85,7 @@ contract PairImplV3 is UUPSUpgradeable, PausableUpgradeable, IPairV3, IOwnable {
     mapping(uint256 orderId => Order) private _allOrders;
     mapping(address account => uint256[2]) private _accountReserves; // 0: sell (base), 1: buy (quote)
 
-    // Pair-specific fee configuration
+    // Pair-specific fee configuration (replaces V2's feeConfig struct in same storage slot)
     IFeeController public feeController;
 
     uint256[24] private __gap;

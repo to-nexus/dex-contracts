@@ -38,7 +38,7 @@ contract CrossDexImplV3 is UUPSUpgradeable, OwnableUpgradeable, ICrossDexV3 {
     address public marketImpl;
     address public pairImpl;
 
-    EnumerableMap.AddressToAddressMap private _allMarkets; // market => quote (update v2)
+    EnumerableMap.AddressToAddressMap private _allMarkets; // market => quote
     mapping(address pair => address) public override pairToMarket;
 
     address public tickSizeSetter;
