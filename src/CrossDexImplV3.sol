@@ -42,9 +42,10 @@ contract CrossDexImplV3 is UUPSUpgradeable, OwnableUpgradeable, ICrossDexV3 {
     mapping(address pair => address) public override pairToMarket;
 
     address public tickSizeSetter;
-    EnumerableSet.AddressSet private _allowedFeeControllers;
+    EnumerableSet.AddressSet private _allowedFeeControllers; // 2 slots
 
-    uint256[42] __gap;
+    // Storage gap reduced from 42 to 40 to account for _allowedFeeControllers (2 slots)
+    uint256[40] __gap;
 
     modifier onlyMarket() {
         _checkMarket();
