@@ -70,11 +70,11 @@ contract MarketImplV3 is UUPSUpgradeable, OwnableUpgradeable, IMarketV3 {
 
     function reInitialize(address _pairImpl, address _feeController) external onlyOwner reinitializer(3) {
         if (_pairImpl == address(0)) revert MarketInvalidInitializeData("pairImpl");
-        // CDC-09: Explicit zero address validation for feeController
+        // Explicit zero address validation for feeController
         if (_feeController == address(0)) revert MarketInvalidInitializeData("feeController");
         CROSS_DEX.checkFeeControllerAllowed(_feeController);
 
-        // CDC-10: Emit events for state changes
+        // Emit events for state changes
         emit PairImplSet(pairImpl, _pairImpl);
         emit FeeControllerUpdated(feeController, _feeController);
 
