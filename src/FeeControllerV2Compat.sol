@@ -215,6 +215,7 @@ contract FeeControllerV2Compat is IFeeController, ERC165 {
         // Effects: Reset transient storage BEFORE external call (CEI pattern)
         // Always reset even if totalFee == 0 to allow subsequent trades in same tx
         _tstoreTakerId(0);
+        _tstoreTakerFeeBps(0); // CDC-11: Reset takerFeeBps as well
         _tstoreMakerFeeAcc(0);
         _tstoreTakerFeeAcc(0);
 
