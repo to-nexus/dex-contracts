@@ -146,6 +146,9 @@ contract CrossDexImplV3 is UUPSUpgradeable, OwnableUpgradeable, ICrossDexV3 {
         onlyOwner
         returns (address)
     {
+        // CDC-07: Validate fee controller is in allowed list before market creation
+        if (!_allowedFeeControllers.contains(feeController)) revert CrossDexInvalidFeeController(feeController);
+
         bytes memory bytecode = abi.encodePacked(
             type(ERC1967Proxy).creationCode,
             abi.encode(
