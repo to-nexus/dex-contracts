@@ -113,6 +113,18 @@ contract CrossDexImplV3Test is DEXV3BaseTest {
         CROSS_DEX.createMarket(OWNER, address(newQuote), address(FEE_CONTROLLER), "test");
     }
 
+    // CDC-07: createMarket should revert if feeController is not in allowed list
+    function test_createMarket_revert_invalidFeeController() external {
+        T20 newQuote = new T20("QUOTE2", "Q2", 18);
+        address invalidFeeController = address(0x9999);
+
+        vm.prank(OWNER);
+        vm.expectRevert(
+            abi.encodeWithSelector(CrossDexImplV3.CrossDexInvalidFeeController.selector, invalidFeeController)
+        );
+        CROSS_DEX.createMarket(OWNER, address(newQuote), invalidFeeController, "test");
+    }
+
     // ═══════════════════════════════════════════════════════════════════════════
     // Admin Functions Tests
     // ═══════════════════════════════════════════════════════════════════════════
