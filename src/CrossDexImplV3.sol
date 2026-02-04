@@ -190,6 +190,9 @@ contract CrossDexImplV3 is UUPSUpgradeable, OwnableUpgradeable, ICrossDexV3 {
     }
 
     function setFeeControllerAllow(address feeController, bool allowed) external onlyOwner {
+        // CDC-09: Explicit zero address validation
+        if (feeController == address(0)) revert CrossDexInvalidFeeController(feeController);
+
         bool ok;
 
         if (allowed) {
