@@ -504,7 +504,6 @@ contract PairImplV3 is UUPSUpgradeable, PausableUpgradeable, IPairV3, IOwnable {
         uint256 matchedBaseAmount;
         uint256 useQuoteAmount;
         uint256 baseReserve;
-        uint256 totalTakerFee;
         bool done;
     }
 
@@ -524,7 +523,7 @@ contract PairImplV3 is UUPSUpgradeable, PausableUpgradeable, IPairV3, IOwnable {
         returns (bool, uint256, uint256)
     {
         MatchBuyCache memory cache = MatchBuyCache({
-            price: 0, matchedBaseAmount: 0, useQuoteAmount: 0, baseReserve: baseReserve, totalTakerFee: 0, done: false
+            price: 0, matchedBaseAmount: 0, useQuoteAmount: 0, baseReserve: baseReserve, done: false
         });
 
         List.U256 storage _sellPrices = _prices[uint8(OrderSide.SELL)];
