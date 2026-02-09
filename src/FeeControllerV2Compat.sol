@@ -117,6 +117,7 @@ contract FeeControllerV2Compat is IFeeController, ERC165 {
         $.buyerTakerFeeBps = bTk;
         // Note: fee accumulators are in transient storage, auto-reset per transaction
         if (address($.quote) == address(0)) {
+            if (quote == address(0)) revert FeeControllerInvalidPairConfig(quote, denominator);
             $.quote = IERC20(quote);
             $.denominator = denominator;
         } else {

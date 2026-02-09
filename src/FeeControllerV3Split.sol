@@ -142,6 +142,7 @@ contract FeeControllerV3Split is IFeeController, ERC165 {
 
         // Cache quote/denominator from Pair (immutable after first init)
         if (address($.quote) == address(0)) {
+            if (quote == address(0)) revert FeeControllerInvalidPairConfig(quote, denominator);
             $.quote = IERC20(quote);
             $.denominator = denominator;
         } else {
