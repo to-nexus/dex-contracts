@@ -81,7 +81,7 @@ contract FeeControllerV2Compat is IFeeController, ERC165 {
         _SELF = address(this);
     }
 
-    /// @dev Ensures the function is called via delegatecall (msg.sender != address(this) in original context).
+    /// @dev Ensures the function is called via delegatecall (address(this) != _SELF, i.e. executing in caller's context).
     modifier onlyDelegateCall() {
         _checkDelegateCall();
         _;
@@ -96,7 +96,7 @@ contract FeeControllerV2Compat is IFeeController, ERC165 {
     // ─────────────────────────────────────────────────────────────────────────────
 
     /// @notice Initialize or update fee configuration.
-    /// @dev Called via delegatecall from Pair. Reads QUOTE/DENOMINATOR from Pair's storage directly.
+    /// @dev Called via delegatecall from Pair. Receives QUOTE/DENOMINATOR as parameters from Pair.
     /// @param initData abi.encode(feeCollector, sellerMakerBps, sellerTakerBps, buyerMakerBps, buyerTakerBps)
     function initialize(address quote, uint256 denominator, bytes memory initData) external override onlyDelegateCall {
         (address _feeCollector, uint32 sMk, uint32 sTk, uint32 bMk, uint32 bTk) =

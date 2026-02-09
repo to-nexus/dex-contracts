@@ -28,10 +28,10 @@ contract MarketImplV3 is UUPSUpgradeable, OwnableUpgradeable, IMarketV3 {
     event PairImplSet(address indexed before, address indexed current);
     event FeeControllerUpdated(address indexed before, address indexed current);
 
-    uint256 public deployed; // immutable
-    ICrossDexV3 public CROSS_DEX; // immutable
-    address public QUOTE; // immutable
-    address public ROUTER; // immutable
+    uint256 public deployed; // set once in initialize
+    ICrossDexV3 public CROSS_DEX; // set once in initialize
+    address public QUOTE; // set once in initialize
+    address public ROUTER; // set once in initialize
 
     address public pairImpl;
 
@@ -46,7 +46,7 @@ contract MarketImplV3 is UUPSUpgradeable, OwnableUpgradeable, IMarketV3 {
         _disableInitializers();
     }
 
-    // Initialize with 4 different fee rates encoded in bytes data
+    /// @notice Initialize market with owner, router, quote token, pair implementation, and fee controller.
     function initialize(address _owner, address _router, address _quote, address _pairImpl, address _feeController)
         external
         override
@@ -70,7 +70,6 @@ contract MarketImplV3 is UUPSUpgradeable, OwnableUpgradeable, IMarketV3 {
 
     function reInitialize(address _pairImpl, address _feeController) external onlyOwner reinitializer(3) {
         if (_pairImpl == address(0)) revert MarketInvalidInitializeData("pairImpl");
-        // Explicit zero address validation for feeController
         if (_feeController == address(0)) revert MarketInvalidInitializeData("feeController");
         CROSS_DEX.checkFeeControllerAllowed(_feeController);
 
