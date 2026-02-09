@@ -41,10 +41,10 @@ contract FeeControllerV3Split is IFeeController, ERC165 {
         address indexed feeCollector
     );
 
-    /// @notice Emitted when maker rebate is paid.
-    /// @param orderId The order ID that initiated this fee settlement
-    /// @param maker The maker order (maker.owner receives rebate)
-    /// @param rebate The amount of maker rebate paid
+    /// @notice Emitted when maker rebate is paid during matching.
+    /// @param orderId The maker order ID receiving the rebate
+    /// @param maker The maker address that receives the rebate
+    /// @param rebate The amount of QUOTE rebated to the maker
     event FeeControllerV3MakerRebatePaid(uint256 indexed orderId, address indexed maker, uint256 rebate);
 
     // ─────────────────────────────────────────────────────────────────────────────

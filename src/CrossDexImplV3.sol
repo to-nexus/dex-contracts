@@ -33,7 +33,7 @@ contract CrossDexImplV3 is UUPSUpgradeable, OwnableUpgradeable, ICrossDexV3 {
     event MarketImplSet(address indexed before, address indexed current);
     event FeeControllerAllowed(address indexed feeController, bool indexed allowed);
 
-    address payable public ROUTER; // immutable
+    address payable public ROUTER; // set once in initialize
 
     address public marketImpl;
     address public pairImpl;

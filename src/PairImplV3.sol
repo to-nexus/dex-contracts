@@ -53,16 +53,15 @@ contract PairImplV3 is UUPSUpgradeable, PausableUpgradeable, IPairV3, IOwnable {
     event Skim(address indexed caller, address indexed erc20, address indexed to, uint256 amount);
     event FeeControllerUpdated(address indexed before, address indexed current);
 
-    // slots
+    // Transient storage slot for caching the latest matched price within a transaction.
     // keccak256(abi.encode(uint256(keccak256("crossdex.pair.matchedprice")) - 1)) & ~bytes32(uint256(0xff))
-    // solhint-disable-next-line const-name-snakecase
     bytes32 private constant MATCHED_PRICE_SLOT = 0xfd0e5d4f9b88892d3b04349a0e2bc0d1359414c21932fcd7d5a523a6c0a5cd00;
 
-    address public MARKET; // immutable
-    address public ROUTER; // immutable
-    IERC20 public BASE; // immutable
-    IERC20 public QUOTE; // immutable
-    uint256 public DENOMINATOR; // immutable ( == 10 ** BASE.decimals())
+    address public MARKET; // set once in initialize
+    address public ROUTER; // set once in initialize
+    IERC20 public BASE; // set once in initialize
+    IERC20 public QUOTE; // set once in initialize
+    uint256 public DENOMINATOR; // set once in initialize ( == 10 ** BASE.decimals())
 
     // reserves
     uint256 public baseReserve;
@@ -79,13 +78,13 @@ contract PairImplV3 is UUPSUpgradeable, PausableUpgradeable, IPairV3, IOwnable {
 
     // orders
     uint256 private _orderIdCounter;
-    List.U256[2] private _prices; // 0: sell, 1: buy (IPair.OrderSide)
+    List.U256[2] private _prices; // 0: sell, 1: buy (IPairV3.OrderSide)
     mapping(uint256 price => List.U256) private _sellOrders; // price => sell order id list (For the same price, orders will be stored in chronological order.)
     mapping(uint256 price => List.U256) private _buyOrders; //  price => buy order id list (For the same price, orders will be stored in chronological order.)
     mapping(uint256 orderId => Order) private _allOrders;
     mapping(address account => uint256[2]) private _accountReserves; // 0: sell (base), 1: buy (quote)
 
-    // Pair-specific fee configuration (replaces V2's feeConfig struct in same storage slot)
+    // Fee policy implementation executed via delegatecall (stores config in ERC-7201 namespaced storage)
     IFeeController public feeController;
 
     uint256[24] private __gap;
@@ -308,15 +307,15 @@ contract PairImplV3 is UUPSUpgradeable, PausableUpgradeable, IPairV3, IOwnable {
                 _allOrders[orderId] = order;
 
                 if (isSellOrder) {
-                    // Set maker fee bps for V2 compatibility (used in cancel refund)
+                    // Snapshot maker fee bps (used in maker fee calculation and cancel refund)
                     _allOrders[orderId].feeBps = _feeControllerSellerMakerFeeBps();
                     _addBaseReserve(order.owner, order.amount);
                     _sellOrders[order.price].push(orderId);
                 } else {
-                    // Set maker fee bps for V2 compatibility (used in cancel refund)
+                    // Snapshot maker fee bps (used in maker fee calculation and cancel refund)
                     _allOrders[orderId].feeBps = _feeControllerBuyerMakerFeeBps();
-                    // For V2 RouterV2, the fee is already included in the transferred amount
-                    // So we use the actual received amount instead of calculating fee again
+                    // The Router transfers fee-inclusive QUOTE, so we calculate
+                    // the reserve amount using maker fee instead of recalculating from scratch
                     uint256 reserveQuoteAmount = _feeControllerCalcBuyVolumeWithFeeOrder(true, order);
                     _addQuoteReserve(order.owner, reserveQuoteAmount);
                     _buyOrders[order.price].push(orderId);
@@ -551,7 +550,7 @@ contract PairImplV3 is UUPSUpgradeable, PausableUpgradeable, IPairV3, IOwnable {
                 (address makerOwner, uint256 tradeAmount, uint256 makerFee) =
                     _matchOrderAmount(orderId, order, makerId, maker, cache.price, _orders);
                 uint256 tradeQuoteAmount = Math.mulDiv(cache.price, tradeAmount, DENOMINATOR);
-                // Trade executed. ( Calculate using the fee rate at the time the seller registered the sale.)
+                // Transfer QUOTE to sell-maker after deducting makerFee (from maker's order.feeBps)
                 _exchangeSellOrder(makerId, makerOwner, tradeQuoteAmount, makerFee);
 
                 // Update information.
@@ -824,7 +823,6 @@ contract PairImplV3 is UUPSUpgradeable, PausableUpgradeable, IPairV3, IOwnable {
     }
 
     function _feeControllerCalcBuyVolumeWithFee(bool isMaker, uint256 volume) private returns (uint256) {
-        // calcBuyVolumeWithFee(bool,uint256)
         bytes memory result = Address.functionDelegateCall(
             address(feeController), abi.encodeCall(IFeeController.calcBuyVolumeWithFee, (isMaker, volume))
         );
@@ -832,7 +830,6 @@ contract PairImplV3 is UUPSUpgradeable, PausableUpgradeable, IPairV3, IOwnable {
     }
 
     function _feeControllerCalcBuyVolumeWithFeeOrder(bool isMaker, Order memory order) private returns (uint256) {
-        // calcBuyVolumeWithFee(bool,(uint8,address,uint32,uint256,uint256)) - Order struct
         bytes memory result = Address.functionDelegateCall(
             address(feeController), abi.encodeCall(IFeeController.calcBuyVolumeWithFeeByOrder, (isMaker, order))
         );
