@@ -424,9 +424,8 @@ contract PairImplV3 is UUPSUpgradeable, PausableUpgradeable, IPairV3, IOwnable {
 
         // 3. Transfer the immediately settled BASE tokens.
         if (buyBaseAmount != 0) {
-            // Process buyer fee
-            _exchangeBuyOrder(orderId, order.owner, buyBaseAmount, useQuoteAmount, 0);
             uint256 takerFee = _feeControllerSettleFees();
+            BASE.safeTransfer(order.owner, buyBaseAmount);
             if (takerFee != 0) {
                 emit FeeCollect(orderId, order.owner, useQuoteAmount, takerFee, useQuoteAmount - takerFee);
             }
@@ -522,9 +521,8 @@ contract PairImplV3 is UUPSUpgradeable, PausableUpgradeable, IPairV3, IOwnable {
         setLatest
         returns (bool, uint256, uint256)
     {
-        MatchBuyCache memory cache = MatchBuyCache({
-            price: 0, matchedBaseAmount: 0, useQuoteAmount: 0, baseReserve: baseReserve, done: false
-        });
+        MatchBuyCache memory cache =
+            MatchBuyCache({price: 0, matchedBaseAmount: 0, useQuoteAmount: 0, baseReserve: baseReserve, done: false});
 
         List.U256 storage _sellPrices = _prices[uint8(OrderSide.SELL)];
         while (!_sellPrices.empty()) {
