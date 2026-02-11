@@ -54,9 +54,12 @@ library List {
         uint256[] memory result = new uint256[](_list.length);
         uint256 _length = _list.length;
         uint256 data = _list.head;
-        for (uint256 i = 0; i < _length; ++i) {
+        for (uint256 i = 0; i < _length;) {
             result[i] = data;
             data = _list.nodes[data].next;
+            unchecked {
+                ++i;
+            }
         }
         return result;
     }
@@ -64,7 +67,7 @@ library List {
     // WARNING: This function assumes that the list is strictly sorted in ascending order.
     // It will only work correctly if values are inserted in ascending order,
     // typically using the designated insertion mechanism that maintains sort order.
-    function findAscPrev(U256 storage _list, uint256 _data, uint256[2] memory _adjacent, uint256 _findMaxCount)
+    function findASCPrev(U256 storage _list, uint256 _data, uint256[2] memory _adjacent, uint256 _findMaxCount)
         internal
         view
         returns (uint256)
@@ -101,7 +104,7 @@ library List {
     // WARNING: This function assumes that the list is strictly sorted in descending order.
     // It will only work correctly if values are inserted in descending order,
     // typically using the designated insertion mechanism that maintains sort order.
-    function findDescPrev(U256 storage _list, uint256 _data, uint256[2] memory _adjacent, uint256 _findMaxCount)
+    function findDESCPrev(U256 storage _list, uint256 _data, uint256[2] memory _adjacent, uint256 _findMaxCount)
         internal
         view
         returns (uint256)

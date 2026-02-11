@@ -1,0 +1,21 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib", "dependencies"]
+optimizer = true
+optimizer_runs = 33333
+remappings = [
+    "@openzeppelin/contracts/=dependencies/@openzeppelin-contracts-5.2.0/", 
+    "forge-std/=dependencies/forge-std-1.14.0/src/",
+]
+
+[dependencies]
+"@openzeppelin-contracts" = "5.2.0"
+"@openzeppelin-contracts-upgradeable" = "5.2.0"
+forge-std = "1.14.0"
+
+# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+
+[fmt]
+single_line_statement_blocks = "single"
+sort_imports = true

@@ -1,23 +1,25 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.28;
+pragma solidity 0.8.30;
 
-import {ERC1967Proxy} from "@openzeppelin-contracts-5.2.0/proxy/ERC1967/ERC1967Proxy.sol";
-import {UUPSUpgradeable} from "@openzeppelin-contracts-5.2.0/proxy/utils/UUPSUpgradeable.sol";
-import {IERC20, IERC20Metadata} from "@openzeppelin-contracts-5.2.0/token/ERC20/extensions/IERC20Metadata.sol";
-import {SafeERC20} from "@openzeppelin-contracts-5.2.0/token/ERC20/utils/SafeERC20.sol";
-import {Math} from "@openzeppelin-contracts-5.2.0/utils/math/Math.sol";
+import {UUPSUpgradeable} from "@openzeppelin-contracts-5.5.0/proxy/utils/UUPSUpgradeable.sol";
+import {IERC20, IERC20Metadata} from "@openzeppelin-contracts-5.5.0/token/ERC20/extensions/IERC20Metadata.sol";
+import {SafeERC20} from "@openzeppelin-contracts-5.5.0/token/ERC20/utils/SafeERC20.sol";
+import {Address} from "@openzeppelin-contracts-5.5.0/utils/Address.sol";
+import {Math} from "@openzeppelin-contracts-5.5.0/utils/math/Math.sol";
 
-import {PausableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.2.0/utils/PausableUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.5.0/utils/PausableUpgradeable.sol";
 
-import {BPS_DENOMINATOR, IMarketV2, NO_FEE_BPS} from "./interfaces/IMarket.sol";
+import {BPS_DENOMINATOR, IFeeController} from "./interfaces/IFeeController.sol";
+import {IMarketV3} from "./interfaces/IMarketV3.sol";
 import {IOwnable} from "./interfaces/IOwnable.sol";
-import {IPairV2} from "./interfaces/IPair.sol";
+import {IPairV3} from "./interfaces/IPairV3.sol";
 import {List} from "./lib/List.sol";
 
-contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
+contract PairImplV3 is UUPSUpgradeable, PausableUpgradeable, IPairV3, IOwnable {
     using SafeERC20 for IERC20;
     using Math for uint256;
     using List for List.U256;
+    using Address for address;
 
     error PairInvalidReserve(address);
     error PairInvalidAccountReserve(address, address);
@@ -33,8 +35,6 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     error PairNotOwner(uint256, address);
     error PairInvalidTickSize(uint256, uint256, uint256);
     error PairFillOrKill(address);
-    error PairInvalidFeeBps();
-    error PairInvalidFeeStructure(uint32 makerFee, uint32 takerFee);
 
     event OrderCreated(
         address indexed owner,
@@ -48,32 +48,20 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         uint256 indexed sellId, uint256 indexed buyId, uint256 indexed price, uint256 amount, uint256 timestamp
     );
     event OrderClosed(uint256 indexed orderId, CloseType indexed closeType, uint256 timestamp);
-    event FeeCollect(
-        uint256 indexed orderId,
-        address indexed owner,
-        uint256 amount,
-        address indexed recipient,
-        uint256 feeBps,
-        uint256 fee,
-        uint256 value
-    );
+    event FeeCollect(uint256 indexed orderId, address indexed owner, uint256 amount, uint256 fee, uint256 value);
     event TickSizeUpdated(uint256 beforeLotSize, uint256 newLotSize, uint256 beforeTickSize, uint256 newTickSize);
-    event PairFeesUpdated(uint32 sellerMakerFee, uint32 sellerTakerFee, uint32 buyerMakerFee, uint32 buyerTakerFee);
     event Skim(address indexed caller, address indexed erc20, address indexed to, uint256 amount);
+    event FeeControllerUpdated(address indexed before, address indexed current);
 
-    // slots
+    // Transient storage slot for caching the latest matched price within a transaction.
     // keccak256(abi.encode(uint256(keccak256("crossdex.pair.matchedprice")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant _matchedPriceSlot = 0xfd0e5d4f9b88892d3b04349a0e2bc0d1359414c21932fcd7d5a523a6c0a5cd00;
-    // keccak256(abi.encode(uint256(keccak256("crossdex.pair.feecollector")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant _feeCollectorSlot = 0xd6aa07baf8485abf9d26fecf4c935d75b50a73e678db02b944bd3ac875982300;
-    // keccak256(abi.encode(uint256(keccak256("crossdex.pair.feebps")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant _feeBpsSlot = 0x1d2ff3fa6980aeeebca4e94965520da48983006e9b1115c1c853cbb10d943d00;
+    bytes32 private constant MATCHED_PRICE_SLOT = 0xfd0e5d4f9b88892d3b04349a0e2bc0d1359414c21932fcd7d5a523a6c0a5cd00;
 
-    address public MARKET; // immutable
-    address public ROUTER; // immutable
-    IERC20 public BASE; // immutable
-    IERC20 public QUOTE; // immutable
-    uint256 public DENOMINATOR; // immutable ( == 10 ** BASE.decimals())
+    address public MARKET; // set once in initialize
+    address public ROUTER; // set once in initialize
+    IERC20 public BASE; // set once in initialize
+    IERC20 public QUOTE; // set once in initialize
+    uint256 public DENOMINATOR; // set once in initialize ( == 10 ** BASE.decimals())
 
     // reserves
     uint256 public baseReserve;
@@ -86,35 +74,34 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     // tick size
     uint256 public tickSize;
     uint256 public lotSize;
-    uint256 public minTradeVolume; // [QUOTE] Math.mulDiv(_tickSize, _lotSize, DENOMINATOR);
+    uint256 public minTradeVolume; // [quote] Math.mulDiv(_tickSize, _lotSize, denominator);
 
     // orders
     uint256 private _orderIdCounter;
-    List.U256[2] private _prices; // 0: sell, 1: buy (IPair.OrderSide)
+    List.U256[2] private _prices; // 0: sell, 1: buy (IPairV3.OrderSide)
     mapping(uint256 price => List.U256) private _sellOrders; // price => sell order id list (For the same price, orders will be stored in chronological order.)
     mapping(uint256 price => List.U256) private _buyOrders; //  price => buy order id list (For the same price, orders will be stored in chronological order.)
     mapping(uint256 orderId => Order) private _allOrders;
-    mapping(address account => uint256[2]) private _accountReserves; // 0: sell (BASE), 1: buy (QUOTE)
+    mapping(address account => uint256[2]) private _accountReserves; // 0: sell (base), 1: buy (quote)
 
-    // Pair-specific fee configuration
-    FeeConfig public feeConfig;
+    // Fee policy implementation executed via delegatecall (stores config in ERC-7201 namespaced storage)
+    IFeeController public feeController;
 
     uint256[24] private __gap;
 
     modifier onlyOwner() {
         // The owner of the Pair is the owner of the Market contract that deployed this Pair.
-        if (_msgSender() != owner()) revert OwnableUnauthorizedAccount(_msgSender());
+        _checkOwner();
         _;
     }
 
     modifier onlyRouter() {
-        if (_msgSender() != ROUTER) revert PairInvalidRouter(_msgSender());
+        _checkRouter();
         _;
     }
 
-    modifier cacheFeeInfos() {
-        _cacheFeeInfos();
-        _;
+    function _checkRouter() private view {
+        if (_msgSender() != ROUTER) revert PairInvalidRouter(_msgSender());
     }
 
     modifier setLatest() {
@@ -128,25 +115,27 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
 
     function initialize(
         address router,
-        address quote,
-        address base,
+        address quoteAddr,
+        address baseAddr,
         uint256 _tickSize, // tick size for quote token
         uint256 _lotSize, // lot size for base token
-        bytes memory feeData // 4 fee rates encoded data
+        address _feeController,
+        bytes memory feeControllerInitData
     ) external initializer {
         __Pausable_init();
 
         if (router == address(0)) revert PairInvalidInitializeData("router");
-        if (quote == address(0)) revert PairInvalidInitializeData("quote");
-        if (base == address(0)) revert PairInvalidInitializeData("base");
+        if (quoteAddr == address(0)) revert PairInvalidInitializeData("quote");
+        if (baseAddr == address(0)) revert PairInvalidInitializeData("base");
         if (_tickSize == 0) revert PairInvalidInitializeData("tickSize");
         if (_lotSize == 0) revert PairInvalidInitializeData("lotSize");
+        if (_feeController == address(0)) revert PairInvalidInitializeData("feeController");
 
         MARKET = _msgSender();
         ROUTER = router;
-        QUOTE = IERC20(quote);
-        BASE = IERC20(base);
-        DENOMINATOR = 10 ** IERC20Metadata(base).decimals();
+        QUOTE = IERC20(quoteAddr);
+        BASE = IERC20(baseAddr);
+        DENOMINATOR = 10 ** IERC20Metadata(baseAddr).decimals();
 
         if (_tickSize * _lotSize % DENOMINATOR != 0) revert PairInvalidTickSize(_tickSize, _lotSize, DENOMINATOR);
 
@@ -154,10 +143,24 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         lotSize = _lotSize;
         minTradeVolume = Math.mulDiv(_tickSize, _lotSize, DENOMINATOR);
 
-        // Decode 4 different fee rates
-        (uint32 sellerMakerFeeBps_, uint32 sellerTakerFeeBps_, uint32 buyerMakerFeeBps_, uint32 buyerTakerFeeBps_) =
-            abi.decode(feeData, (uint32, uint32, uint32, uint32));
-        _setFeeBps(sellerMakerFeeBps_, sellerTakerFeeBps_, buyerMakerFeeBps_, buyerTakerFeeBps_);
+        feeController = IFeeController(_feeController);
+        _feeControllerInitialize(feeControllerInitData);
+    }
+
+    function reInitialize(address _feeController, bytes memory feeControllerInitData)
+        external
+        onlyOwner
+        reinitializer(3)
+    {
+        // Explicit zero address validation
+        if (_feeController == address(0)) revert PairInvalidInitializeData("feeController");
+        IMarketV3(MARKET).checkFeeControllerAllowed(_feeController);
+
+        // Emit event for state change
+        emit FeeControllerUpdated(address(feeController), _feeController);
+
+        feeController = IFeeController(_feeController);
+        _feeControllerInitialize(feeControllerInitData);
     }
 
     //  #    # # ###### #    #  ####
@@ -167,6 +170,10 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     //   #  #  # #      ##  ## #    #
     //    ##   # ###### #    #  ####
 
+    function version() external pure returns (uint64) {
+        return 3;
+    }
+
     function getConfig() external view returns (Config memory) {
         return Config({QUOTE: QUOTE, BASE: BASE, DENOMINATOR: DENOMINATOR});
     }
@@ -175,7 +182,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         return _allOrders[id];
     }
 
-    function accountReserves(address account) external view returns (uint256 base, uint256 quote) {
+    function accountReserves(address account) external view returns (uint256 baseAmount, uint256 quoteAmount) {
         return (_accountReserves[account][uint8(OrderSide.SELL)], _accountReserves[account][uint8(OrderSide.BUY)]);
     }
 
@@ -189,16 +196,35 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         lot = lotSize;
     }
 
+    function getEffectiveFees()
+        external
+        returns (uint32 sellerMakerFeeBps, uint32 sellerTakerFeeBps, uint32 buyerMakerFeeBps, uint32 buyerTakerFeeBps)
+    {
+        // return feeController.getEffectiveFees();
+        bytes memory result =
+            Address.functionDelegateCall(address(feeController), abi.encodeCall(IFeeController.getEffectiveFees, ()));
+        return abi.decode(result, (uint32, uint32, uint32, uint32));
+    }
+
+    /// @notice Get the FeeController configuration identifier and encoded storage data.
+    /// @dev Uses delegatecall to FeeController. Can be called via eth_call for gas-free queries.
+    function getFeeControllerConfig() external returns (bytes32 configId, bytes memory data) {
+        bytes memory resultId =
+            Address.functionDelegateCall(address(feeController), abi.encodeCall(IFeeController.getConfigId, ()));
+        configId = abi.decode(resultId, (bytes32));
+
+        bytes memory resultData =
+            Address.functionDelegateCall(address(feeController), abi.encodeCall(IFeeController.getStorage, ()));
+        data = abi.decode(resultData, (bytes));
+    }
+
     function ordersByPrices(OrderSide side, uint256[] memory prices) external view returns (uint256[][] memory) {
         mapping(uint256 price => List.U256) storage orders = side == OrderSide.SELL ? _sellOrders : _buyOrders;
         uint256 length = prices.length;
 
         uint256[][] memory orderIds = new uint256[][](length);
-        for (uint256 i = 0; i < length;) {
+        for (uint256 i = 0; i < length; ++i) {
             orderIds[i] = orders[prices[i]].values();
-            unchecked {
-                ++i;
-            }
         }
         return orderIds;
     }
@@ -215,24 +241,18 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         if (side == OrderSide.SELL) {
             // For a SELL order, search from the most expensive price in the BUY list
             // and only match with buy orders that have a price equal to or higher than the input price.
-            return _prices[uint8(side)].findASCPrev(price, adjacent, findMaxCount);
+            return _prices[uint8(side)].findAscPrev(price, adjacent, findMaxCount);
         } else {
             // For a BUY order, search from the cheapest price in the SELL list
             // and only match with sell orders that have a price equal to or lower than the input price.
-            return _prices[uint8(side)].findDESCPrev(price, adjacent, findMaxCount);
+            return _prices[uint8(side)].findDescPrev(price, adjacent, findMaxCount);
         }
     }
 
-    function getEffectiveFees()
-        external
-        view
-        returns (uint32 sellerMakerFeeBps, uint32 sellerTakerFeeBps, uint32 buyerMakerFeeBps, uint32 buyerTakerFeeBps)
-    {
-        FeeConfig memory feeInfos = _resolveEffectiveFees();
-        sellerMakerFeeBps = feeInfos.sellerMakerFeeBps;
-        sellerTakerFeeBps = feeInfos.sellerTakerFeeBps;
-        buyerMakerFeeBps = feeInfos.buyerMakerFeeBps;
-        buyerTakerFeeBps = feeInfos.buyerTakerFeeBps;
+    /// @notice Calculate total QUOTE volume including buyer taker fee.
+    /// @dev Uses delegatecall to FeeController. Can be called via eth_call for gas-free queries.
+    function calcBuyVolumeWithFee(uint256 volume) external returns (uint256 buyVolume) {
+        return _feeControllerCalcBuyVolumeWithFee(false, volume);
     }
 
     //  ###### #    # ######  ####  #    # ##### ######  ####
@@ -247,7 +267,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         LimitConstraints constraints,
         uint256 prevPrice,
         uint256 maxMatchCount
-    ) external override whenNotPaused onlyRouter cacheFeeInfos returns (uint256 orderId) {
+    ) external override whenNotPaused onlyRouter returns (uint256 orderId) {
         // Check the conditions of the entered quantity.
         if (order.price == 0 || order.price % tickSize != 0) revert PairInvalidPrice(order.price);
         if (order.amount == 0 || order.amount % lotSize != 0) revert PairInvalidAmount(order.amount);
@@ -287,27 +307,22 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
                 _allOrders[orderId] = order;
 
                 if (isSellOrder) {
+                    // Snapshot maker fee bps (used in maker fee calculation and cancel refund)
+                    _allOrders[orderId].feeBps = _feeControllerSellerMakerFeeBps();
                     _addBaseReserve(order.owner, order.amount);
-                    // For sell orders, a fee is charged when acting as a maker.
-                    _allOrders[orderId].feeBps = _sellerMakerFeeBps();
                     _sellOrders[order.price].push(orderId);
                 } else {
-                    // For V2 RouterV2, the fee is already included in the transferred amount
-                    // So we use the actual received amount instead of calculating fee again
-                    uint256 reserveQuoteAmount = Math.mulDiv(order.price, order.amount, DENOMINATOR);
-                    {
-                        uint32 feeBps = _buyerMakerFeeBps();
-                        if (feeBps != 0) {
-                            uint256 fee = Math.mulDiv(reserveQuoteAmount, feeBps, BPS_DENOMINATOR);
-                            reserveQuoteAmount += fee;
-                        }
-                        _allOrders[orderId].feeBps = feeBps;
-                    }
+                    // Snapshot maker fee bps (used in maker fee calculation and cancel refund)
+                    _allOrders[orderId].feeBps = _feeControllerBuyerMakerFeeBps();
+                    // The Router transfers fee-inclusive QUOTE, so we calculate
+                    // the reserve amount using maker fee instead of recalculating from scratch
+                    uint256 reserveQuoteAmount = _feeControllerCalcBuyVolumeWithFeeOrder(true, order);
                     _addQuoteReserve(order.owner, reserveQuoteAmount);
                     _buyOrders[order.price].push(orderId);
                 }
             }
         }
+
         if (!isSellOrder) _returnRemainQuote(order.owner, mustRemainQuoteAmount);
     }
 
@@ -316,7 +331,6 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         override
         whenNotPaused
         onlyRouter
-        cacheFeeInfos
     {
         uint256 orderId = ++_orderIdCounter;
         if (order.side == OrderSide.SELL) {
@@ -341,16 +355,13 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
 
     function cancelOrder(address caller, uint256[] calldata orderIds) external override onlyRouter {
         uint256 length = orderIds.length;
-        for (uint256 i = 0; i < length;) {
+        for (uint256 i = 0; i < length; ++i) {
             uint256 orderId = orderIds[i];
             Order memory order = _allOrders[orderId];
             if (order.owner == address(0)) continue;
             if (order.owner != caller) revert PairNotOwner(orderId, caller);
 
             _cancelOrder(orderId, order, CloseType.CANCEL);
-            unchecked {
-                ++i;
-            }
         }
     }
 
@@ -375,14 +386,10 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         //    For a SELL order, search from the most expensive price in the BUY list
         //    and only match with buy orders that have a price equal to or higher than the input price.
         (bool done, uint256 earnQuoteAmount) = _matchSellOrder(orderId, order, maxMatchCount);
-
-        // 3. Immediately transfer the proceeds from the trade to the seller.
         if (earnQuoteAmount != 0) {
-            (address feeCollector, uint32 feeBps) = (_feeCollector(), _sellerTakerFeeBps());
-            uint256 fee = _exchangeSellOrder(orderId, order.owner, earnQuoteAmount, feeCollector, feeBps);
-            if (fee != 0) QUOTE.safeTransfer(feeCollector, fee);
+            uint256 takerFee = _feeControllerSettleFees();
+            _exchangeSellOrder(orderId, order.owner, earnQuoteAmount, takerFee);
         }
-
         return (done, 0);
     }
 
@@ -391,24 +398,20 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         Order memory order,
         uint256 spendQuoteAmount, // Set this value if it is a Market Order.
         uint256 maxMatchCount
-    ) private returns (bool, uint256) {
+    )
+        private
+        returns (bool, uint256)
+    {
         if (order.side != OrderSide.BUY) revert PairInvalidOrderSide(OrderSide.SELL);
-
-        // Verify the conditions of the entered quantity.
-        uint256 quoteAmount;
-        if (spendQuoteAmount != 0) quoteAmount = spendQuoteAmount;
-        else quoteAmount = Math.mulDiv(order.price, order.amount, DENOMINATOR);
 
         // 1. Verify that the required tokens for the order have been deposited.
         uint256 skimQuoteAmount;
         {
+            uint256 buyVolumeWithFee = spendQuoteAmount == 0
+                ? _feeControllerCalcBuyVolumeWithFeeOrder(false, order)
+                : _feeControllerCalcBuyVolumeWithFee(false, spendQuoteAmount);
             bool ok;
-
-            // For limit orders, calculate fee separately since RouterV2 includes it
-            uint32 feeBps = _buyerTakerFeeBps(); // Always use taker fee since even limit orders can be immediately matched
-            uint256 fee = feeBps != 0 ? Math.mulDiv(quoteAmount, feeBps, BPS_DENOMINATOR) : 0;
-
-            (ok, skimQuoteAmount) = Math.trySub(QUOTE.balanceOf(address(this)), quoteReserve + quoteAmount + fee);
+            (ok, skimQuoteAmount) = Math.trySub(QUOTE.balanceOf(address(this)), quoteReserve + buyVolumeWithFee);
             if (!ok) revert PairInvalidReserve(address(QUOTE));
             emit OrderCreated(order.owner, orderId, order.side, order.price, order.amount, block.timestamp);
         }
@@ -420,12 +423,11 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
 
         // 3. Transfer the immediately settled BASE tokens.
         if (buyBaseAmount != 0) {
-            // Process buyer fee
-            uint256 fee = _exchangeBuyOrder(
-                orderId, order.owner, buyBaseAmount, useQuoteAmount, _feeCollector(), _buyerTakerFeeBps()
-            );
-            // _exchangeBuyOrder only emits events, so actual transfer happens here
-            if (fee != 0) QUOTE.safeTransfer(_feeCollector(), fee);
+            uint256 takerFee = _feeControllerSettleFees();
+            BASE.safeTransfer(order.owner, buyBaseAmount);
+            if (takerFee != 0) {
+                emit FeeCollect(orderId, order.owner, useQuoteAmount, takerFee, useQuoteAmount - takerFee);
+            }
         }
 
         return (done, skimQuoteAmount);
@@ -434,7 +436,6 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     struct MatchSellCache {
         uint256 price;
         uint256 earnQuoteAmount;
-        uint256 totalTargetFee;
         uint256 quoteReserve;
         bool done;
     }
@@ -442,14 +443,15 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     // For a SELL order, search from the most expensive price in the BUY list
     // and only execute trades where order.price is equal to or lower than the buy order price.
     /// @return done Whether the order has been completely matched or the maxMatchCount has reached 0.
-    /// @return earnQuoteAmount The amount of QUOTE earned from the sale.
+    /// @return earnQuoteAmount The amount of quote earned from the sale.
     function _matchSellOrder(uint256 orderId, Order memory order, uint256 maxMatchCount)
         private
         setLatest
         returns (bool, uint256)
     {
         MatchSellCache memory cache =
-            MatchSellCache({price: 0, earnQuoteAmount: 0, totalTargetFee: 0, quoteReserve: quoteReserve, done: false});
+            MatchSellCache({price: 0, earnQuoteAmount: 0, quoteReserve: quoteReserve, done: false});
+
         // cache storage immutables to memory
         List.U256 storage _buyPrices = _prices[uint8(OrderSide.BUY)];
         while (!_buyPrices.empty()) {
@@ -459,24 +461,21 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
             _cacheLatestPrice(cache.price);
 
             while (List.length(_orders) != 0) {
-                uint256 targetId = _orders.at(0);
-                Order storage target = _allOrders[targetId];
+                uint256 makerId = _orders.at(0);
+                Order storage maker = _allOrders[makerId];
 
                 // Update the settled quantity.
                 // For sell order matching buy order: sell order is taker, buy order is maker
-                (address targetOwner, uint256 tradeAmount, uint32 targetFeeBps) =
-                    _matchOrderAmount(orderId, order, targetId, target, cache.price, _orders);
+                (address makerOwner, uint256 tradeAmount, uint256 makerFee) =
+                    _matchOrderAmount(orderId, order, makerId, maker, cache.price, _orders);
                 uint256 tradeQuoteAmount = Math.mulDiv(cache.price, tradeAmount, DENOMINATOR);
 
                 // Trade executed.
-                uint256 fee = _exchangeBuyOrder(
-                    targetId, targetOwner, tradeAmount, tradeQuoteAmount, _feeCollector(), targetFeeBps
-                );
-                cache.totalTargetFee += fee;
+                _exchangeBuyOrder(makerId, makerOwner, tradeAmount, tradeQuoteAmount, makerFee);
 
                 // Update information.
                 cache.earnQuoteAmount += tradeQuoteAmount;
-                cache.quoteReserve = _subQuoteReserve(targetOwner, tradeQuoteAmount + fee, true, cache.quoteReserve);
+                cache.quoteReserve = _subQuoteReserve(makerOwner, tradeQuoteAmount + makerFee, true, cache.quoteReserve);
                 if (order.amount == 0 || --maxMatchCount == 0) {
                     if (_orders.empty()) {
                         // Although the `while` loop has not yet ended,
@@ -493,7 +492,6 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
             // so remove `price` from `_buyPrices`.
             if (!_buyPrices.remove(cache.price)) revert PairUnknownPrices(OrderSide.BUY, cache.price);
         }
-        if (cache.totalTargetFee != 0) QUOTE.safeTransfer(_feeCollector(), cache.totalTargetFee);
         if (cache.quoteReserve != quoteReserve) quoteReserve = cache.quoteReserve;
         return (cache.done, cache.earnQuoteAmount);
     }
@@ -503,7 +501,6 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         uint256 price;
         uint256 matchedBaseAmount;
         uint256 useQuoteAmount;
-        uint256 totalFee;
         uint256 baseReserve;
         bool done;
     }
@@ -511,22 +508,20 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     // For a BUY order, search from the cheapest price in the SELL list
     // and only execute trades where the sell order price is equal to or lower than the input price.
     /// @return done Whether the order has been completely matched or the maxMatchCount has reached 0.
-    /// @return matchedBaseAmount The amount of BASE purchased.
-    /// @return useQuoteAmount The amount of QUOTE used for the purchase.
+    /// @return matchedBaseAmount The amount of base purchased.
+    /// @return useQuoteAmount The amount of quote used for the purchase.
     function _matchBuyOrder(
         uint256 orderId,
         Order memory order,
         uint256 quoteAmount, // Quote amount to be used for Market trades.
         uint256 maxMatchCount
-    ) private setLatest returns (bool, uint256, uint256) {
-        MatchBuyCache memory cache = MatchBuyCache({
-            price: 0,
-            matchedBaseAmount: 0,
-            useQuoteAmount: 0,
-            totalFee: 0,
-            baseReserve: baseReserve,
-            done: false
-        });
+    )
+        private
+        setLatest
+        returns (bool, uint256, uint256)
+    {
+        MatchBuyCache memory cache =
+            MatchBuyCache({price: 0, matchedBaseAmount: 0, useQuoteAmount: 0, baseReserve: baseReserve, done: false});
 
         List.U256 storage _sellPrices = _prices[uint8(OrderSide.SELL)];
         while (!_sellPrices.empty()) {
@@ -547,23 +542,21 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
             }
 
             while (List.length(_orders) != 0) {
-                uint256 targetId = _orders.at(0);
-                Order storage target = _allOrders[targetId];
+                uint256 makerId = _orders.at(0);
+                Order storage maker = _allOrders[makerId];
 
                 // Update the settled quantity.
                 // For buy order matching sell order: buy order is taker, sell order is maker
-                (address targetOwner, uint256 tradeAmount, uint32 targetFeeBps) =
-                    _matchOrderAmount(orderId, order, targetId, target, cache.price, _orders);
+                (address makerOwner, uint256 tradeAmount, uint256 makerFee) =
+                    _matchOrderAmount(orderId, order, makerId, maker, cache.price, _orders);
                 uint256 tradeQuoteAmount = Math.mulDiv(cache.price, tradeAmount, DENOMINATOR);
-
-                // Trade executed. ( Calculate using the fee rate at the time the seller registered the sale.)
-                cache.totalFee +=
-                    _exchangeSellOrder(targetId, targetOwner, tradeQuoteAmount, _feeCollector(), targetFeeBps);
+                // Transfer QUOTE to sell-maker after deducting makerFee (from maker's order.feeBps)
+                _exchangeSellOrder(makerId, makerOwner, tradeQuoteAmount, makerFee);
 
                 // Update information.
                 cache.matchedBaseAmount += tradeAmount;
                 cache.useQuoteAmount += tradeQuoteAmount;
-                cache.baseReserve = _subBaseReserve(targetOwner, tradeAmount, true, cache.baseReserve);
+                cache.baseReserve = _subBaseReserve(makerOwner, tradeAmount, true, cache.baseReserve);
                 if (order.amount == 0 || --maxMatchCount == 0) {
                     if (_orders.empty()) {
                         // Although the `while` loop has not yet ended,
@@ -580,39 +573,41 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
             // so remove `price` from `_sellPrices`.
             if (!_sellPrices.remove(cache.price)) revert PairUnknownPrices(OrderSide.SELL, cache.price);
         }
-        if (cache.totalFee != 0) QUOTE.safeTransfer(_feeCollector(), cache.totalFee);
         if (cache.baseReserve != baseReserve) baseReserve = cache.baseReserve;
         return (cache.done, cache.matchedBaseAmount, cache.useQuoteAmount);
     }
 
     function _matchOrderAmount(
-        uint256 orderId,
-        Order memory order,
-        uint256 targetId,
-        Order storage target,
+        uint256 takerId,
+        Order memory taker,
+        uint256 makerId,
+        Order storage maker,
         uint256 price,
         List.U256 storage _orders
-    ) private returns (address targetOwner, uint256 tradeAmount, uint32 targetFeeBps) {
-        (targetOwner, tradeAmount, targetFeeBps) = (target.owner, Math.min(order.amount, target.amount), target.feeBps);
+    ) private returns (address makerOwner, uint256 tradeAmount, uint256 makerFee) {
+        tradeAmount = Math.min(taker.amount, maker.amount);
+        uint256 tradeQuoteAmount = Math.mulDiv(price, tradeAmount, DENOMINATOR);
+        (makerOwner, makerFee) =
+        (maker.owner, _feeControllerRecordMatch(takerId, makerId, taker, maker, tradeAmount, tradeQuoteAmount));
 
-        (uint256 sellId, uint256 buyId) = (order.side == OrderSide.SELL ? (orderId, targetId) : (targetId, orderId));
+        (uint256 sellId, uint256 buyId) = (taker.side == OrderSide.SELL ? (takerId, makerId) : (makerId, takerId));
         emit OrderMatched(sellId, buyId, price, tradeAmount, block.timestamp);
 
         // If the entire quantity of target is traded, remove the data.
-        if (tradeAmount == target.amount) {
-            _removeOrder(targetId, CloseType.COMPLETED, _orders);
+        if (tradeAmount == maker.amount) {
+            _removeOrder(makerId, CloseType.COMPLETED, _orders);
         } else {
             unchecked {
-                target.amount -= tradeAmount;
+                maker.amount -= tradeAmount;
             }
         }
 
         // If the entire quantity of order is traded, trigger termination.
-        if (tradeAmount == order.amount) {
-            order.amount = 0;
+        if (tradeAmount == taker.amount) {
+            taker.amount = 0;
         } else {
             unchecked {
-                order.amount -= tradeAmount;
+                taker.amount -= tradeAmount;
             }
         }
     }
@@ -626,8 +621,8 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
             _orders = _sellOrders[order.price];
             uint256 amount = order.amount;
             if (amount != 0) {
-                BASE.safeTransfer(order.owner, amount);
                 _subBaseReserve(order.owner, amount, false, baseReserve);
+                BASE.safeTransfer(order.owner, amount);
             }
         } else {
             _orders = _buyOrders[order.price];
@@ -636,8 +631,8 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
                 if (order.feeBps != 0) {
                     returnQuoteAmount += Math.mulDiv(returnQuoteAmount, order.feeBps, BPS_DENOMINATOR);
                 }
-                QUOTE.safeTransfer(order.owner, returnQuoteAmount);
                 _subQuoteReserve(order.owner, returnQuoteAmount, false, quoteReserve);
+                QUOTE.safeTransfer(order.owner, returnQuoteAmount);
             }
         }
 
@@ -714,20 +709,13 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         }
     }
 
-    function _exchangeSellOrder(uint256 orderId, address _owner, uint256 amount, address feeCollector, uint32 feeBps)
-        private
-        returns (uint256)
-    {
-        if (feeBps == 0) {
+    function _exchangeSellOrder(uint256 orderId, address _owner, uint256 amount, uint256 fee) private {
+        if (fee == 0) {
             QUOTE.safeTransfer(_owner, amount);
-            return 0;
         } else {
-            uint256 fee = Math.mulDiv(amount, feeBps, BPS_DENOMINATOR);
             uint256 value = amount - fee;
-            emit FeeCollect(orderId, _owner, amount, feeCollector, feeBps, fee, value);
-
+            emit FeeCollect(orderId, _owner, amount, fee, value);
             QUOTE.safeTransfer(_owner, value);
-            return fee;
         }
     }
 
@@ -736,114 +724,22 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         address _owner,
         uint256 buyBaseAmount,
         uint256 useQuoteAmount,
-        address feeCollector,
-        uint32 feeBps
-    ) private returns (uint256) {
+        uint256 fee
+    ) private {
         BASE.safeTransfer(_owner, buyBaseAmount);
-
-        if (feeBps == 0) {
-            return 0;
-        } else {
-            uint256 fee = Math.mulDiv(useQuoteAmount, feeBps, BPS_DENOMINATOR);
-            emit FeeCollect(orderId, _owner, useQuoteAmount, feeCollector, feeBps, fee, useQuoteAmount - fee);
-            return fee;
-        }
-    }
-
-    function _cacheFeeInfos() private {
-        IMarketV2 market = IMarketV2(MARKET);
-        address feeCollector = market.feeCollector();
-        FeeConfig memory feeInfos = _resolveEffectiveFees();
-
-        assembly {
-            tstore(_feeCollectorSlot, feeCollector)
-            tstore(_feeBpsSlot, feeInfos)
-        }
-    }
-
-    function _resolveEffectiveFees() private view returns (FeeConfig memory feeInfos) {
-        IMarketV2.FeeConfig memory defaultFeeBps = IMarketV2(MARKET).getFeeConfig();
-
-        // Step 1: Resolve NO_FEE_BPS to actual values from Market
-        feeInfos.sellerMakerFeeBps =
-            feeConfig.sellerMakerFeeBps == NO_FEE_BPS ? defaultFeeBps.sellerMakerFeeBps : feeConfig.sellerMakerFeeBps;
-        feeInfos.sellerTakerFeeBps =
-            feeConfig.sellerTakerFeeBps == NO_FEE_BPS ? defaultFeeBps.sellerTakerFeeBps : feeConfig.sellerTakerFeeBps;
-        feeInfos.buyerMakerFeeBps =
-            feeConfig.buyerMakerFeeBps == NO_FEE_BPS ? defaultFeeBps.buyerMakerFeeBps : feeConfig.buyerMakerFeeBps;
-        feeInfos.buyerTakerFeeBps =
-            feeConfig.buyerTakerFeeBps == NO_FEE_BPS ? defaultFeeBps.buyerTakerFeeBps : feeConfig.buyerTakerFeeBps;
-
-        // Step 2: Ensure taker >= maker by adjusting inherited values
-        // If maker > taker, prioritize user-specified values and adjust inherited ones
-        if (feeInfos.sellerMakerFeeBps > feeInfos.sellerTakerFeeBps) {
-            if (feeConfig.sellerTakerFeeBps == NO_FEE_BPS) {
-                // Taker was inherited - adjust it to match maker
-                feeInfos.sellerTakerFeeBps = feeInfos.sellerMakerFeeBps;
-            } else {
-                // Maker was inherited - adjust it to match taker
-                feeInfos.sellerMakerFeeBps = feeInfos.sellerTakerFeeBps;
-            }
-        }
-        if (feeInfos.buyerMakerFeeBps > feeInfos.buyerTakerFeeBps) {
-            if (feeConfig.buyerTakerFeeBps == NO_FEE_BPS) {
-                // Taker was inherited - adjust it to match maker
-                feeInfos.buyerTakerFeeBps = feeInfos.buyerMakerFeeBps;
-            } else {
-                // Maker was inherited - adjust it to match taker
-                feeInfos.buyerMakerFeeBps = feeInfos.buyerTakerFeeBps;
-            }
-        }
-    }
-
-    function _feeCollector() private view returns (address feeCollector) {
-        assembly {
-            feeCollector := tload(_feeCollectorSlot)
-        }
-    }
-
-    function _sellerMakerFeeBps() private view returns (uint32 feeBps) {
-        FeeConfig memory feeInfos;
-        assembly {
-            feeInfos := tload(_feeBpsSlot)
-        }
-        feeBps = feeInfos.sellerMakerFeeBps;
-    }
-
-    function _sellerTakerFeeBps() private view returns (uint32 feeBps) {
-        FeeConfig memory feeInfos;
-        assembly {
-            feeInfos := tload(_feeBpsSlot)
-        }
-        feeBps = feeInfos.sellerTakerFeeBps;
-    }
-
-    function _buyerMakerFeeBps() private view returns (uint32 feeBps) {
-        FeeConfig memory feeInfos;
-        assembly {
-            feeInfos := tload(_feeBpsSlot)
-        }
-        feeBps = feeInfos.buyerMakerFeeBps;
-    }
-
-    function _buyerTakerFeeBps() private view returns (uint32 feeBps) {
-        FeeConfig memory feeInfos;
-        assembly {
-            feeInfos := tload(_feeBpsSlot)
-        }
-        feeBps = feeInfos.buyerTakerFeeBps;
+        if (fee > 0) emit FeeCollect(orderId, _owner, useQuoteAmount, fee, useQuoteAmount - fee);
     }
 
     function _cacheLatestPrice(uint256 price) private {
         assembly {
-            tstore(_matchedPriceSlot, price)
+            tstore(MATCHED_PRICE_SLOT, price)
         }
     }
 
     function _setLatest() private {
         uint256 _latestPrice;
         assembly {
-            _latestPrice := tload(_matchedPriceSlot)
+            _latestPrice := tload(MATCHED_PRICE_SLOT)
         }
         if (_latestPrice != 0) {
             if (_latestPrice != matchedPrice) matchedPrice = _latestPrice;
@@ -851,34 +747,8 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         }
     }
 
-    function _setFeeBps(
-        uint32 sellerMakerFeeBps_,
-        uint32 sellerTakerFeeBps_,
-        uint32 buyerMakerFeeBps_,
-        uint32 buyerTakerFeeBps_
-    ) private {
-        // range check
-        if (sellerMakerFeeBps_ >= BPS_DENOMINATOR && sellerMakerFeeBps_ != NO_FEE_BPS) revert PairInvalidFeeBps();
-        if (sellerTakerFeeBps_ >= BPS_DENOMINATOR && sellerTakerFeeBps_ != NO_FEE_BPS) revert PairInvalidFeeBps();
-        if (buyerMakerFeeBps_ >= BPS_DENOMINATOR && buyerMakerFeeBps_ != NO_FEE_BPS) revert PairInvalidFeeBps();
-        if (buyerTakerFeeBps_ >= BPS_DENOMINATOR && buyerTakerFeeBps_ != NO_FEE_BPS) revert PairInvalidFeeBps();
-
-        // logical check - taker fee must be >= maker fee
-        if (sellerTakerFeeBps_ < sellerMakerFeeBps_ && sellerMakerFeeBps_ != NO_FEE_BPS) {
-            revert PairInvalidFeeStructure(sellerMakerFeeBps_, sellerTakerFeeBps_);
-        }
-        if (buyerTakerFeeBps_ < buyerMakerFeeBps_ && buyerMakerFeeBps_ != NO_FEE_BPS) {
-            revert PairInvalidFeeStructure(buyerMakerFeeBps_, buyerTakerFeeBps_);
-        }
-
-        // set
-        feeConfig = FeeConfig({
-            sellerMakerFeeBps: sellerMakerFeeBps_,
-            sellerTakerFeeBps: sellerTakerFeeBps_,
-            buyerMakerFeeBps: buyerMakerFeeBps_,
-            buyerTakerFeeBps: buyerTakerFeeBps_
-        });
-        emit PairFeesUpdated(sellerMakerFeeBps_, sellerTakerFeeBps_, buyerMakerFeeBps_, buyerTakerFeeBps_);
+    function _checkOwner() private view {
+        if (_msgSender() != IOwnable(MARKET).owner()) revert OwnableUnauthorizedAccount(_msgSender());
     }
 
     //    ##   #    # ##### #    #  ####  #####  # ######   ##   ##### #  ####  #    #
@@ -889,7 +759,7 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
     //  #    #  ####    #   #    #  ####  #    # # ###### #    #   #   #  ####  #    #
 
     function setTickSize(uint256 _lotSize, uint256 _tickSize) external {
-        IMarketV2(MARKET).checkTickSizeRoles(_msgSender());
+        IMarketV3(MARKET).checkTickSizeRoles(_msgSender());
 
         if (_tickSize == 0) revert PairInvalidInitializeData("tickSize");
         if (_lotSize == 0) revert PairInvalidInitializeData("lotSize");
@@ -901,17 +771,20 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         minTradeVolume = Math.mulDiv(_tickSize, _lotSize, DENOMINATOR);
     }
 
-    function setPairFees(
-        uint32 sellerMakerFeeBps_,
-        uint32 sellerTakerFeeBps_,
-        uint32 buyerMakerFeeBps_,
-        uint32 buyerTakerFeeBps_
-    ) external onlyOwner {
-        _setFeeBps(sellerMakerFeeBps_, sellerTakerFeeBps_, buyerMakerFeeBps_, buyerTakerFeeBps_);
+    function setFeeController(address newFeeController, bytes memory feeControllerInitData) external {
+        if (_msgSender() != MARKET) _checkOwner(); // only owner
+        IMarketV3(MARKET).checkFeeControllerAllowed(newFeeController);
+
+        if (address(feeController) != newFeeController) {
+            emit FeeControllerUpdated(address(feeController), newFeeController);
+            feeController = IFeeController(newFeeController);
+        }
+        _feeControllerInitialize(feeControllerInitData);
     }
 
     function skim(IERC20 erc20, address to, uint256 amount) external onlyOwner {
         if (amount == 0) return;
+        if (to == address(0)) return;
 
         if (erc20 == BASE && BASE.balanceOf(address(this)) < baseReserve + amount) {
             revert PairInvalidReserve(address(BASE));
@@ -925,21 +798,75 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
 
     function emergencyCancelOrder(uint256[] calldata orderIds) external whenPaused onlyOwner {
         uint256 length = orderIds.length;
-        for (uint256 i = 0; i < length;) {
+        for (uint256 i = 0; i < length; ++i) {
             uint256 orderId = orderIds[i];
             Order memory order = _allOrders[orderId];
             if (order.owner == address(0)) continue;
 
             _cancelOrder(orderId, order, CloseType.EMERGENCY);
-            unchecked {
-                ++i;
-            }
         }
     }
 
     function setPause(bool pause) external onlyOwner {
         if (pause) _pause();
         else _unpause();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // FeeController delegatecall wrappers
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    function _feeControllerInitialize(bytes memory initData) private {
+        Address.functionDelegateCall(
+            address(feeController), abi.encodeCall(IFeeController.initialize, (address(QUOTE), DENOMINATOR, initData))
+        );
+    }
+
+    function _feeControllerCalcBuyVolumeWithFee(bool isMaker, uint256 volume) private returns (uint256) {
+        bytes memory result = Address.functionDelegateCall(
+            address(feeController), abi.encodeCall(IFeeController.calcBuyVolumeWithFee, (isMaker, volume))
+        );
+        return abi.decode(result, (uint256));
+    }
+
+    function _feeControllerCalcBuyVolumeWithFeeOrder(bool isMaker, Order memory order) private returns (uint256) {
+        bytes memory result = Address.functionDelegateCall(
+            address(feeController), abi.encodeCall(IFeeController.calcBuyVolumeWithFeeByOrder, (isMaker, order))
+        );
+        return abi.decode(result, (uint256));
+    }
+
+    function _feeControllerRecordMatch(
+        uint256 takerId,
+        uint256 makerId,
+        Order memory taker,
+        Order memory maker,
+        uint256 tradeAmount,
+        uint256 tradeQuoteAmount
+    ) private returns (uint256) {
+        bytes memory result = Address.functionDelegateCall(
+            address(feeController),
+            abi.encodeCall(IFeeController.recordMatch, (takerId, makerId, taker, maker, tradeAmount, tradeQuoteAmount))
+        );
+        return abi.decode(result, (uint256));
+    }
+
+    function _feeControllerSettleFees() private returns (uint256) {
+        bytes memory result =
+            Address.functionDelegateCall(address(feeController), abi.encodeCall(IFeeController.settleFees, ()));
+        return abi.decode(result, (uint256));
+    }
+
+    function _feeControllerSellerMakerFeeBps() private returns (uint32) {
+        bytes memory result =
+            Address.functionDelegateCall(address(feeController), abi.encodeCall(IFeeController.sellerMakerFeeBps, ()));
+        return abi.decode(result, (uint32));
+    }
+
+    function _feeControllerBuyerMakerFeeBps() private returns (uint32) {
+        bytes memory result =
+            Address.functionDelegateCall(address(feeController), abi.encodeCall(IFeeController.buyerMakerFeeBps, ()));
+        return abi.decode(result, (uint32));
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}

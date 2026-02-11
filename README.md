@@ -1,111 +1,114 @@
-# DEX Contracts V2
+# DEX Contracts V3
 
-A decentralized exchange (DEX) that enables trading of tokens through an order book system. Trade limit and market orders with flexible fee structures and native CROSS coin support.
+A decentralized exchange (DEX) that enables trading of tokens through an **on-chain order book**. V3 keeps the familiar V1/V2 trading UX (limit/market orders + native CROSS support) while modernizing fees via **pluggable Fee Controllers** and documenting a safe **V2 → V3 upgrade path**.
 
 ## 📋 Table of Contents
 
-- [What is DEX V2?](#what-is-dex-v2)
-- [Key Features](#key-features)
-- [Order Types](#order-types)
-- [Fees](#fees)
-- [Native CROSS Coin Support](#native-cross-coin-support)
-- [Security](#security)
-- [License](#license)
-- [Disclaimer](#disclaimer)
-- [Technical Documentation](#technical-documentation)
+- [What is DEX V3?](#-what-is-dex-v3)
+- [High-level Architecture](#-high-level-architecture)
+- [Fees (V3 FeeController)](#-fees-v3-feecontroller)
+- [Native CROSS Coin Support](#-native-cross-coin-support)
+- [Documentation](#-documentation)
+- [Development](#-development)
+- [Security](#-security)
+- [License](#-license)
+- [Disclaimer](#-disclaimer)
+- [Legacy V1/V2](#-legacy-v1v2)
 
-## 🎯 What is DEX V2?
+## 🎯 What is DEX V3?
 
-DEX V2 is a decentralized exchange protocol that allows users to trade tokens through an order book. Unlike automated market makers (AMMs), this DEX uses a traditional order book model where buy and sell orders are matched at specified prices.
+DEX V3 is an order-book DEX protocol composed of upgradeable, modular contracts:
 
-### Key Highlights
+- **CrossDex**: global registry + market creation
+- **Router**: user entry point for submitting/canceling orders and handling native CROSS
+- **Market**: per-quote market that deploys pairs
+- **Pair**: the matching engine + order book
+- **FeeController**: fee logic called via `delegatecall` from `Pair`
 
-- **Order Book Trading**: Buy and sell orders are matched through an order book, giving you control over your trade prices
-- **Flexible Fee Structure**: Each market can have different fee rates for makers and takers
-- **Multiple Markets**: Multiple markets can exist for the same quote token, each with different fee policies
-- **Native CROSS Support**: Use Cross Chain's native CROSS coin directly without manual wrapping
+V3’s key design shift is that fee logic lives in a separate contract (FeeController) so the matching engine can stay stable while fee policies evolve.
 
-## ✨ Key Features
+## 🏗️ High-level Architecture
 
-### Order Types
+```text
+User  ──>  CrossDexRouterV3  ──>  PairImplV3  ──>  Order Book + Matching
+                 │                 │
+                 │                 └─ delegatecall ──> FeeController (policy)
+                 │
+                 └─ isPair() / registry lookups ──> CrossDexImplV3 / MarketImplV3
+```
 
-#### Limit Orders
+The complete architecture, call flows, and invariants are documented in `docs/`.
 
-Place orders at a specific price you choose. Your order will wait in the order book until someone matches it at your price.
+## 💰 Fees (V3 FeeController)
 
-**Time-in-Force Options:**
-- **Good Till Cancel (GTC)**: Order stays active until you cancel it or it gets filled
-- **Immediate Or Cancel (IOC)**: Order executes immediately at your price or better, unfilled portion is cancelled
-- **Fill Or Kill (FOK)**: Order must execute completely at your price or better, otherwise cancelled
+In V3, each `PairImplV3` holds a `feeController` address and calls it via `delegatecall`.
+Two fee controller implementations are included:
 
-#### Market Orders
+- **`FeeControllerV2Compat`**: V2-compatible 4-bps model (seller/buyer × maker/taker)
+- **`FeeControllerV3Split`**: taker-only fee with a 3-way split (creator / maker rebate / system)
 
-Execute your order immediately at the best available price in the order book. Perfect for when you want to trade right away without waiting.
+See `docs/FEES.md` for details.
 
-### Native CROSS Coin Support
+## 🪙 Native CROSS Coin Support
 
-The DEX seamlessly supports Cross Chain's native CROSS coin:
+The Router deploys a `WETH`-style wrapper for native CROSS and integrates it seamlessly:
 
-- **Send CROSS directly**: You can send native CROSS coins with your transaction (no need to wrap manually)
-- **Automatic handling**: The system automatically wraps CROSS for trading and unwraps it when transferring to your wallet
-- **Transparent experience**: Use CROSS just like any other token without extra steps
+- When trading with CROSS as BASE/QUOTE, users provide `msg.value` and the Router wraps it.
+- When a transfer sends wrapped CROSS to a non-pair address, `WETH` auto-unwraps and transfers native CROSS.
 
-## 💰 Fees
+## 📚 Documentation
 
-DEX V2 uses a flexible fee structure with four separate fee rates:
+Start here: `docs/README.md`.
 
-1. **Seller Maker Fee**: Fee for sellers who place limit orders
-2. **Seller Taker Fee**: Fee for sellers who execute market orders
-3. **Buyer Maker Fee**: Fee for buyers who place limit orders
-4. **Buyer Taker Fee**: Fee for buyers who execute market orders
+Key documents:
 
-### How Fees Work
+- `docs/ARCHITECTURE.md`: system overview, diagrams, and call flows
+- `docs/ROUTER_GUIDE.md`: how to submit/cancel orders (including adjacent hints, fees, and native CROSS)
+- `docs/FEES.md`: how FeeController works and how to configure it
+- `docs/UPGRADE_V2_TO_V3.md`: required upgrade steps + storage collision notes
 
-- Each market sets its own fee rates
-- **Maker orders** (limit orders): Typically lower fees since you provide liquidity to the order book
-- **Taker orders** (market orders): Typically higher fees since you consume liquidity
-- Fees can be different for buy vs sell orders
+## 🧰 Development
 
-The fee structure allows markets to incentivize certain trading behaviors, such as encouraging limit orders by offering lower maker fees.
+This is a Foundry project.
+
+```bash
+forge --version
+forge build
+forge test
+```
+
+### Running the V2 → V3 upgrade tests
+
+The upgrade tests load V2 bytecode from `solc_0_8_28/out` via `vm.getCode(...)`.
+Build legacy artifacts first:
+
+```bash
+cd solc_0_8_28
+forge build
+cd ..
+forge test --match-path test/V2ToV3Upgrade.t.sol
+```
 
 ## 🔒 Security
 
-The DEX contracts have been professionally audited to ensure security and reliability.
+The contracts use established security patterns:
 
-### Security Measures
+- **UUPS upgradeability** (`upgradeToAndCall`) with `onlyOwner` authorization
+- **Deterministic deployments** via Create2 for Markets and Pairs
+- **Reentrancy protection** in the Router (`ReentrancyGuardTransient`)
+- **Contract-account restrictions** (EOA-only by default, with an owner-managed whitelist)
+- **Native value accounting** to prevent leftover ETH and mitigate forced-ETH scenarios
 
-- All contracts follow security best practices
-- Comprehensive input validation
-- Protection against reentrancy attacks
-- Access control for administrative functions
-
-For detailed security information, see the audit report in [`audits/REP-final-20251103T123743Z.pdf`](audits/REP-final-20251103T123743Z.pdf).
+Audit report: `audits/REP-final-20251103T123743Z.pdf`.
 
 ## 📄 License
 
-This project is licensed under the Business Source License 1.1 (BUSL-1.1). See the [LICENSE](./LICENSE) file for details.
-
-**License Terms:**
-- **Licensor**: Nexus Co., Ltd.
-- **Change Date**: 2029-10-29
-- **Change License**: MIT License (after Change Date)
-
-Until the Change Date, this license permits:
-- Copying and modification
-- Creating derivative works
-- Redistribution
-- Non-production use
+This project is licensed under the Business Source License 1.1 (BUSL-1.1). See `LICENSE`.
 
 ## ⚠️ Disclaimer
 
 This software is provided "as is" without warranty. Users should conduct their own audits and security reviews before using in production.
 
----
+## 🕰️ Legacy V1/V2
 
-## 📚 Technical Documentation
-
-For detailed technical documentation about the contract architecture, implementation details, and V2 changes, see [Technical Documentation](docs-v1/TECHNICAL.md).
-
-### Router Scripts Guide
-
-For a comprehensive guide on how to place orders using the Router, see [Router Order Script Guide](docs-v1/ROUTER_SCRIPTS_GUIDE.md).
+Historical V1/V2 code and docs are available under `solc_0_8_28/`.

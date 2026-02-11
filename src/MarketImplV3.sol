@@ -1,0 +1,167 @@
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.30;
+
+import {ERC1967Proxy} from "@openzeppelin-contracts-5.5.0/proxy/ERC1967/ERC1967Proxy.sol";
+import {UUPSUpgradeable} from "@openzeppelin-contracts-5.5.0/proxy/utils/UUPSUpgradeable.sol";
+import {IERC20Metadata} from "@openzeppelin-contracts-5.5.0/token/ERC20/extensions/IERC20Metadata.sol";
+import {Create2} from "@openzeppelin-contracts-5.5.0/utils/Create2.sol";
+import {EnumerableMap} from "@openzeppelin-contracts-5.5.0/utils/structs/EnumerableMap.sol";
+
+import {OwnableUpgradeable} from "@openzeppelin-contracts-upgradeable-5.5.0/access/OwnableUpgradeable.sol";
+
+import {PairImplV3} from "./PairImplV3.sol";
+import {ICrossDexV3} from "./interfaces/ICrossDexV3.sol";
+import {IMarketV3} from "./interfaces/IMarketV3.sol";
+
+contract MarketImplV3 is UUPSUpgradeable, OwnableUpgradeable, IMarketV3 {
+    using EnumerableMap for EnumerableMap.AddressToAddressMap;
+
+    error MarketInvalidInitializeData(bytes32);
+    error MarketInvalidBaseAddress(address);
+    error MarketAlreadyCreatedBaseAddress(address);
+    error MarketDeployPair();
+    error MarketInvalidFeeStructure(uint32 makerFee, uint32 takerFee);
+    error MarketInvalidPairAddress(address pair);
+
+    event PairCreated(address indexed pair, address indexed base, uint256 timestamp);
+    event MarketFeesUpdated(uint32 sellerMakerFee, uint32 sellerTakerFee, uint32 buyerMakerFee, uint32 buyerTakerFee);
+    event PairImplSet(address indexed before, address indexed current);
+    event FeeControllerUpdated(address indexed before, address indexed current);
+
+    uint256 public deployed; // set once in initialize
+    ICrossDexV3 public CROSS_DEX; // set once in initialize
+    address public QUOTE; // set once in initialize
+    address public ROUTER; // set once in initialize
+
+    address public pairImpl;
+
+    address public override feeController;
+    uint32 private _emptySlot;
+
+    EnumerableMap.AddressToAddressMap private _allPairs; // base => pair
+
+    uint256[41] private __gap;
+
+    constructor() {
+        _disableInitializers();
+    }
+
+    /// @notice Initialize market with owner, router, quote token, pair implementation, and fee controller.
+    function initialize(address _owner, address _router, address _quote, address _pairImpl, address _feeController)
+        external
+        override
+        initializer
+    {
+        __Ownable_init(_owner);
+
+        if (_owner == address(0)) revert MarketInvalidInitializeData("owner");
+        if (_router == address(0)) revert MarketInvalidInitializeData("router");
+        if (_quote == address(0)) revert MarketInvalidInitializeData("quote");
+        if (_pairImpl == address(0)) revert MarketInvalidInitializeData("pairImpl");
+        if (_feeController == address(0)) revert MarketInvalidInitializeData("feeController");
+
+        deployed = block.number;
+        CROSS_DEX = ICrossDexV3(_msgSender());
+        QUOTE = _quote;
+        ROUTER = _router;
+        pairImpl = _pairImpl;
+        feeController = _feeController;
+    }
+
+    function reInitialize(address _pairImpl, address _feeController) external onlyOwner reinitializer(3) {
+        if (_pairImpl == address(0)) revert MarketInvalidInitializeData("pairImpl");
+        if (_feeController == address(0)) revert MarketInvalidInitializeData("feeController");
+        CROSS_DEX.checkFeeControllerAllowed(_feeController);
+
+        // Emit events for state changes
+        emit PairImplSet(pairImpl, _pairImpl);
+        emit FeeControllerUpdated(feeController, _feeController);
+
+        pairImpl = _pairImpl;
+        feeController = _feeController;
+    }
+
+    function version() external pure returns (uint64) {
+        return 3;
+    }
+
+    function allPairs() external view returns (address[] memory bases, address[] memory pairs) {
+        uint256 length = _allPairs.length();
+        bases = new address[](length);
+        pairs = new address[](length);
+        for (uint256 i = 0; i < length; ++i) {
+            (bases[i], pairs[i]) = _allPairs.at(i);
+        }
+    }
+
+    function checkTickSizeRoles(address account) external view override {
+        // check account is tick size setter
+        CROSS_DEX.checkTickSizeRoles(account);
+    }
+
+    function checkFeeControllerAllowed(address _feeController) external view override {
+        CROSS_DEX.checkFeeControllerAllowed(_feeController);
+    }
+
+    function baseToPair(address base) external view returns (address) {
+        return _allPairs.get(base);
+    }
+
+    function createPair(address base, uint256 tickSize, uint256 lotSize, bytes memory feeControllerInitData)
+        external
+        onlyOwner
+        returns (address)
+    {
+        if (base == address(0) || base == QUOTE) revert MarketInvalidBaseAddress(base);
+        uint256 baseDecimals = IERC20Metadata(base).decimals();
+        if (baseDecimals == 0) revert MarketInvalidBaseAddress(base);
+        if (_allPairs.contains(base)) revert MarketAlreadyCreatedBaseAddress(base);
+
+        bytes memory bytecode = abi.encodePacked(
+            type(ERC1967Proxy).creationCode,
+            abi.encode(
+                pairImpl,
+                abi.encodeCall(
+                    PairImplV3.initialize,
+                    (ROUTER, QUOTE, base, tickSize, lotSize, feeController, feeControllerInitData)
+                )
+            )
+        );
+        // forge-lint: disable-next-line(asm-keccak256)
+        bytes32 salt = keccak256(abi.encodePacked(base));
+        address pair = Create2.deploy(0, salt, bytecode);
+
+        if (pair == address(0)) revert MarketDeployPair();
+        if (!_allPairs.set(base, pair)) revert MarketAlreadyCreatedBaseAddress(base);
+
+        CROSS_DEX.pairCreated(pair);
+        emit PairCreated(pair, base, block.timestamp);
+        return pair;
+    }
+
+    function setPairImpl(address _pairImpl) external onlyOwner {
+        if (_pairImpl == address(0)) revert MarketInvalidInitializeData("pairImpl");
+        emit PairImplSet(pairImpl, _pairImpl);
+        pairImpl = _pairImpl;
+    }
+
+    function setFeeController(address[] calldata pairs, address newFeeController, bytes calldata feeControllerInitData)
+        external
+        onlyOwner
+    {
+        CROSS_DEX.checkFeeControllerAllowed(newFeeController);
+        if (feeController != newFeeController) {
+            emit FeeControllerUpdated(feeController, newFeeController);
+            feeController = newFeeController;
+        }
+
+        uint256 length = pairs.length;
+        for (uint256 i = 0; i < length; ++i) {
+            address pair = pairs[i];
+            if (CROSS_DEX.pairToMarket(pair) != address(this)) revert MarketInvalidPairAddress(pair);
+            PairImplV3(pair).setFeeController(newFeeController, feeControllerInitData);
+        }
+    }
+
+    function _authorizeUpgrade(address) internal override onlyOwner {}
+}

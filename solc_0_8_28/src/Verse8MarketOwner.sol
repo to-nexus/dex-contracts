@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.28;
 
-import {AccessControlDefaultAdminRules} from
-    "@openzeppelin-contracts-5.2.0/access/extensions/AccessControlDefaultAdminRules.sol";
+import {
+    AccessControlDefaultAdminRules
+} from "@openzeppelin-contracts-5.2.0/access/extensions/AccessControlDefaultAdminRules.sol";
 
 import {IMarketV2} from "./interfaces/IMarket.sol";
 

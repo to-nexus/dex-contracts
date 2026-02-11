@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.28;
 
-import {AccessControlDefaultAdminRules} from
-    "@openzeppelin-contracts-5.2.0/access/extensions/AccessControlDefaultAdminRules.sol";
+import {
+    AccessControlDefaultAdminRules
+} from "@openzeppelin-contracts-5.2.0/access/extensions/AccessControlDefaultAdminRules.sol";
 import {IERC20} from "@openzeppelin-contracts-5.2.0/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin-contracts-5.2.0/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin-contracts-5.2.0/utils/ReentrancyGuard.sol";
@@ -149,11 +150,7 @@ contract BuyBot is AccessControlDefaultAdminRules, ReentrancyGuard {
      * @param amount Amount to spend (must be greater than 0)
      * @param maxMatchCount Maximum number of orders to match (0 for router default)
      */
-    function buyMarket(address pair, uint256 amount, uint256 maxMatchCount)
-        external
-        nonReentrant
-        onlyRole(BUYER_ROLE)
-    {
+    function buyMarket(address pair, uint256 amount, uint256 maxMatchCount) external nonReentrant onlyRole(BUYER_ROLE) {
         if (pair == address(0)) revert BuyBotInvalidPair(pair);
         // Get pair configuration
         IPair.Config memory config = IPair(pair).getConfig();
