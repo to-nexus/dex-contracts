@@ -131,18 +131,10 @@ contract Verse8MarketOwnerTest is Test {
 
         Verse8MarketOwner.CreatePairArgs[] memory args = new Verse8MarketOwner.CreatePairArgs[](2);
         args[0] = Verse8MarketOwner.CreatePairArgs({
-            market: address(market),
-            base: base,
-            tickSize: 1e18,
-            lotSize: 1e18,
-            feeData: NOFEEBPS
+            market: address(market), base: base, tickSize: 1e18, lotSize: 1e18, feeData: NOFEEBPS
         });
         args[1] = Verse8MarketOwner.CreatePairArgs({
-            market: address(market),
-            base: base2,
-            tickSize: 2e18,
-            lotSize: 2e18,
-            feeData: NOFEEBPS
+            market: address(market), base: base2, tickSize: 2e18, lotSize: 2e18, feeData: NOFEEBPS
         });
 
         vm.startPrank(pairCreator1);
@@ -241,9 +233,7 @@ contract Verse8MarketOwnerTest is Test {
 
         Verse8MarketOwner.ExecuteBatchArgs[] memory calls = new Verse8MarketOwner.ExecuteBatchArgs[](2);
         calls[0] = Verse8MarketOwner.ExecuteBatchArgs({
-            to: address(market),
-            value: 0,
-            data: abi.encodeCall(MarketImplV2.setFeeCollector, (newFeeCollector))
+            to: address(market), value: 0, data: abi.encodeCall(MarketImplV2.setFeeCollector, (newFeeCollector))
         });
         calls[1] = Verse8MarketOwner.ExecuteBatchArgs({
             to: address(market),

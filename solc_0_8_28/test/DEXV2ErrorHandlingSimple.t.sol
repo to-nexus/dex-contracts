@@ -341,8 +341,9 @@ contract DEXV2ErrorHandlingTest is Test {
         // This is more of a validation that our error testing framework works correctly
         bool errorOccurred = false;
         try PAIR.setPairFees(200, 100, 0, 0) {
-            // Should not reach here
-        } catch {
+        // Should not reach here
+        }
+        catch {
             errorOccurred = true;
         }
         assertTrue(errorOccurred, "Error should occur with invalid fee structure");

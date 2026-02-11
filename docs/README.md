@@ -37,6 +37,6 @@ Recommended reading order:
 
 ## 🕰️ Versioning and Legacy
 
-- **V1/V2 legacy** lives under `legacy_v1_v2/`.
+- **V1/V2 legacy** lives under `solc_0_8_28/`.
 - The V3 docs are written to be self-contained, but legacy docs can be used for historical context.
 

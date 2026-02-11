@@ -86,11 +86,7 @@ contract DEXExceptionTest is DEXBaseTest {
         vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", address(OWNER)));
         PAIR.submitLimitOrder(
             IPair.Order({
-                side: IPair.OrderSide.SELL,
-                owner: address(OWNER),
-                feeBps: 0,
-                price: _toQuote(1),
-                amount: _toBase(1)
+                side: IPair.OrderSide.SELL, owner: address(OWNER), feeBps: 0, price: _toQuote(1), amount: _toBase(1)
             }),
             IPair.LimitConstraints.GOOD_TILL_CANCEL,
             0,
@@ -101,11 +97,7 @@ contract DEXExceptionTest is DEXBaseTest {
         vm.expectRevert(abi.encodeWithSignature("PairInvalidRouter(address)", address(OWNER)));
         PAIR.submitLimitOrder(
             IPair.Order({
-                side: IPair.OrderSide.BUY,
-                owner: address(OWNER),
-                feeBps: 0,
-                price: _toQuote(1),
-                amount: _toBase(1)
+                side: IPair.OrderSide.BUY, owner: address(OWNER), feeBps: 0, price: _toQuote(1), amount: _toBase(1)
             }),
             IPair.LimitConstraints.GOOD_TILL_CANCEL,
             0,

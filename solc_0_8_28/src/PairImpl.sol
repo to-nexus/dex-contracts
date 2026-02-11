@@ -128,7 +128,10 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         address base,
         uint256 _tickSize, // tick size for quote token
         uint256 _lotSize // lot size for base token
-    ) external initializer {
+    )
+        external
+        initializer
+    {
         __Pausable_init();
 
         if (router == address(0)) revert PairInvalidInitializeData("router");
@@ -365,7 +368,10 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         Order memory order,
         uint256 spendQuoteAmount, // Set this value if it is a Market Order.
         uint256 maxMatchCount
-    ) private returns (bool, uint256) {
+    )
+        private
+        returns (bool, uint256)
+    {
         if (order.side != OrderSide.BUY) revert PairInvalidOrderSide(OrderSide.SELL);
 
         // Verify the conditions of the entered quantity.
@@ -451,7 +457,11 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         Order memory order,
         uint256 quoteAmount, // Quote amount to be used for Market trades.
         uint256 maxMatchCount
-    ) private setLatest returns (bool done, uint256 matchedBaseAmount) {
+    )
+        private
+        setLatest
+        returns (bool done, uint256 matchedBaseAmount)
+    {
         // (done) Whether the order has been completely matched or the maxMatchCount has reached 0.
         uint256 useQuoteAmount;
 
@@ -576,7 +586,7 @@ contract PairImpl is IPair, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         bool isQuote,
         address account,
         uint256 amount,
-        function(uint256, uint256) returns (bool,uint256) op
+        function(uint256, uint256) returns (bool, uint256) op
     ) private {
         bool ok = false;
         if (isQuote) {

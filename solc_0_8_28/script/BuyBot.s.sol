@@ -19,7 +19,6 @@ contract BuyBotScript is Script {
      * @param buyer Address authorized to execute buyMarket (gets BUYER_ROLE)
      * @param manager Address authorized to set minOrderAmount and interval (gets MANAGER_ROLE)
      * @param swapRouter Uniswap V3 SwapRouter address (address(0) to disable swapping)
-     * @param maxTickSlippage Maximum tick slippage for swaps (1 tick = 0.01%)
      */
     function deployBuyBot(
         uint48 initialDelay,
@@ -30,22 +29,11 @@ contract BuyBotScript is Script {
         address recipient,
         address buyer,
         address manager,
-        address swapRouter,
-        uint24 maxTickSlippage
+        address swapRouter
     ) external returns (address) {
         vm.broadcast();
-        BuyBot bot = new BuyBot(
-            initialDelay,
-            owner,
-            router,
-            minOrderAmount,
-            interval,
-            recipient,
-            buyer,
-            manager,
-            swapRouter,
-            maxTickSlippage
-        );
+        BuyBot bot =
+            new BuyBot(initialDelay, owner, router, minOrderAmount, interval, recipient, buyer, manager, swapRouter);
         return address(bot);
     }
 
@@ -63,14 +51,15 @@ contract BuyBotScript is Script {
 
     /**
      * @notice Swap configured swap token to pair's quote token
-     * @dev Uses 1 tick (0.01%) slippage protection automatically
+     * @dev Caller must provide minAmountOut for slippage protection (calculated off-chain)
      * @param buyBot BuyBot contract address
      * @param pair Trading pair address (to determine quote token)
      * @param uniswapFee Uniswap V3 pool fee tier (500 = 0.05%, 3000 = 0.3%, 10000 = 1%)
+     * @param minAmountOut Minimum amount of quote tokens to receive (for slippage protection)
      */
-    function swapToQuote(address buyBot, address pair, uint24 uniswapFee) external {
+    function swapToQuote(address buyBot, address pair, uint24 uniswapFee, uint256 minAmountOut) external {
         vm.broadcast();
-        BuyBot(payable(buyBot)).swapToQuote(pair, uniswapFee);
+        BuyBot(payable(buyBot)).swapToQuote(pair, uniswapFee, minAmountOut);
     }
 
     /**
@@ -149,16 +138,6 @@ contract BuyBotScript is Script {
     }
 
     /**
-     * @notice Set maximum tick slippage for swaps
-     * @param buyBot BuyBot contract address
-     * @param maxTickSlippage New maximum tick slippage (1 tick = 0.01%)
-     */
-    function setMaxTickSlippage(address buyBot, uint24 maxTickSlippage) external {
-        vm.broadcast();
-        BuyBot(payable(buyBot)).setMaxTickSlippage(maxTickSlippage);
-    }
-
-    /**
      * @notice Set Uniswap V3 SwapRouter address
      * @param buyBot BuyBot contract address
      * @param swapRouter New SwapRouter address
@@ -228,7 +207,7 @@ contract BuyBotScript is Script {
         console.log("Last Buy Time:", bot.lastBuyTime());
         console.log("------------------------------------------");
         console.log("Swap Router:", address(bot.swapRouter()));
-        console.log("Max Tick Slippage:", bot.maxTickSlippage());
+        console.log("Swap Token:", bot.swapToken());
         console.log("------------------------------------------");
         console.log("Note: Check BUYER_ROLE and MANAGER_ROLE via hasRole()");
         console.log("Note: Check whitelisted tokens and pools via contract state");
@@ -287,8 +266,7 @@ contract BuyBotScript is Script {
             owner, // recipient: owner
             owner, // buyer: owner
             owner, // manager: owner
-            address(0), // swapRouter: disabled
-            1 // maxTickSlippage: 1 tick
+            address(0) // swapRouter: disabled
         );
         return address(bot);
     }

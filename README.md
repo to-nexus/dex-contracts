@@ -79,11 +79,11 @@ forge test
 
 ### Running the V2 → V3 upgrade tests
 
-The upgrade tests load V2 bytecode from `legacy_v1_v2/out` via `vm.getCode(...)`.
+The upgrade tests load V2 bytecode from `solc_0_8_28/out` via `vm.getCode(...)`.
 Build legacy artifacts first:
 
 ```bash
-cd legacy_v1_v2
+cd solc_0_8_28
 forge build
 cd ..
 forge test --match-path test/V2ToV3Upgrade.t.sol
@@ -111,4 +111,4 @@ This software is provided "as is" without warranty. Users should conduct their o
 
 ## 🕰️ Legacy V1/V2
 
-Historical V1/V2 code and docs are available under `legacy_v1_v2/`.
+Historical V1/V2 code and docs are available under `solc_0_8_28/`.

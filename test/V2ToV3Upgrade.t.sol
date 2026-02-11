@@ -122,8 +122,8 @@ import {T20} from "./mock/T20.sol";
 
 /// @title V2ToV3UpgradeTest
 /// @notice V2 → V3 업그레이드 경로 및 스토리지 충돌 검증 테스트
-/// @dev vm.getCode()를 사용하여 legacy_v1_v2/out/에서 V2 바이트코드를 로드합니다.
-///      테스트 실행 전 `cd legacy_v1_v2 && forge build` 필요.
+/// @dev vm.getCode()를 사용하여 solc_0_8_28/out/에서 V2 바이트코드를 로드합니다.
+///      테스트 실행 전 `cd solc_0_8_28 && forge build` 필요.
 contract V2ToV3UpgradeTest is Test {
     // ─────────────────────────────────────────────────────────────────────────────
     // Constants
@@ -221,7 +221,7 @@ contract V2ToV3UpgradeTest is Test {
     // ─────────────────────────────────────────────────────────────────────────────
 
     function _deployV2CrossDexImpl() internal returns (address) {
-        bytes memory bytecode = vm.getCode("legacy_v1_v2/out/CrossDexImplV2.sol/CrossDexImplV2.json");
+        bytes memory bytecode = vm.getCode("solc_0_8_28/out/CrossDexImplV2.sol/CrossDexImplV2.json");
         address deployed;
         assembly {
             deployed := create(0, add(bytecode, 0x20), mload(bytecode))
@@ -231,7 +231,7 @@ contract V2ToV3UpgradeTest is Test {
     }
 
     function _deployV2RouterImpl() internal returns (address) {
-        bytes memory bytecode = vm.getCode("legacy_v1_v2/out/CrossDexRouterV2.sol/CrossDexRouterV2.json");
+        bytes memory bytecode = vm.getCode("solc_0_8_28/out/CrossDexRouterV2.sol/CrossDexRouterV2.json");
         address deployed;
         assembly {
             deployed := create(0, add(bytecode, 0x20), mload(bytecode))
@@ -241,7 +241,7 @@ contract V2ToV3UpgradeTest is Test {
     }
 
     function _deployV2MarketImpl() internal returns (address) {
-        bytes memory bytecode = vm.getCode("legacy_v1_v2/out/MarketImplV2.sol/MarketImplV2.json");
+        bytes memory bytecode = vm.getCode("solc_0_8_28/out/MarketImplV2.sol/MarketImplV2.json");
         address deployed;
         assembly {
             deployed := create(0, add(bytecode, 0x20), mload(bytecode))
@@ -251,7 +251,7 @@ contract V2ToV3UpgradeTest is Test {
     }
 
     function _deployV2PairImpl() internal returns (address) {
-        bytes memory bytecode = vm.getCode("legacy_v1_v2/out/PairImplV2.sol/PairImplV2.json");
+        bytes memory bytecode = vm.getCode("solc_0_8_28/out/PairImplV2.sol/PairImplV2.json");
         address deployed;
         assembly {
             deployed := create(0, add(bytecode, 0x20), mload(bytecode))

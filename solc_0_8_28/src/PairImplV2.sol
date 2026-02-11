@@ -391,7 +391,10 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         Order memory order,
         uint256 spendQuoteAmount, // Set this value if it is a Market Order.
         uint256 maxMatchCount
-    ) private returns (bool, uint256) {
+    )
+        private
+        returns (bool, uint256)
+    {
         if (order.side != OrderSide.BUY) revert PairInvalidOrderSide(OrderSide.SELL);
 
         // Verify the conditions of the entered quantity.
@@ -448,8 +451,9 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         setLatest
         returns (bool, uint256)
     {
-        MatchSellCache memory cache =
-            MatchSellCache({price: 0, earnQuoteAmount: 0, totalTargetFee: 0, quoteReserve: quoteReserve, done: false});
+        MatchSellCache memory cache = MatchSellCache({
+            price: 0, earnQuoteAmount: 0, totalTargetFee: 0, quoteReserve: quoteReserve, done: false
+        });
         // cache storage immutables to memory
         List.U256 storage _buyPrices = _prices[uint8(OrderSide.BUY)];
         while (!_buyPrices.empty()) {
@@ -518,14 +522,13 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
         Order memory order,
         uint256 quoteAmount, // Quote amount to be used for Market trades.
         uint256 maxMatchCount
-    ) private setLatest returns (bool, uint256, uint256) {
+    )
+        private
+        setLatest
+        returns (bool, uint256, uint256)
+    {
         MatchBuyCache memory cache = MatchBuyCache({
-            price: 0,
-            matchedBaseAmount: 0,
-            useQuoteAmount: 0,
-            totalFee: 0,
-            baseReserve: baseReserve,
-            done: false
+            price: 0, matchedBaseAmount: 0, useQuoteAmount: 0, totalFee: 0, baseReserve: baseReserve, done: false
         });
 
         List.U256 storage _sellPrices = _prices[uint8(OrderSide.SELL)];
@@ -557,8 +560,9 @@ contract PairImplV2 is IPairV2, IOwnable, UUPSUpgradeable, PausableUpgradeable {
                 uint256 tradeQuoteAmount = Math.mulDiv(cache.price, tradeAmount, DENOMINATOR);
 
                 // Trade executed. ( Calculate using the fee rate at the time the seller registered the sale.)
-                cache.totalFee +=
-                    _exchangeSellOrder(targetId, targetOwner, tradeQuoteAmount, _feeCollector(), targetFeeBps);
+                cache.totalFee += _exchangeSellOrder(
+                    targetId, targetOwner, tradeQuoteAmount, _feeCollector(), targetFeeBps
+                );
 
                 // Update information.
                 cache.matchedBaseAmount += tradeAmount;

@@ -2,6 +2,7 @@
 src = "src"
 out = "out"
 libs = ["lib", "dependencies"]
+via-ir = true
 optimizer = true
 optimizer_runs = 999999
 remappings = [
@@ -11,7 +12,7 @@ remappings = [
 
 # Allow vm.getCode to read V2 artifacts from legacy directory
 fs_permissions = [
-    { access = "read", path = "./legacy_v1_v2/out" }
+    { access = "read", path = "./solc_0_8_28/out" }
 ]
 
 [dependencies]

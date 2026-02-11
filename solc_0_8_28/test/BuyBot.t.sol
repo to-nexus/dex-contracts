@@ -259,30 +259,14 @@ contract BuyBotTest is Test {
     function test_RevertWhen_BuyerIsZeroAddress() public {
         vm.expectRevert(abi.encodeWithSelector(BuyBot.BuyBotInvalidBuyer.selector, address(0)));
         new BuyBot(
-            0,
-            owner,
-            address(router),
-            MIN_ORDER_AMOUNT,
-            0,
-            recipient,
-            address(0),
-            managerRole,
-            address(swapRouter)
+            0, owner, address(router), MIN_ORDER_AMOUNT, 0, recipient, address(0), managerRole, address(swapRouter)
         );
     }
 
     function test_RevertWhen_ManagerIsZeroAddress() public {
         vm.expectRevert(abi.encodeWithSelector(BuyBot.BuyBotInvalidManager.selector, address(0)));
         new BuyBot(
-            0,
-            owner,
-            address(router),
-            MIN_ORDER_AMOUNT,
-            0,
-            recipient,
-            buyerRole,
-            address(0),
-            address(swapRouter)
+            0, owner, address(router), MIN_ORDER_AMOUNT, 0, recipient, buyerRole, address(0), address(swapRouter)
         );
     }
 
@@ -399,15 +383,7 @@ contract BuyBotTest is Test {
     function test_CanBuyMarketViewWithInterval() public {
         // Deploy buyer with 60 second interval
         BuyBot buyerWithInterval = new BuyBot(
-            0,
-            owner,
-            address(router),
-            MIN_ORDER_AMOUNT,
-            60,
-            recipient,
-            buyerRole,
-            managerRole,
-            address(swapRouter)
+            0, owner, address(router), MIN_ORDER_AMOUNT, 60, recipient, buyerRole, managerRole, address(swapRouter)
         );
 
         // Sufficient balance, but no lastBuyTime yet (should be true)
@@ -725,15 +701,7 @@ contract BuyBotTest is Test {
     function test_BuyMarketWithInterval() public {
         // Deploy buyer with 60 second interval
         BuyBot buyerWithInterval = new BuyBot(
-            0,
-            owner,
-            address(router),
-            MIN_ORDER_AMOUNT,
-            60,
-            recipient,
-            buyerRole,
-            managerRole,
-            address(swapRouter)
+            0, owner, address(router), MIN_ORDER_AMOUNT, 60, recipient, buyerRole, managerRole, address(swapRouter)
         );
 
         // First buy should succeed
@@ -907,15 +875,7 @@ contract BuyBotTest is Test {
     function test_IntervalZeroDisablesCheck() public {
         // Deploy buyer with 0 interval (disabled)
         BuyBot buyerNoInterval = new BuyBot(
-            0,
-            owner,
-            address(router),
-            MIN_ORDER_AMOUNT,
-            0,
-            recipient,
-            buyerRole,
-            managerRole,
-            address(swapRouter)
+            0, owner, address(router), MIN_ORDER_AMOUNT, 0, recipient, buyerRole, managerRole, address(swapRouter)
         );
 
         // First buy
