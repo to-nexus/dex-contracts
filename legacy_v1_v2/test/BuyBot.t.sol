@@ -83,7 +83,6 @@ contract BuyBotTest is Test {
     uint256 public constant MIN_ORDER_AMOUNT = 100e18;
     uint256 public constant TICK_SIZE = 1e18;
     uint256 public constant LOT_SIZE = 1e18;
-    uint24 public constant MAX_TICK_SLIPPAGE = 1; // 1 tick = 0.01%
 
     function setUp() public {
         owner = makeAddr("owner");
@@ -142,8 +141,7 @@ contract BuyBotTest is Test {
             recipient,
             buyerRole,
             managerRole,
-            address(swapRouter),
-            MAX_TICK_SLIPPAGE
+            address(swapRouter)
         );
 
         // Setup initial liquidity (sell orders)
@@ -173,8 +171,7 @@ contract BuyBotTest is Test {
             recipient,
             buyerRole,
             managerRole,
-            address(swapRouter),
-            MAX_TICK_SLIPPAGE
+            address(swapRouter)
         );
 
         // Setup liquidity for WETH pair
@@ -270,8 +267,7 @@ contract BuyBotTest is Test {
             recipient,
             address(0),
             managerRole,
-            address(swapRouter),
-            MAX_TICK_SLIPPAGE
+            address(swapRouter)
         );
     }
 
@@ -286,8 +282,7 @@ contract BuyBotTest is Test {
             recipient,
             buyerRole,
             address(0),
-            address(swapRouter),
-            MAX_TICK_SLIPPAGE
+            address(swapRouter)
         );
     }
 
@@ -322,7 +317,7 @@ contract BuyBotTest is Test {
         quoteToken.mint(address(buyer), 200e18);
 
         vm.prank(buyerRole);
-        vm.expectRevert(abi.encodeWithSelector(BuyBot.BuyBotInvalidAmount.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(BuyBot.BuyBotInsufficientBalance.selector, 0, MIN_ORDER_AMOUNT));
         buyer.buyMarket(address(pair), 0, 0);
     }
 
@@ -371,6 +366,12 @@ contract BuyBotTest is Test {
         buyer.setMinOrderAmount(0);
     }
 
+    function test_RevertWhen_SetMinOrderAmountToSameValue() public {
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(BuyBot.BuyBotNotChanged.selector, MIN_ORDER_AMOUNT, MIN_ORDER_AMOUNT));
+        buyer.setMinOrderAmount(MIN_ORDER_AMOUNT);
+    }
+
     function test_CanBuyMarketView() public {
         // No balance - authorized caller
         (bool canBuy, uint256 balance) = buyer.canBuyMarket(address(pair), buyerRole);
@@ -406,8 +407,7 @@ contract BuyBotTest is Test {
             recipient,
             buyerRole,
             managerRole,
-            address(swapRouter),
-            MAX_TICK_SLIPPAGE
+            address(swapRouter)
         );
 
         // Sufficient balance, but no lastBuyTime yet (should be true)
@@ -733,8 +733,7 @@ contract BuyBotTest is Test {
             recipient,
             buyerRole,
             managerRole,
-            address(swapRouter),
-            MAX_TICK_SLIPPAGE
+            address(swapRouter)
         );
 
         // First buy should succeed
@@ -774,6 +773,17 @@ contract BuyBotTest is Test {
         buyer.setInterval(newInterval);
 
         assertEq(buyer.interval(), newInterval);
+    }
+
+    function test_RevertWhen_SetIntervalToSameValue() public {
+        // First set interval to 60
+        vm.prank(owner);
+        buyer.setInterval(60);
+
+        // Try to set same value again
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(BuyBot.BuyBotNotChanged.selector, 60, 60));
+        buyer.setInterval(60);
     }
 
     // ===== Authorization Tests =====
@@ -821,6 +831,12 @@ contract BuyBotTest is Test {
         buyer.setRecipient(newRecipient);
 
         assertEq(buyer.recipient(), newRecipient);
+    }
+
+    function test_RevertWhen_SetRecipientToSameValue() public {
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(BuyBot.BuyBotAddressNotChanged.selector, recipient, recipient));
+        buyer.setRecipient(recipient);
     }
 
     function test_RevertWhen_NonOwnerTriesToSetRecipient() public {
@@ -899,8 +915,7 @@ contract BuyBotTest is Test {
             recipient,
             buyerRole,
             managerRole,
-            address(swapRouter),
-            MAX_TICK_SLIPPAGE
+            address(swapRouter)
         );
 
         // First buy
@@ -1024,29 +1039,32 @@ contract BuyBotTest is Test {
     // ===== SWAP TESTS =====
 
     function test_ManagerCanSetSwapPool() public {
-        address poolAddress = makeAddr("uniswapPool");
-
+        // Use mockPool which has correct token0/token1
         vm.prank(managerRole);
         vm.expectEmit(true, true, true, false);
-        emit BuyBot.SwapPoolSet(address(swapToken), address(quoteToken), poolAddress);
-        buyer.setSwapPool(address(swapToken), address(quoteToken), poolAddress);
+        emit BuyBot.SwapPoolSet(address(swapToken), address(quoteToken), address(mockPool));
+        buyer.setSwapPool(address(swapToken), address(quoteToken), address(mockPool));
 
-        assertEq(buyer.swapPools(address(swapToken), address(quoteToken)), poolAddress);
+        assertEq(buyer.swapPools(address(swapToken), address(quoteToken)), address(mockPool));
     }
 
-    function test_ManagerCanRemoveSwapPool() public {
-        address poolAddress = makeAddr("uniswapPool");
-
-        vm.startPrank(managerRole);
-        buyer.setSwapPool(address(swapToken), address(quoteToken), poolAddress);
-
-        // Remove by setting to address(0)
-        vm.expectEmit(true, true, true, false);
-        emit BuyBot.SwapPoolSet(address(swapToken), address(quoteToken), address(0));
+    function test_RevertWhen_SetSwapPoolToZeroAddress() public {
+        vm.prank(managerRole);
+        vm.expectRevert(abi.encodeWithSelector(BuyBot.BuyBotInvalidPool.selector, address(0)));
         buyer.setSwapPool(address(swapToken), address(quoteToken), address(0));
-        vm.stopPrank();
+    }
 
-        assertEq(buyer.swapPools(address(swapToken), address(quoteToken)), address(0));
+    function test_RevertWhen_SetSwapPoolWithInvalidTokens() public {
+        // Create a pool with different tokens
+        MockUniswapV3Pool invalidPool = new MockUniswapV3Pool(address(baseToken), address(quoteToken));
+
+        vm.prank(managerRole);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                BuyBot.BuyBotInvalidPoolTokens.selector, address(invalidPool), address(swapToken), address(quoteToken)
+            )
+        );
+        buyer.setSwapPool(address(swapToken), address(quoteToken), address(invalidPool));
     }
 
     function test_ManagerCanSetSwapToken() public {
@@ -1056,6 +1074,19 @@ contract BuyBotTest is Test {
         buyer.setSwapToken(address(swapToken));
 
         assertEq(buyer.swapToken(), address(swapToken));
+    }
+
+    function test_RevertWhen_SetSwapTokenToSameValue() public {
+        // First set swap token
+        vm.prank(managerRole);
+        buyer.setSwapToken(address(swapToken));
+
+        // Try to set same value again
+        vm.prank(managerRole);
+        vm.expectRevert(
+            abi.encodeWithSelector(BuyBot.BuyBotAddressNotChanged.selector, address(swapToken), address(swapToken))
+        );
+        buyer.setSwapToken(address(swapToken));
     }
 
     function test_ManagerCanRemoveSwapToken() public {
@@ -1070,17 +1101,6 @@ contract BuyBotTest is Test {
         assertEq(buyer.swapToken(), address(0));
     }
 
-    function test_ManagerCanSetMaxTickSlippage() public {
-        uint24 newSlippage = 10; // 10 ticks = 0.1%
-
-        vm.prank(managerRole);
-        vm.expectEmit(true, true, false, false);
-        emit BuyBot.MaxTickSlippageSet(MAX_TICK_SLIPPAGE, newSlippage);
-        buyer.setMaxTickSlippage(newSlippage);
-
-        assertEq(buyer.maxTickSlippage(), newSlippage);
-    }
-
     function test_OwnerCanSetSwapRouter() public {
         address newRouter = makeAddr("newSwapRouter");
 
@@ -1092,18 +1112,20 @@ contract BuyBotTest is Test {
         assertEq(address(buyer.swapRouter()), newRouter);
     }
 
+    function test_RevertWhen_SetSwapRouterToSameValue() public {
+        vm.prank(owner);
+        vm.expectRevert(
+            abi.encodeWithSelector(BuyBot.BuyBotAddressNotChanged.selector, address(swapRouter), address(swapRouter))
+        );
+        buyer.setSwapRouter(address(swapRouter));
+    }
+
     function test_RevertWhen_UnauthorizedSetSwapPool() public {
         address poolAddress = makeAddr("uniswapPool");
 
         vm.prank(user);
         vm.expectRevert();
         buyer.setSwapPool(address(swapToken), address(quoteToken), poolAddress);
-    }
-
-    function test_RevertWhen_ZeroTickSlippage() public {
-        vm.prank(managerRole);
-        vm.expectRevert();
-        buyer.setMaxTickSlippage(0); // 0 not allowed
     }
 
     function test_SwapToQuote_Success() public {
@@ -1123,9 +1145,9 @@ contract BuyBotTest is Test {
         vm.prank(address(swapRouter));
         quoteToken.approve(address(swapRouter), type(uint256).max);
 
-        // Execute swapToQuote
+        // Execute swapToQuote with minAmountOut = 0 (no slippage protection for test)
         vm.prank(buyerRole);
-        uint256 amountOut = buyer.swapToQuote(address(pair), 3000);
+        uint256 amountOut = buyer.swapToQuote(address(pair), 3000, 0);
 
         // Verify swap executed
         assertGt(amountOut, 0);
@@ -1151,9 +1173,9 @@ contract BuyBotTest is Test {
         vm.prank(address(swapRouter));
         quoteToken.approve(address(swapRouter), type(uint256).max);
 
-        // Step 1: Swap to quote
+        // Step 1: Swap to quote with minAmountOut = 0 (no slippage protection for test)
         vm.prank(buyerRole);
-        uint256 amountOut = buyer.swapToQuote(address(pair), 3000);
+        uint256 amountOut = buyer.swapToQuote(address(pair), 3000, 0);
         assertGe(amountOut, buyAmount);
 
         // Step 2: Buy market
@@ -1168,7 +1190,7 @@ contract BuyBotTest is Test {
         // No swap token set
         vm.prank(buyerRole);
         vm.expectRevert(BuyBot.BuyBotNoSwapToken.selector);
-        buyer.swapToQuote(address(pair), 3000);
+        buyer.swapToQuote(address(pair), 3000, 0);
     }
 
     function test_RevertWhen_SwapToQuote_PoolNotFound() public {
@@ -1184,7 +1206,7 @@ contract BuyBotTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(BuyBot.BuyBotPoolNotFound.selector, address(swapToken), address(quoteToken))
         );
-        buyer.swapToQuote(address(pair), 3000);
+        buyer.swapToQuote(address(pair), 3000, 0);
     }
 
     function test_RevertWhen_SwapToQuote_InsufficientBalance() public {
@@ -1198,6 +1220,31 @@ contract BuyBotTest is Test {
 
         vm.prank(buyerRole);
         vm.expectRevert(abi.encodeWithSelector(BuyBot.BuyBotInsufficientSwapBalance.selector, address(swapToken), 0));
-        buyer.swapToQuote(address(pair), 3000);
+        buyer.swapToQuote(address(pair), 3000, 0);
+    }
+
+    function test_RevertWhen_SwapToQuote_SlippageExceeded() public {
+        uint256 swapAmount = 500e18;
+
+        // Setup: Set swapToken and pool
+        vm.startPrank(managerRole);
+        buyer.setSwapToken(address(swapToken));
+        buyer.setSwapPool(address(swapToken), address(quoteToken), address(mockPool));
+        vm.stopPrank();
+
+        // Fund buyer with swapToken
+        swapToken.mint(address(buyer), swapAmount);
+
+        // Fund swap router with quoteToken for swaps
+        quoteToken.mint(address(swapRouter), 1000e18);
+        vm.prank(address(swapRouter));
+        quoteToken.approve(address(swapRouter), type(uint256).max);
+
+        // Execute swapToQuote with minAmountOut higher than actual output (should fail)
+        // MockSwapRouter returns 1:1, so 500e18 in = 500e18 out
+        // Setting minAmountOut to 600e18 should cause revert
+        vm.prank(buyerRole);
+        vm.expectRevert(); // Uniswap router will revert with "Too little received"
+        buyer.swapToQuote(address(pair), 3000, 600e18);
     }
 }
