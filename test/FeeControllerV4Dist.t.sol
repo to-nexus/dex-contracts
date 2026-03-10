@@ -148,7 +148,9 @@ contract FeeControllerV4DistTest is Test {
             SELLER_MAKER_FEE, SELLER_TAKER_FEE, BUYER_MAKER_FEE, BUYER_TAKER_FEE, recipients, ratios, labels
         );
 
-        vm.expectRevert(abi.encodeWithSelector(FeeControllerV4Dist.FeeControllerV4DistRatiosBpsSumNot10000.selector, 9999));
+        vm.expectRevert(
+            abi.encodeWithSelector(FeeControllerV4Dist.FeeControllerV4DistRatiosBpsSumNot10000.selector, 9999)
+        );
         vm.prank(OWNER);
         PAIR.setFeeController(address(FEE_CONTROLLER), badInitData);
     }
@@ -312,6 +314,54 @@ contract FeeControllerV4DistTest is Test {
         assertEq(QUOTE.balanceOf(RECIPIENT_A) - aBefore, expectedA, "A");
         assertEq(QUOTE.balanceOf(RECIPIENT_B) - bBefore, expectedB, "B");
         assertEq(QUOTE.balanceOf(RECIPIENT_C) - cBefore, expectedC, "C");
+    }
+
+    /// @notice Verifies: (1) fee payers pay exactly the configured BPS, (2) recipients receive by ratio,
+    ///         (3) Pair holds no excess QUOTE/BASE after settlement (no dust left in contract).
+    function test_fee_payer_pays_exact_bps_and_pair_has_no_excess_balance() external {
+        uint256 price = _toQuote(100);
+        uint256 amount = _toBase(10);
+        uint256 quoteVolume = _toTradeVolume(price, amount);
+        uint256 expectedMakerFee = _calcFee(quoteVolume, BUYER_MAKER_FEE);
+        uint256 expectedTakerFee = _calcFee(quoteVolume, SELLER_TAKER_FEE);
+        uint256 expectedTotalFee = expectedMakerFee + expectedTakerFee;
+
+        uint256 user1QuoteBefore = QUOTE.balanceOf(USER1);
+        uint256 user1BaseBefore = BASE.balanceOf(USER1);
+        uint256 user2QuoteBefore = QUOTE.balanceOf(USER2);
+        uint256 user2BaseBefore = BASE.balanceOf(USER2);
+        uint256 aBefore = QUOTE.balanceOf(RECIPIENT_A);
+        uint256 bBefore = QUOTE.balanceOf(RECIPIENT_B);
+        uint256 cBefore = QUOTE.balanceOf(RECIPIENT_C);
+
+        vm.prank(USER1);
+        ROUTER.submitBuyLimit(address(PAIR), price, amount, IPairV3.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+
+        vm.prank(USER2);
+        ROUTER.submitSellMarket(address(PAIR), amount, 0);
+
+        uint256 user1QuoteAfter = QUOTE.balanceOf(USER1);
+        uint256 user1BaseAfter = BASE.balanceOf(USER1);
+        uint256 user2QuoteAfter = QUOTE.balanceOf(USER2);
+        uint256 user2BaseAfter = BASE.balanceOf(USER2);
+
+        uint256 makerPaid = user1QuoteBefore - user1QuoteAfter - quoteVolume;
+        assertEq(makerPaid, expectedMakerFee, "maker pays exactly buyerMakerFeeBps of quote volume");
+
+        uint256 takerReceived = user2QuoteAfter - user2QuoteBefore;
+        assertEq(takerReceived, quoteVolume - expectedTakerFee, "taker receives quote minus sellerTakerFeeBps");
+
+        uint256 totalReceivedByRecipients = (QUOTE.balanceOf(RECIPIENT_A) - aBefore)
+            + (QUOTE.balanceOf(RECIPIENT_B) - bBefore) + (QUOTE.balanceOf(RECIPIENT_C) - cBefore);
+        assertEq(totalReceivedByRecipients, expectedTotalFee, "recipients receive total fee");
+
+        assertEq(PAIR.quoteReserve(), 0, "quoteReserve zero after full match");
+        assertEq(PAIR.baseReserve(), 0, "baseReserve zero after full match");
+        assertEq(QUOTE.balanceOf(address(PAIR)), 0, "Pair holds no excess QUOTE after settlement");
+        assertEq(BASE.balanceOf(address(PAIR)), 0, "Pair holds no excess BASE after settlement");
+
+        assertEq(user1BaseAfter - user1BaseBefore, amount, "buyer receives exact BASE");
+        assertEq(user2BaseBefore - user2BaseAfter, amount, "seller sent exact BASE");
     }
 
     function test_single_recipient_10000_bps() external {
