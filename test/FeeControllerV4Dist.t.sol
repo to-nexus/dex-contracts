@@ -286,6 +286,63 @@ contract FeeControllerV4DistTest is Test {
         assertTrue(found, "FeeControllerV4DistFeesSettled event should be emitted");
     }
 
+    function test_fees_settled_event_data_is_correct() external {
+        uint256 price = _toQuote(100);
+        uint256 amount = _toBase(10);
+        uint256 quoteVolume = _toTradeVolume(price, amount);
+
+        vm.prank(USER1);
+        ROUTER.submitBuyLimit(address(PAIR), price, amount, IPairV3.LimitConstraints.GOOD_TILL_CANCEL, _searchPrices, 0);
+
+        vm.recordLogs();
+        vm.prank(USER2);
+        ROUTER.submitSellMarket(address(PAIR), amount, 0);
+
+        uint256 expectedMakerFee = _calcFee(quoteVolume, BUYER_MAKER_FEE);
+        uint256 expectedTakerFee = _calcFee(quoteVolume, SELLER_TAKER_FEE);
+        uint256 expectedTotalFee = expectedMakerFee + expectedTakerFee;
+        uint256 expectedA = Math.mulDiv(expectedTotalFee, 3000, BPS_DENOMINATOR);
+        uint256 expectedB = Math.mulDiv(expectedTotalFee, 3000, BPS_DENOMINATOR);
+        uint256 expectedC = expectedTotalFee - expectedA - expectedB;
+
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        bytes32 expectedTopic =
+            keccak256("FeeControllerV4DistFeesSettled(uint256,uint256,address[],uint256[],bytes32[])");
+
+        bool found = false;
+        for (uint256 i = 0; i < entries.length; ++i) {
+            if (entries[i].topics.length >= 2 && entries[i].topics[0] == expectedTopic) {
+                found = true;
+
+                uint256 takerId = uint256(entries[i].topics[1]);
+                assertGt(takerId, 0, "takerId should be non-zero");
+
+                (uint256 totalFee, address[] memory recipients, uint256[] memory amounts, bytes32[] memory labels) =
+                    abi.decode(entries[i].data, (uint256, address[], uint256[], bytes32[]));
+
+                assertEq(totalFee, expectedTotalFee, "totalFee");
+
+                assertEq(recipients.length, 3, "recipients length");
+                assertEq(recipients[0], RECIPIENT_A, "recipients[0]");
+                assertEq(recipients[1], RECIPIENT_B, "recipients[1]");
+                assertEq(recipients[2], RECIPIENT_C, "recipients[2]");
+
+                assertEq(amounts.length, 3, "amounts length");
+                assertEq(amounts[0], expectedA, "amounts[0]");
+                assertEq(amounts[1], expectedB, "amounts[1]");
+                assertEq(amounts[2], expectedC, "amounts[2]");
+
+                assertEq(labels.length, 3, "labels length");
+                assertEq(labels[0], bytes32("CREATOR"), "labels[0]");
+                assertEq(labels[1], bytes32("PLATFORM"), "labels[1]");
+                assertEq(labels[2], bytes32("SYSTEM"), "labels[2]");
+
+                break;
+            }
+        }
+        assertTrue(found, "FeeControllerV4DistFeesSettled event should be emitted");
+    }
+
     function test_record_match_accumulates_maker_and_taker() external {
         uint256 price = _toQuote(100);
         uint256 amount = _toBase(10);
