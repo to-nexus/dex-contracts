@@ -9,19 +9,19 @@ import {Math} from "@openzeppelin-contracts-5.5.0/utils/math/Math.sol";
 import {BPS_DENOMINATOR, IFeeController} from "./interfaces/IFeeController.sol";
 import {IPairV3} from "./interfaces/IPairV3.sol";
 
-/// @title FeeControllerV4Dist
+/// @title FeeControllerV3Dist
 /// @notice 4-way fee controller (seller/buyer x maker/taker) with N-way distribution to multiple recipients by BPS ratio.
 ///         Designed to be called via delegatecall from PairImplV3.
 /// @dev Persistent config stored in Pair's storage via ERC-7201 namespaced slot.
 ///      Per-transaction data stored in transient storage for gas efficiency.
-contract FeeControllerV4Dist is IFeeController, ERC165 {
+contract FeeControllerV3Dist is IFeeController, ERC165 {
     using SafeERC20 for IERC20;
     using Math for uint256;
 
     uint8 public constant MAX_RECIPIENTS = 10;
 
-    error FeeControllerV4DistInvalidRecipients();
-    error FeeControllerV4DistRatiosBpsSumNot10000(uint256 bpsSum);
+    error FeeControllerV3DistInvalidRecipients();
+    error FeeControllerV3DistRatiosBpsSumNot10000(uint256 bpsSum);
 
     /// @notice Emitted when fees are settled and distributed to multiple recipients.
     /// @param takerId The taker order ID that initiated this fee settlement
@@ -29,12 +29,12 @@ contract FeeControllerV4Dist is IFeeController, ERC165 {
     /// @param recipients Addresses receiving the fees
     /// @param amounts Amounts transferred to each recipient
     /// @param labels bytes32 label per recipient (e.g. CREATOR, PLATFORM)
-    event FeeControllerV4DistFeesSettled(
+    event FeeControllerV3DistFeesSettled(
         uint256 indexed takerId, uint256 totalFee, address[] recipients, uint256[] amounts, bytes32[] labels
     );
 
-    /// @custom:storage-location erc7201:cross.storage.FeeControllerV4Dist
-    struct FeeControllerV4DistStorage {
+    /// @custom:storage-location erc7201:cross.storage.FeeControllerV3Dist
+    struct FeeControllerV3DistStorage {
         uint32 sellerMakerFeeBps;
         uint32 sellerTakerFeeBps;
         uint32 buyerMakerFeeBps;
@@ -47,21 +47,21 @@ contract FeeControllerV4Dist is IFeeController, ERC165 {
         bytes32[] labels;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("cross.storage.FeeControllerV4Dist")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant FeeControllerV4DistStorageLocation =
-        0x4ff253cf0dd0a08d59116de49a3085c781c02dce4c81748caa013a84f9a2da00;
+    // keccak256(abi.encode(uint256(keccak256("cross.storage.FeeControllerV3Dist")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant FeeControllerV3DistStorageLocation =
+        0xcf8197069ed4914f85bcb17827b19530499b47ac931f1345bd9e11975128a100;
 
-    function _getFeeControllerV4DistStorage() private pure returns (FeeControllerV4DistStorage storage $) {
+    function _getFeeControllerV3DistStorage() private pure returns (FeeControllerV3DistStorage storage $) {
         assembly {
-            $.slot := FeeControllerV4DistStorageLocation
+            $.slot := FeeControllerV3DistStorageLocation
         }
     }
 
-    /// @custom:storage-location erc7201:cross.storage.FeeControllerV4Dist.transient
+    /// @custom:storage-location erc7201:cross.storage.FeeControllerV3Dist.transient
     /// Slot offsets: +0 currentTakerId, +1 takerFeeBps, +2 makerFeeAcc, +3 takerFeeAcc
-    // keccak256(abi.encode(uint256(keccak256("cross.storage.FeeControllerV4Dist.transient")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant FeeControllerV4DistTransientLocation =
-        0x6c05832cac1084fd63c1c9f91b80dd1d8fb40343a1907a5986f873bc8e8acd00;
+    // keccak256(abi.encode(uint256(keccak256("cross.storage.FeeControllerV3Dist.transient")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant FeeControllerV3DistTransientLocation =
+        0xa65ece664cc680a5cef1d3092a2777f9d43ea55cc7a3dfff71e7ffe246389c00;
 
     address private immutable _SELF;
 
@@ -94,18 +94,18 @@ contract FeeControllerV4Dist is IFeeController, ERC165 {
 
         uint256 n = recipients.length;
         if (n == 0 || n != ratios.length || n != labels.length || n > MAX_RECIPIENTS) {
-            revert FeeControllerV4DistInvalidRecipients();
+            revert FeeControllerV3DistInvalidRecipients();
         }
 
         uint256 ratioSum = 0;
         for (uint256 i = 0; i < n; ++i) {
-            if (recipients[i] == address(0)) revert FeeControllerV4DistInvalidRecipients();
-            if (ratios[i] == 0) revert FeeControllerV4DistInvalidRecipients();
+            if (recipients[i] == address(0)) revert FeeControllerV3DistInvalidRecipients();
+            if (ratios[i] == 0) revert FeeControllerV3DistInvalidRecipients();
             ratioSum += ratios[i];
         }
-        if (ratioSum != BPS_DENOMINATOR) revert FeeControllerV4DistRatiosBpsSumNot10000(ratioSum);
+        if (ratioSum != BPS_DENOMINATOR) revert FeeControllerV3DistRatiosBpsSumNot10000(ratioSum);
 
-        FeeControllerV4DistStorage storage $ = _getFeeControllerV4DistStorage();
+        FeeControllerV3DistStorage storage $ = _getFeeControllerV3DistStorage();
         $.sellerMakerFeeBps = sMk;
         $.sellerTakerFeeBps = sTk;
         $.buyerMakerFeeBps = bMk;
@@ -136,14 +136,14 @@ contract FeeControllerV4Dist is IFeeController, ERC165 {
         override
         returns (uint256 buyVolume)
     {
-        FeeControllerV4DistStorage storage $ = _getFeeControllerV4DistStorage();
+        FeeControllerV3DistStorage storage $ = _getFeeControllerV3DistStorage();
         uint256 baseVolume = Math.mulDiv(order.price, order.amount, $.denominator);
         uint32 bps = isMaker ? $.buyerMakerFeeBps : $.buyerTakerFeeBps;
         return baseVolume + Math.mulDiv(baseVolume, bps, BPS_DENOMINATOR);
     }
 
     function calcBuyVolumeWithFee(bool isMaker, uint256 volume) external view override returns (uint256 buyVolume) {
-        FeeControllerV4DistStorage storage $ = _getFeeControllerV4DistStorage();
+        FeeControllerV3DistStorage storage $ = _getFeeControllerV3DistStorage();
         uint32 bps = isMaker ? $.buyerMakerFeeBps : $.buyerTakerFeeBps;
         return volume + Math.mulDiv(volume, bps, BPS_DENOMINATOR);
     }
@@ -160,7 +160,7 @@ contract FeeControllerV4Dist is IFeeController, ERC165 {
         uint256 currentTakerId = _tloadTakerId();
         if (currentTakerId == 0) {
             _tstoreTakerId(takerId);
-            FeeControllerV4DistStorage storage $ = _getFeeControllerV4DistStorage();
+            FeeControllerV3DistStorage storage $ = _getFeeControllerV3DistStorage();
             takerBps = taker.side == IPairV3.OrderSide.SELL ? $.sellerTakerFeeBps : $.buyerTakerFeeBps;
             _tstoreTakerFeeBps(takerBps);
         } else {
@@ -192,7 +192,7 @@ contract FeeControllerV4Dist is IFeeController, ERC165 {
         _tstoreTakerFeeAcc(0);
 
         if (totalFee > 0) {
-            FeeControllerV4DistStorage storage $ = _getFeeControllerV4DistStorage();
+            FeeControllerV3DistStorage storage $ = _getFeeControllerV3DistStorage();
             uint8 n = $.recipientCount;
             address[] memory recipients = new address[](n);
             uint256[] memory amounts = new uint256[](n);
@@ -214,29 +214,29 @@ contract FeeControllerV4Dist is IFeeController, ERC165 {
                 if (amounts[i] != 0) $.quote.safeTransfer(recipients[i], amounts[i]);
             }
 
-            emit FeeControllerV4DistFeesSettled(takerId, totalFee, recipients, amounts, labels);
+            emit FeeControllerV3DistFeesSettled(takerId, totalFee, recipients, amounts, labels);
         }
     }
 
     function sellerMakerFeeBps() external view returns (uint32) {
-        return _getFeeControllerV4DistStorage().sellerMakerFeeBps;
+        return _getFeeControllerV3DistStorage().sellerMakerFeeBps;
     }
 
     function buyerMakerFeeBps() external view returns (uint32) {
-        return _getFeeControllerV4DistStorage().buyerMakerFeeBps;
+        return _getFeeControllerV3DistStorage().buyerMakerFeeBps;
     }
 
     function getEffectiveFees() external view returns (uint32, uint32, uint32, uint32) {
-        FeeControllerV4DistStorage storage $ = _getFeeControllerV4DistStorage();
+        FeeControllerV3DistStorage storage $ = _getFeeControllerV3DistStorage();
         return ($.sellerMakerFeeBps, $.sellerTakerFeeBps, $.buyerMakerFeeBps, $.buyerTakerFeeBps);
     }
 
     function getConfigId() external pure returns (bytes32) {
-        return keccak256("FeeControllerV4Dist.v1");
+        return keccak256("FeeControllerV3Dist.v1");
     }
 
     function getStorage() external view returns (bytes memory) {
-        FeeControllerV4DistStorage storage $ = _getFeeControllerV4DistStorage();
+        FeeControllerV3DistStorage storage $ = _getFeeControllerV3DistStorage();
         return abi.encode(
             $.sellerMakerFeeBps,
             $.sellerTakerFeeBps,
@@ -253,56 +253,56 @@ contract FeeControllerV4Dist is IFeeController, ERC165 {
     }
 
     function _tloadTakerId() private view returns (uint256 value) {
-        bytes32 slot = FeeControllerV4DistTransientLocation;
+        bytes32 slot = FeeControllerV3DistTransientLocation;
         assembly {
             value := tload(slot)
         }
     }
 
     function _tstoreTakerId(uint256 value) private {
-        bytes32 slot = FeeControllerV4DistTransientLocation;
+        bytes32 slot = FeeControllerV3DistTransientLocation;
         assembly {
             tstore(slot, value)
         }
     }
 
     function _tloadTakerFeeBps() private view returns (uint32 value) {
-        bytes32 slot = bytes32(uint256(FeeControllerV4DistTransientLocation) + 1);
+        bytes32 slot = bytes32(uint256(FeeControllerV3DistTransientLocation) + 1);
         assembly {
             value := tload(slot)
         }
     }
 
     function _tstoreTakerFeeBps(uint32 value) private {
-        bytes32 slot = bytes32(uint256(FeeControllerV4DistTransientLocation) + 1);
+        bytes32 slot = bytes32(uint256(FeeControllerV3DistTransientLocation) + 1);
         assembly {
             tstore(slot, value)
         }
     }
 
     function _tloadMakerFeeAcc() private view returns (uint256 value) {
-        bytes32 slot = bytes32(uint256(FeeControllerV4DistTransientLocation) + 2);
+        bytes32 slot = bytes32(uint256(FeeControllerV3DistTransientLocation) + 2);
         assembly {
             value := tload(slot)
         }
     }
 
     function _tstoreMakerFeeAcc(uint256 value) private {
-        bytes32 slot = bytes32(uint256(FeeControllerV4DistTransientLocation) + 2);
+        bytes32 slot = bytes32(uint256(FeeControllerV3DistTransientLocation) + 2);
         assembly {
             tstore(slot, value)
         }
     }
 
     function _tloadTakerFeeAcc() private view returns (uint256 value) {
-        bytes32 slot = bytes32(uint256(FeeControllerV4DistTransientLocation) + 3);
+        bytes32 slot = bytes32(uint256(FeeControllerV3DistTransientLocation) + 3);
         assembly {
             value := tload(slot)
         }
     }
 
     function _tstoreTakerFeeAcc(uint256 value) private {
-        bytes32 slot = bytes32(uint256(FeeControllerV4DistTransientLocation) + 3);
+        bytes32 slot = bytes32(uint256(FeeControllerV3DistTransientLocation) + 3);
         assembly {
             tstore(slot, value)
         }
