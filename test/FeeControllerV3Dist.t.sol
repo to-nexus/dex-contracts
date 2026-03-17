@@ -9,16 +9,16 @@ import {Vm} from "forge-std/Vm.sol";
 
 import {CrossDexImplV3} from "../src/CrossDexImplV3.sol";
 import {CrossDexRouterV3} from "../src/CrossDexRouterV3.sol";
-import {FeeControllerV4Dist} from "../src/FeeControllerV4Dist.sol";
+import {FeeControllerV3Dist} from "../src/FeeControllerV3Dist.sol";
 import {MarketImplV3} from "../src/MarketImplV3.sol";
 import {PairImplV3} from "../src/PairImplV3.sol";
 import {BPS_DENOMINATOR} from "../src/interfaces/IFeeController.sol";
 import {IPairV3} from "../src/interfaces/IPairV3.sol";
 import {T20} from "./mock/T20.sol";
 
-/// @title FeeControllerV4DistTest
-/// @notice Tests for FeeControllerV4Dist: 4-way fees with N-way distribution to multiple recipients.
-contract FeeControllerV4DistTest is Test {
+/// @title FeeControllerV3DistTest
+/// @notice Tests for FeeControllerV3Dist: 4-way fees with N-way distribution to multiple recipients.
+contract FeeControllerV3DistTest is Test {
     address public constant OWNER = address(bytes20("OWNER"));
     address public constant RECIPIENT_A = address(bytes20("RECIPIENT_A"));
     address public constant RECIPIENT_B = address(bytes20("RECIPIENT_B"));
@@ -32,7 +32,7 @@ contract FeeControllerV4DistTest is Test {
     IERC20 public BASE;
     MarketImplV3 public MARKET;
     PairImplV3 public PAIR;
-    FeeControllerV4Dist public FEE_CONTROLLER;
+    FeeControllerV3Dist public FEE_CONTROLLER;
 
     uint256 public QUOTE_DECIMALS = 1e18;
     uint256 public BASE_DECIMALS = 1e18;
@@ -53,7 +53,7 @@ contract FeeControllerV4DistTest is Test {
 
         vm.startPrank(OWNER);
 
-        FEE_CONTROLLER = new FeeControllerV4Dist();
+        FEE_CONTROLLER = new FeeControllerV3Dist();
 
         address routerImpl = address(new CrossDexRouterV3());
         address marketImpl = address(new MarketImplV3());
@@ -149,7 +149,7 @@ contract FeeControllerV4DistTest is Test {
         );
 
         vm.expectRevert(
-            abi.encodeWithSelector(FeeControllerV4Dist.FeeControllerV4DistRatiosBpsSumNot10000.selector, 9999)
+            abi.encodeWithSelector(FeeControllerV3Dist.FeeControllerV3DistRatiosBpsSumNot10000.selector, 9999)
         );
         vm.prank(OWNER);
         PAIR.setFeeController(address(FEE_CONTROLLER), badInitData);
@@ -170,7 +170,7 @@ contract FeeControllerV4DistTest is Test {
             SELLER_MAKER_FEE, SELLER_TAKER_FEE, BUYER_MAKER_FEE, BUYER_TAKER_FEE, recipients, ratios, labels
         );
 
-        vm.expectRevert(FeeControllerV4Dist.FeeControllerV4DistInvalidRecipients.selector);
+        vm.expectRevert(FeeControllerV3Dist.FeeControllerV3DistInvalidRecipients.selector);
         vm.prank(OWNER);
         PAIR.setFeeController(address(FEE_CONTROLLER), badInitData);
     }
@@ -189,7 +189,7 @@ contract FeeControllerV4DistTest is Test {
             SELLER_MAKER_FEE, SELLER_TAKER_FEE, BUYER_MAKER_FEE, BUYER_TAKER_FEE, recipients, ratios, labels
         );
 
-        vm.expectRevert(FeeControllerV4Dist.FeeControllerV4DistInvalidRecipients.selector);
+        vm.expectRevert(FeeControllerV3Dist.FeeControllerV3DistInvalidRecipients.selector);
         vm.prank(OWNER);
         PAIR.setFeeController(address(FEE_CONTROLLER), badInitData);
     }
@@ -204,7 +204,7 @@ contract FeeControllerV4DistTest is Test {
 
     function test_get_config_id() external {
         (bytes32 configId,) = PAIR.getFeeControllerConfig();
-        assertEq(configId, keccak256("FeeControllerV4Dist.v1"));
+        assertEq(configId, keccak256("FeeControllerV3Dist.v1"));
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -275,7 +275,7 @@ contract FeeControllerV4DistTest is Test {
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
         bytes32 expectedTopic =
-            keccak256("FeeControllerV4DistFeesSettled(uint256,uint256,address[],uint256[],bytes32[])");
+            keccak256("FeeControllerV3DistFeesSettled(uint256,uint256,address[],uint256[],bytes32[])");
         bool found = false;
         for (uint256 i = 0; i < entries.length; ++i) {
             if (entries[i].topics.length >= 1 && entries[i].topics[0] == expectedTopic) {
@@ -283,7 +283,7 @@ contract FeeControllerV4DistTest is Test {
                 break;
             }
         }
-        assertTrue(found, "FeeControllerV4DistFeesSettled event should be emitted");
+        assertTrue(found, "FeeControllerV3DistFeesSettled event should be emitted");
     }
 
     function test_fees_settled_event_data_is_correct() external {
@@ -307,7 +307,7 @@ contract FeeControllerV4DistTest is Test {
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
         bytes32 expectedTopic =
-            keccak256("FeeControllerV4DistFeesSettled(uint256,uint256,address[],uint256[],bytes32[])");
+            keccak256("FeeControllerV3DistFeesSettled(uint256,uint256,address[],uint256[],bytes32[])");
 
         bool found = false;
         for (uint256 i = 0; i < entries.length; ++i) {
@@ -340,7 +340,7 @@ contract FeeControllerV4DistTest is Test {
                 break;
             }
         }
-        assertTrue(found, "FeeControllerV4DistFeesSettled event should be emitted");
+        assertTrue(found, "FeeControllerV3DistFeesSettled event should be emitted");
     }
 
     function test_record_match_accumulates_maker_and_taker() external {
