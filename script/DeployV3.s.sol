@@ -7,6 +7,7 @@ import {Script, console} from "forge-std/Script.sol";
 import {CrossDexImplV3} from "../src/CrossDexImplV3.sol";
 import {CrossDexRouterV3} from "../src/CrossDexRouterV3.sol";
 import {FeeControllerV2Compat} from "../src/FeeControllerV2Compat.sol";
+import {FeeControllerV3Dist} from "../src/FeeControllerV3Dist.sol";
 import {FeeControllerV3Split} from "../src/FeeControllerV3Split.sol";
 import {MarketImplV3} from "../src/MarketImplV3.sol";
 import {PairImplV3} from "../src/PairImplV3.sol";
@@ -27,6 +28,7 @@ contract DeployV3 is Script {
         address marketImpl;
         address pairImpl;
         address feeControllerV2Compat;
+        address feeControllerV3Dist;
         address feeControllerV3Split;
     }
 
@@ -103,6 +105,7 @@ contract DeployV3 is Script {
         impls.pairImpl = address(new PairImplV3());
         impls.crossDexImpl = address(new CrossDexImplV3());
         impls.feeControllerV2Compat = address(new FeeControllerV2Compat());
+        impls.feeControllerV3Dist = address(new FeeControllerV3Dist());
         impls.feeControllerV3Split = address(new FeeControllerV3Split());
     }
 
@@ -113,6 +116,7 @@ contract DeployV3 is Script {
         console.log("MarketImplV3 impl:", impls.marketImpl);
         console.log("PairImplV3 impl:", impls.pairImpl);
         console.log("FeeControllerV2Compat:", impls.feeControllerV2Compat);
+        console.log("FeeControllerV3Dist:", impls.feeControllerV3Dist);
         console.log("FeeControllerV3Split:", impls.feeControllerV3Split);
     }
 
@@ -227,5 +231,127 @@ contract DeployV3 is Script {
         _logImplementations(impls);
         console.log("");
         _logProxyDeployment(deployment, feeController);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Helper: Deploy & Upgrade All
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// @notice Deploy fresh implementations and upgrade all existing proxies in one transaction.
+    /// @param crossDex Existing CrossDex proxy address
+    /// @param oldFeeControllers Previous fee controller addresses to remove from allowed list
+    /// @return impls Newly deployed implementation addresses
+    function deployAndUpgradeAll(address crossDex, address[] memory oldFeeControllers)
+        external
+        returns (Implementations memory impls)
+    {
+        vm.startBroadcast();
+
+        impls = _deployImplementations();
+        _upgradeAll(crossDex, impls, oldFeeControllers);
+
+        vm.stopBroadcast();
+
+        _logImplementations(impls);
+    }
+
+    /// @notice Upgrade all existing proxies with pre-deployed implementations.
+    /// @param crossDex Existing CrossDex proxy address
+    /// @param crossDexImpl New CrossDexImplV3 implementation
+    /// @param routerImpl New CrossDexRouterV3 implementation
+    /// @param marketImpl New MarketImplV3 implementation
+    /// @param pairImpl New PairImplV3 implementation
+    /// @param oldFeeControllers Previous fee controller addresses to remove from allowed list
+    /// @param newFeeControllers New fee controller addresses to add to allowed list
+    function upgradeAll(
+        address crossDex,
+        address crossDexImpl,
+        address routerImpl,
+        address marketImpl,
+        address pairImpl,
+        address[] memory oldFeeControllers,
+        address[] memory newFeeControllers
+    ) external {
+        Implementations memory impls;
+        impls.crossDexImpl = crossDexImpl;
+        impls.routerImpl = routerImpl;
+        impls.marketImpl = marketImpl;
+        impls.pairImpl = pairImpl;
+
+        vm.startBroadcast();
+        _upgradeAll(crossDex, impls, oldFeeControllers);
+
+        CrossDexImplV3 dex = CrossDexImplV3(crossDex);
+        for (uint256 i = 0; i < newFeeControllers.length; ++i) {
+            dex.setFeeControllerAllow(newFeeControllers[i], true);
+        }
+
+        vm.stopBroadcast();
+    }
+
+    /// @notice Upgrade a single Market and all its Pairs to the implementations currently set in CrossDex.
+    ///         Must be called by the Market owner (may differ from CrossDex owner).
+    /// @param crossDex CrossDex proxy address (reads marketImpl / pairImpl from it)
+    /// @param marketProxy Market proxy address to upgrade
+    function upgradeMarketFromDex(address crossDex, address marketProxy) external {
+        CrossDexImplV3 dex = CrossDexImplV3(crossDex);
+        address newMarketImpl = dex.marketImpl();
+        address newPairImpl = dex.pairImpl();
+
+        vm.startBroadcast();
+
+        MarketImplV3 market = MarketImplV3(marketProxy);
+        market.upgradeToAndCall(newMarketImpl, hex"");
+        market.setPairImpl(newPairImpl);
+
+        (, address[] memory pairs) = market.allPairs();
+        for (uint256 j = 0; j < pairs.length; ++j) {
+            PairImplV3(pairs[j]).upgradeToAndCall(newPairImpl, hex"");
+        }
+
+        vm.stopBroadcast();
+
+        console.log("=== Market Upgrade Complete ===");
+        console.log("Market:", marketProxy);
+        console.log("Pairs upgraded:", pairs.length);
+        console.log("Using marketImpl:", newMarketImpl);
+        console.log("Using pairImpl:", newPairImpl);
+    }
+
+    function _upgradeAll(
+        address crossDex,
+        Implementations memory impls,
+        address[] memory oldFeeControllers
+    ) internal {
+        CrossDexImplV3 dex = CrossDexImplV3(crossDex);
+        address router = dex.ROUTER();
+
+        // Upgrade CrossDex & Router proxies
+        dex.upgradeToAndCall(impls.crossDexImpl, hex"");
+        CrossDexRouterV3(router).upgradeToAndCall(impls.routerImpl, hex"");
+
+        // Update impl references stored in CrossDex
+        dex.setMarketImpl(impls.marketImpl);
+        dex.setPairImpl(impls.pairImpl);
+
+        // Remove old fee controllers
+        for (uint256 i = 0; i < oldFeeControllers.length; ++i) {
+            dex.setFeeControllerAllow(oldFeeControllers[i], false);
+        }
+
+        // Allow newly deployed fee controllers
+        if (impls.feeControllerV2Compat != address(0)) {
+            dex.setFeeControllerAllow(impls.feeControllerV2Compat, true);
+        }
+        if (impls.feeControllerV3Dist != address(0)) {
+            dex.setFeeControllerAllow(impls.feeControllerV3Dist, true);
+        }
+        if (impls.feeControllerV3Split != address(0)) {
+            dex.setFeeControllerAllow(impls.feeControllerV3Split, true);
+        }
+
+        console.log("=== CrossDex Upgrade Complete ===");
+        console.log("CrossDex:", crossDex);
+        console.log("Router:", router);
     }
 }
