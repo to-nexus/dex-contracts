@@ -318,6 +318,36 @@ contract DeployV3 is Script {
         console.log("Using pairImpl:", newPairImpl);
     }
 
+    /// @notice Migrate a Market's fee controller to a new address, preserving each Pair's existing config.
+    ///         Reads each Pair's current fee config via getFeeControllerConfig(), then re-initializes
+    ///         with the new fee controller address and the same config data.
+    /// @param marketProxy Market proxy address
+    /// @param newFeeController New fee controller implementation address (must be allowed in CrossDex)
+    function migrateFeeController(address marketProxy, address newFeeController) external {
+        MarketImplV3 market = MarketImplV3(marketProxy);
+        (, address[] memory pairs) = market.allPairs();
+
+        bytes[] memory configs = new bytes[](pairs.length);
+        for (uint256 i = 0; i < pairs.length; ++i) {
+            (, configs[i]) = PairImplV3(pairs[i]).getFeeControllerConfig();
+        }
+
+        vm.startBroadcast();
+
+        market.setFeeController(new address[](0), newFeeController, hex"");
+
+        for (uint256 i = 0; i < pairs.length; ++i) {
+            PairImplV3(pairs[i]).setFeeController(newFeeController, configs[i]);
+        }
+
+        vm.stopBroadcast();
+
+        console.log("=== FeeController Migration Complete ===");
+        console.log("Market:", marketProxy);
+        console.log("New FeeController:", newFeeController);
+        console.log("Pairs migrated:", pairs.length);
+    }
+
     function _upgradeAll(
         address crossDex,
         Implementations memory impls,
