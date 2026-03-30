@@ -348,11 +348,7 @@ contract DeployV3 is Script {
         console.log("Pairs migrated:", pairs.length);
     }
 
-    function _upgradeAll(
-        address crossDex,
-        Implementations memory impls,
-        address[] memory oldFeeControllers
-    ) internal {
+    function _upgradeAll(address crossDex, Implementations memory impls, address[] memory oldFeeControllers) internal {
         CrossDexImplV3 dex = CrossDexImplV3(crossDex);
         address router = dex.ROUTER();
 
@@ -370,15 +366,9 @@ contract DeployV3 is Script {
         }
 
         // Allow newly deployed fee controllers
-        if (impls.feeControllerV2Compat != address(0)) {
-            dex.setFeeControllerAllow(impls.feeControllerV2Compat, true);
-        }
-        if (impls.feeControllerV3Dist != address(0)) {
-            dex.setFeeControllerAllow(impls.feeControllerV3Dist, true);
-        }
-        if (impls.feeControllerV3Split != address(0)) {
-            dex.setFeeControllerAllow(impls.feeControllerV3Split, true);
-        }
+        if (impls.feeControllerV2Compat != address(0)) dex.setFeeControllerAllow(impls.feeControllerV2Compat, true);
+        if (impls.feeControllerV3Dist != address(0)) dex.setFeeControllerAllow(impls.feeControllerV3Dist, true);
+        if (impls.feeControllerV3Split != address(0)) dex.setFeeControllerAllow(impls.feeControllerV3Split, true);
 
         console.log("=== CrossDex Upgrade Complete ===");
         console.log("CrossDex:", crossDex);
