@@ -21,14 +21,32 @@ import {IPairV3} from "../src/interfaces/IPairV3.sol";
 
 import {T20} from "./mock/T20.sol";
 
+/// @dev Minimal mock of Verse8MarketOwner — only `execute` with owner check
+contract MockVerse8MarketOwner {
+    address public owner;
+
+    constructor(address _owner) {
+        owner = _owner;
+    }
+
+    function execute(address to, uint256 value, bytes calldata data) external returns (bytes memory) {
+        require(msg.sender == owner, "not owner");
+        (bool success, bytes memory result) = to.call{value: value}(data);
+        require(success, "execute failed");
+        return result;
+    }
+}
+
 /// @title MainnetUpgradeTest
-/// @notice Simulates the full post-audit upgrade scenario described in .cursor/upgrade-guide.md
+/// @notice Simulates the full post-audit upgrade scenario described in .cursor/upgrade-commands.md
 /// @dev Phases:
 ///   1-1. Deploy new implementations
 ///   1-2. Upgrade CrossDex + Router, swap fee controllers
 ///   2.   Upgrade wCROSS/CROSSD markets (Owner A)
-///   3.   Upgrade FORGE market (Owner B)
+///   3-0. Transfer FORGE market ownership from Verse8MarketOwner → EOA
+///   3-1. Upgrade FORGE market (Verse8 Admin)
 ///   4-1. Migrate fee controllers (same type, preserving existing config)
+///   4-1-4. Transfer FORGE market ownership back to Verse8MarketOwner
 contract MainnetUpgradeTest is Test {
     // ─────────────────────────────────────────────────────────────────────────
     // Actors
@@ -36,11 +54,13 @@ contract MainnetUpgradeTest is Test {
 
     address constant CROSSDEX_OWNER = address(bytes20("CROSSDEX_OWNER"));
     address constant MARKET_OWNER_A = address(bytes20("MARKET_OWNER_A"));
-    address constant MARKET_OWNER_B = address(bytes20("MARKET_OWNER_B"));
     address constant FEE_COLLECTOR = address(bytes20("FEE_COLLECTOR"));
     address constant CREATOR = address(bytes20("CREATOR"));
     address constant USER1 = address(bytes20("USER1"));
     address constant USER2 = address(bytes20("USER2"));
+
+    // Verse8 Admin = MARKET_OWNER_A (same key as mainnet)
+    address constant VERSE8_ADMIN = MARKET_OWNER_A;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Contracts — "current mainnet" state
@@ -52,6 +72,8 @@ contract MainnetUpgradeTest is Test {
     MarketImplV3 marketWCross;
     MarketImplV3 marketCrossD;
     MarketImplV3 marketForge;
+
+    MockVerse8MarketOwner forgeMarketOwner;
 
     PairImplV3[] pairsWCross;
     PairImplV3[] pairsCrossD;
@@ -98,8 +120,7 @@ contract MainnetUpgradeTest is Test {
 
     function setUp() public {
         vm.label(CROSSDEX_OWNER, "crossDexOwner");
-        vm.label(MARKET_OWNER_A, "marketOwnerA");
-        vm.label(MARKET_OWNER_B, "marketOwnerB");
+        vm.label(MARKET_OWNER_A, "marketOwnerA / verse8Admin");
         vm.label(FEE_COLLECTOR, "feeCollector");
         vm.label(CREATOR, "creator");
         vm.label(USER1, "user1");
@@ -170,23 +191,31 @@ contract MainnetUpgradeTest is Test {
         }
         vm.stopPrank();
 
-        // ── FORGE Market (Owner B, V3Split, 3 pairs, each with different creator) ──
+        // ── FORGE Market (owner = Verse8MarketOwner contract, V3Split, 3 pairs) ──
+        forgeMarketOwner = new MockVerse8MarketOwner(VERSE8_ADMIN);
+        vm.label(address(forgeMarketOwner), "forgeMarketOwner");
+
         vm.startPrank(CROSSDEX_OWNER);
-        address mForge = crossDex.createMarket(MARKET_OWNER_B, address(quoteCrossD), address(oldFcV3Split), "FORGE");
+        address mForge =
+            crossDex.createMarket(address(forgeMarketOwner), address(quoteCrossD), address(oldFcV3Split), "FORGE");
         marketForge = MarketImplV3(mForge);
         vm.stopPrank();
-        vm.startPrank(MARKET_OWNER_B);
 
+        // Verse8MarketOwner.execute → Market.createPair (simulates real flow)
+        vm.startPrank(VERSE8_ADMIN);
         for (uint256 i = 0; i < 3; ++i) {
             T20 base = new T20(string(abi.encodePacked("BASE_F", vm.toString(i))), "BF", 18);
             basesForge.push(base);
             address pairCreator = address(uint160(0xC0DE0000 + i));
             bytes memory splitInitData =
                 abi.encode(FEE_COLLECTOR, pairCreator, V3SPLIT_TAKER, V3SPLIT_CREATOR_SHARE, V3SPLIT_MAKER_REBATE);
-            address pair = marketForge.createPair(address(base), TICK_SIZE, LOT_SIZE, splitInitData);
+
+            bytes memory callData =
+                abi.encodeCall(MarketImplV3.createPair, (address(base), TICK_SIZE, LOT_SIZE, splitInitData));
+            bytes memory result = forgeMarketOwner.execute(address(marketForge), 0, callData);
+            address pair = abi.decode(result, (address));
             pairsForge.push(PairImplV3(pair));
         }
-
         vm.stopPrank();
     }
 
@@ -207,7 +236,7 @@ contract MainnetUpgradeTest is Test {
         for (uint256 i = 0; i < bases.length; ++i) {
             vm.prank(MARKET_OWNER_A);
             try bases[i].transfer(user, 100_000 * BASE_DECIMALS) {} catch {}
-            vm.prank(MARKET_OWNER_B);
+            vm.prank(VERSE8_ADMIN);
             try bases[i].transfer(user, 100_000 * BASE_DECIMALS) {} catch {}
         }
 
@@ -343,7 +372,17 @@ contract MainnetUpgradeTest is Test {
     }
 
     function _phase3_upgradeMarketOwnerB() internal {
-        vm.startPrank(MARKET_OWNER_B);
+        // Phase 3-0: Transfer FORGE ownership from Verse8MarketOwner → VERSE8_ADMIN EOA
+        assertEq(marketForge.owner(), address(forgeMarketOwner), "FORGE owner is Verse8MarketOwner");
+
+        vm.prank(VERSE8_ADMIN);
+        forgeMarketOwner.execute(
+            address(marketForge), 0, abi.encodeWithSignature("transferOwnership(address)", VERSE8_ADMIN)
+        );
+        assertEq(marketForge.owner(), VERSE8_ADMIN, "FORGE owner transferred to EOA");
+
+        // Phase 3-1: Upgrade FORGE market + pairs (now as direct EOA owner)
+        vm.startPrank(VERSE8_ADMIN);
 
         marketForge.upgradeToAndCall(newMarketImpl, hex"");
         marketForge.setPairImpl(newPairImpl);
@@ -358,14 +397,19 @@ contract MainnetUpgradeTest is Test {
     }
 
     function _phase4_1_migrateFeeControllers() internal {
-        // ── wCROSS: V2Compat → new V2Compat ──
+        // ── 4-1-1. wCROSS: V2Compat → new V2Compat ──
         _migrateFeeControllerAs(MARKET_OWNER_A, marketWCross, pairsWCross, address(newFcV2Compat));
 
-        // ── CROSSD: V2Compat → new V2Compat ──
+        // ── 4-1-2. CROSSD: V2Compat → new V2Compat ──
         _migrateFeeControllerAs(MARKET_OWNER_A, marketCrossD, pairsCrossD, address(newFcV2Compat));
 
-        // ── FORGE: V3Split → new V3Split ──
-        _migrateFeeControllerAs(MARKET_OWNER_B, marketForge, pairsForge, address(newFcV3Split));
+        // ── 4-1-3. FORGE: V3Split → new V3Split (VERSE8_ADMIN still owns the market) ──
+        _migrateFeeControllerAs(VERSE8_ADMIN, marketForge, pairsForge, address(newFcV3Split));
+
+        // ── 4-1-4. Return FORGE ownership to Verse8MarketOwner ──
+        vm.prank(VERSE8_ADMIN);
+        marketForge.transferOwnership(address(forgeMarketOwner));
+        assertEq(marketForge.owner(), address(forgeMarketOwner), "FORGE owner returned to Verse8MarketOwner");
     }
 
     function _migrateFeeControllerAs(address owner, MarketImplV3 market, PairImplV3[] storage pairs, address newFc)
