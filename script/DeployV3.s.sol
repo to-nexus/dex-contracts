@@ -19,6 +19,14 @@ import {PairImplV3} from "../src/PairImplV3.sol";
 ///   2. Deploy proxy: forge script script/DeployV3.s.sol:DeployV3 --sig "deployProxy(address,address,address,address,address)" <args> --broadcast
 contract DeployV3 is Script {
     // ─────────────────────────────────────────────────────────────────────────────
+    // Constants
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    bytes32 private constant FEE_CONFIG_V2_COMPAT = keccak256("FeeControllerV2Compat.v1");
+    bytes32 private constant FEE_CONFIG_V3_DIST = keccak256("FeeControllerV3Dist.v1");
+    bytes32 private constant FEE_CONFIG_V3_SPLIT = keccak256("FeeControllerV3Split.v1");
+
+    // ─────────────────────────────────────────────────────────────────────────────
     // Structs
     // ─────────────────────────────────────────────────────────────────────────────
 
@@ -346,6 +354,56 @@ contract DeployV3 is Script {
         console.log("Market:", marketProxy);
         console.log("New FeeController:", newFeeController);
         console.log("Pairs migrated:", pairs.length);
+    }
+
+    /// @notice Update seller (maker + taker) fee bps for every Pair under a Market, keeping
+    ///         the existing FeeController address, feeCollector, recipients/ratios/labels intact.
+    ///         Buyer maker/taker fees are explicitly forced to 0 (not read from current config).
+    /// @dev Supports FeeControllerV2Compat and FeeControllerV3Dist. Reverts on V3Split
+    ///      (taker-only model cannot separate seller from buyer) or unknown configId.
+    ///      Must be called by an EOA that holds the setFeeController permission on each Pair.
+    /// @param marketProxy Market proxy address
+    /// @param newSellerBps New seller maker/taker fee bps (e.g., 3000 for 30%)
+    function setSellerFeeToAllPairs(address marketProxy, uint32 newSellerBps) external {
+        uint32 buyerMakerBps = 0;
+        uint32 buyerTakerBps = 0;
+
+        MarketImplV3 market = MarketImplV3(marketProxy);
+        (, address[] memory pairs) = market.allPairs();
+
+        address[] memory controllers = new address[](pairs.length);
+        bytes[] memory newInitDatas = new bytes[](pairs.length);
+
+        for (uint256 i = 0; i < pairs.length; ++i) {
+            PairImplV3 pair = PairImplV3(pairs[i]);
+            (bytes32 configId, bytes memory data) = pair.getFeeControllerConfig();
+            controllers[i] = address(pair.feeController());
+
+            if (configId == FEE_CONFIG_V2_COMPAT) {
+                (address feeCollector,,,,) = abi.decode(data, (address, uint32, uint32, uint32, uint32));
+                newInitDatas[i] = abi.encode(feeCollector, newSellerBps, newSellerBps, buyerMakerBps, buyerTakerBps);
+            } else if (configId == FEE_CONFIG_V3_DIST) {
+                (,,,, address[] memory recipients, uint32[] memory ratios, bytes32[] memory labels) =
+                    abi.decode(data, (uint32, uint32, uint32, uint32, address[], uint32[], bytes32[]));
+                newInitDatas[i] =
+                    abi.encode(newSellerBps, newSellerBps, buyerMakerBps, buyerTakerBps, recipients, ratios, labels);
+            } else if (configId == FEE_CONFIG_V3_SPLIT) {
+                revert("V3Split unsupported: seller/buyer not separable");
+            } else {
+                revert("Unknown FeeController configId");
+            }
+        }
+
+        vm.startBroadcast();
+        for (uint256 i = 0; i < pairs.length; ++i) {
+            PairImplV3(pairs[i]).setFeeController(controllers[i], newInitDatas[i]);
+        }
+        vm.stopBroadcast();
+
+        console.log("=== Seller Fee Update Complete ===");
+        console.log("Market:", marketProxy);
+        console.log("Pairs updated:", pairs.length);
+        console.log("New seller bps:", uint256(newSellerBps));
     }
 
     function _upgradeAll(address crossDex, Implementations memory impls, address[] memory oldFeeControllers) internal {
