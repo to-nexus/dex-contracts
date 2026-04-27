@@ -362,9 +362,11 @@ contract DeployV3 is Script {
     /// @dev Supports FeeControllerV2Compat and FeeControllerV3Dist. Reverts on V3Split
     ///      (taker-only model cannot separate seller from buyer) or unknown configId.
     ///      Must be called by an EOA that holds the setFeeController permission on each Pair.
+    ///      Paused pairs are skipped to respect operational pause policy.
     /// @param marketProxy Market proxy address
     /// @param newSellerBps New seller maker/taker fee bps (e.g., 3000 for 30%)
-    function setSellerFeeToAllPairs(address marketProxy, uint32 newSellerBps) external {
+    /// @param skipPair Pair address to exclude from the update (pass address(0) to update all)
+    function setSellerFeeToAllPairs(address marketProxy, uint32 newSellerBps, address skipPair) external {
         uint32 buyerMakerBps = 0;
         uint32 buyerTakerBps = 0;
 
@@ -373,9 +375,25 @@ contract DeployV3 is Script {
 
         address[] memory controllers = new address[](pairs.length);
         bytes[] memory newInitDatas = new bytes[](pairs.length);
+        bool[] memory skipFlags = new bool[](pairs.length);
+        uint256 skippedCount = 0;
 
         for (uint256 i = 0; i < pairs.length; ++i) {
+            if (pairs[i] == skipPair) {
+                console.log("Skip pair (matched skipPair):", pairs[i]);
+                skipFlags[i] = true;
+                ++skippedCount;
+                continue;
+            }
+
             PairImplV3 pair = PairImplV3(pairs[i]);
+            if (pair.paused()) {
+                console.log("Skip pair (paused):", pairs[i]);
+                skipFlags[i] = true;
+                ++skippedCount;
+                continue;
+            }
+
             (bytes32 configId, bytes memory data) = pair.getFeeControllerConfig();
             controllers[i] = address(pair.feeController());
 
@@ -396,13 +414,15 @@ contract DeployV3 is Script {
 
         vm.startBroadcast();
         for (uint256 i = 0; i < pairs.length; ++i) {
+            if (skipFlags[i]) continue;
             PairImplV3(pairs[i]).setFeeController(controllers[i], newInitDatas[i]);
         }
         vm.stopBroadcast();
 
         console.log("=== Seller Fee Update Complete ===");
         console.log("Market:", marketProxy);
-        console.log("Pairs updated:", pairs.length);
+        console.log("Pairs updated:", pairs.length - skippedCount);
+        console.log("Pairs skipped:", skippedCount);
         console.log("New seller bps:", uint256(newSellerBps));
     }
 
